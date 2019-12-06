@@ -1,0 +1,13 @@
+.DS_Store
+dist
+.vscode/
+node_modules
+
+venv/
+env/
+.env
+.nuxt
+
+*.pyc
+__pycache__/
+.idea

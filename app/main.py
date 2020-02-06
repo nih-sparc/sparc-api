@@ -1,3 +1,4 @@
+import os
 from flask import Flask, Blueprint, jsonify, request
 import boto3
 from app.config import Config
@@ -12,6 +13,8 @@ import logging
 
 
 app = Flask(__name__)
+# set environment variable
+app.config['ENV'] = Config.DEPLOY_ENV
 ma = Marshmallow(app)
 email_sender = EmailSender()
 mongo = None

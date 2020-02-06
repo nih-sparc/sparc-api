@@ -25,3 +25,4 @@ class Config(object):
     BIOLUCIDA_USERNAME = os.environ.get('BIOLUCIDA_USERNAME', 'major-user')
     BIOLUCIDA_PASSWORD = os.environ.get('BIOLUCIDA_PASSWORD', 'local-password')
     KNOWLEDGEBASE_KEY = os.environ.get('KNOWLEDGEBASE_KEY', 'secret-key')
+    DEPLOY_ENV = os.environ.get('DEPLOY_ENV', 'development')

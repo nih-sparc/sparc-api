@@ -1,12 +1,12 @@
 from flask import Flask, Blueprint, jsonify, request
 import boto3
-from .config import Config
-from .email_sender import EmailSender
+from app.config import Config
+from scripts.email_sender import EmailSender
 import json 
 import requests
 from flask_marshmallow import Marshmallow
 from blackfynn import Blackfynn
-from .serializer import ContactRequestSchema
+from app.serializer import ContactRequestSchema
 # from pymongo import MongoClient
 import logging
 

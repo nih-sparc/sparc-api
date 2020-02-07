@@ -26,3 +26,4 @@ class Config(object):
     BIOLUCIDA_PASSWORD = os.environ.get('BIOLUCIDA_PASSWORD', 'local-password')
     KNOWLEDGEBASE_KEY = os.environ.get('KNOWLEDGEBASE_KEY', 'secret-key')
     DEPLOY_ENV = os.environ.get('DEPLOY_ENV', 'development')
+    SPARC_APP_HOST = os.environ.get('SPARC_APP_HOST', 'https://sparc-app.herokuapp.com')

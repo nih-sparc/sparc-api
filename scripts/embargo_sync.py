@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-from config import Config
+from app.config import Config
 
 from blackfynn import Blackfynn
 from pymongo import MongoClient
-
-from collections import Counter
 
 bf = None
 embargoed = None

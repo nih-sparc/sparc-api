@@ -1,4 +1,4 @@
-from .config import Config
+from app.config import Config
 import boto3
 
 subject = "Message from SPARC Portal"

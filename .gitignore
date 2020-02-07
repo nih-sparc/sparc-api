@@ -11,3 +11,4 @@ env/
 *.pyc
 __pycache__/
 .idea
+*.iml

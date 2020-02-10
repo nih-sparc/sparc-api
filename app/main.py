@@ -1,10 +1,12 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import boto3
+from botocore.exceptions import ClientError
 from app.config import Config
 from scripts.email_sender import EmailSender
 import json 
-# import requests
+import requests
+import logging
 from flask_marshmallow import Marshmallow
 # from blackfynn import Blackfynn
 from app.serializer import ContactRequestSchema
@@ -85,3 +87,50 @@ def create_presigned_url(expiration=3600):
                                          ExpiresIn=expiration)
 
     return response
+
+@app.route('/sim/dataset/<id>')
+def sim_dataset(id):
+    if request.method == 'GET':
+        req = requests.get('{}/datasets/{}'.format(Config.DISCOVER_API_HOST, id))
+        json = req.json()
+        inject_markdown(json)
+        inject_template_data(json)
+        return jsonify(json)
+
+def inject_markdown(resp):
+    if 'readme' in resp:
+        mark_req = requests.get(resp.get('readme'))
+        resp['markdown'] = mark_req.text
+
+def inject_template_data(resp):
+    id = resp.get('id')
+    version = resp.get('version')
+    if (id is None or version is None):
+        return
+
+    try:
+        response = s3.get_object(Bucket='blackfynn-discover-use1',
+                                 Key='{}/{}/files/template.json'.format(id, version),
+                                 RequestPayer='requester')
+    except ClientError as e:
+        # If the file is not under folder 'files', check under folder 'packages'
+        logging.warning('Required file template.json was not found under /files folder, trying under /packages...')
+        try:
+            response = s3.get_object(Bucket='blackfynn-discover-use1',
+                                     Key='{}/{}/packages/template.json'.format(id, version),
+                                     RequestPayer='requester')
+        except ClientError as e2:
+            logging.error(e2)
+            return
+
+    template = response['Body'].read()
+
+    try:
+        template_json = json.loads(template)
+    except ValueError as e:
+        logging.error(e)
+        return
+
+    resp['study'] = {'uuid': template_json.get('uuid'),
+                     'name': template_json.get('name'),
+                     'description': template_json.get('description')}

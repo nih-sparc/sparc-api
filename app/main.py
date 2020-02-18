@@ -134,3 +134,32 @@ def inject_template_data(resp):
     resp['study'] = {'uuid': template_json.get('uuid'),
                      'name': template_json.get('name'),
                      'description': template_json.get('description')}
+
+
+@app.route("/project/<project_id>", methods=["GET"])
+def datasets_by_project_id(project_id):
+
+    #1 - call discover to get awards on all datasets (let put a very high limit to make sure we do not miss any)
+
+    req = requests.get('{}/search/records?limit=1000&offset=0&model=summary'.format(Config.DISCOVER_API_HOST))
+
+    json = req.json()['records']
+
+    #2 - filter response to retain only awards with project_id
+    result = filter(lambda x : x['properties']['hasAwardNumber'] == project_id, json)
+
+    ids = map(lambda x: str(x['datasetId']), result)
+
+    comma=','
+
+    list_ids = comma.join(ids)
+
+    #3 - get the datasets from the list of ids from #2
+
+    if len(list_ids) > 0:
+        return requests.get('{}/datasets?ids={}'.format(Config.DISCOVER_API_HOST, list_ids))
+    else:
+        return
+
+
+

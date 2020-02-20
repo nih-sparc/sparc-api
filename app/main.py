@@ -150,9 +150,9 @@ def datasets_by_project_id(project_id):
 
     ids = map(lambda x: str(x['datasetId']), result)
 
-    comma=','
+    separator='&ids='
 
-    list_ids = comma.join(ids)
+    list_ids = separator.join(ids)
 
     #3 - get the datasets from the list of ids from #2
 

@@ -30,6 +30,9 @@ s3 = boto3.client('s3',
                   region_name='us-east-1'
                   )
 
+@app.errorhandler(404)
+def resource_not_found(e):
+    return jsonify(error=str(e)), 404
 
 # @app.before_first_request
 # def connect_to_blackfynn():
@@ -159,7 +162,7 @@ def datasets_by_project_id(project_id):
     if len(list_ids) > 0:
         return requests.get('{}/datasets?ids={}'.format(Config.DISCOVER_API_HOST, list_ids)).json()
     else:
-        return ""
+        abort(404, description="Resource not found")
 
 
 

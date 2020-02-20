@@ -159,7 +159,7 @@ def datasets_by_project_id(project_id):
     if len(list_ids) > 0:
         return requests.get('{}/datasets?ids={}'.format(Config.DISCOVER_API_HOST, list_ids)).json()
     else:
-        return
+        return ""
 
 
 

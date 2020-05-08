@@ -9,6 +9,7 @@ from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 
 from app.config import Config
+
 # from blackfynn import Blackfynn
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender

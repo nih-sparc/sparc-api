@@ -1,9 +1,11 @@
 # Third-party imports...
-from nose.tools import assert_equals
 import json
+
+from nose.tools import assert_equals
 
 # Local imports...
 from app.main import health
+
 
 def test_request_response():
     response = health()

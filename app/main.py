@@ -86,7 +86,6 @@ def contact():
 
 # Download a file from S3
 @app.route("/download")
-@cross_origin()
 def create_presigned_url(expiration=3600):
     bucket_name = "blackfynn-discover-use1"
     key = request.args.get("key")

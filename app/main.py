@@ -1,5 +1,8 @@
 import json
+import base64
 import logging
+from threading import Lock
+from datetime import datetime, timedelta
 
 import boto3
 import requests
@@ -34,6 +37,35 @@ s3 = boto3.client(
     aws_secret_access_key=Config.SPARC_PORTAL_AWS_SECRET,
     region_name="us-east-1",
 )
+
+biolucida_lock = Lock()
+
+
+class Biolucida(object):
+    _token = ''
+    _expiry_date = datetime.now() + timedelta(999999)
+    _pending_authentication = False
+
+    @staticmethod
+    def set_token(value):
+        Biolucida._token = value
+
+    def token(self):
+        return self._token
+
+    @staticmethod
+    def set_expiry_date(value):
+        Biolucida._expiry_date = value
+
+    def expiry_date(self):
+        return self._expiry_date
+
+    @staticmethod
+    def set_pending_authentication(value):
+        Biolucida._pending_authentication = value
+
+    def pending_authentication(self):
+        return self._pending_authentication
 
 
 @app.errorhandler(404)
@@ -186,3 +218,52 @@ def datasets_by_project_id(project_id):
         ).json()
     else:
         abort(404, description="Resource not found")
+
+
+@app.route("/thumbnail/<image_id>", methods=["GET"])
+def thumbnail_by_image_id(image_id, recursive_call=False):
+    bl = Biolucida()
+
+    with biolucida_lock:
+        if not bl.token():
+            authenticate_biolucida()
+
+    url = Config.BIOLUCIDA_ENDPOINT + "/thumbnail/{0}".format(image_id)
+    headers = {
+        'token': bl.token(),
+    }
+    response = requests.request("GET", url, headers=headers)
+    encoded_content = base64.b64encode(response.content)
+    if encoded_content == b'eyJzdGF0dXMiOiJBZG1pbiB1c2VyIGF1dGhlbnRpY2F0aW9uIHJlcXVpcmVkIHRvIHZpZXcvZWRpdCB1c2VyIGluZm8uIFlvdSBtYXkgbmVlZCB0byBsb2cgb3V0IGFuZCBsb2cgYmFjayBpbiB0byByZXZlcmlmeSB5b3VyIGNyZWRlbnRpYWxzLiJ9'\
+            and not recursive_call:
+        # Authentication failure, try again after resetting token.
+        with biolucida_lock:
+            bl.set_token('')
+
+        encoded_content = thumbnail_by_image_id(image_id, True)
+
+    return encoded_content
+
+
+@app.route("/image/<image_id>", methods=["GET"])
+def image_info_by_image_id(image_id):
+    url = Config.BIOLUCIDA_ENDPOINT + "/image/{0}".format(image_id)
+    response = requests.request("GET", url)
+    return response.json()
+
+
+def authenticate_biolucida():
+    bl = Biolucida()
+    url = Config.BIOLUCIDA_ENDPOINT + "/authenticate"
+
+    payload = {'username': Config.BIOLUCIDA_USERNAME,
+               'password': Config.BIOLUCIDA_PASSWORD,
+               'token': ''}
+    files = [
+    ]
+    headers = {}
+
+    response = requests.request("POST", url, headers=headers, data=payload, files=files)
+    if response.status_code == requests.codes.ok:
+        content = response.json()
+        bl.set_token(content['token'])

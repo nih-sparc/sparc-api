@@ -1,5 +1,4 @@
 import unittest
-from datetime import datetime, timedelta
 
 from app.main import authenticate_biolucida, thumbnail_by_image_id, image_info_by_image_id
 from app.main import Biolucida

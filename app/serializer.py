@@ -1,23 +1,29 @@
 from marshmallow import Schema, fields
 
+
 class ContactRequestSchema(Schema):
     name = fields.Str()
     email = fields.Str()
     message = fields.Str()
 
+
 class ListservSubscribeSchema(Schema):
     name = fields.Str()
     email = fields.Str()
 
+
 class TagSchema(Schema):
     tag = fields.Str()
+
 
 class TermSchema(Schema):
     term = fields.Str()
 
+
 class ModelCountSchema(Schema):
     model_name = fields.Str(attribute="model_name")
     count = fields.Int()
+
 
 class DatasetSchema(Schema):
     id = fields.Int()
@@ -42,6 +48,7 @@ class DatasetSchema(Schema):
     createdAt = fields.Str(attribute="created_at")
     updatedAt = fields.Str(attribute="updated_at")
 
+
 class FileSchema(Schema):
     name = fields.Str()
     datasetId = fields.Int(attribute="dataset_id")
@@ -50,11 +57,13 @@ class FileSchema(Schema):
     uri = fields.Str()
     createdAt = fields.Str(attribute="created_at")
 
+
 class PaginatedFileResponseSchema(Schema):
     limit = fields.Int()
     offset = fields.Int()
     files = fields.List(fields.Nested(FileSchema))
     totalCount = fields.Int(attribute="total_count")
+
 
 class PaginatedDatasetResponseSchema(Schema):
     limit = fields.Int()

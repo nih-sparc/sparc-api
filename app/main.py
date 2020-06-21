@@ -133,8 +133,8 @@ def create_presigned_url(expiration=3600):
 # operation. This is used by scaffoldvuer and its 
 # important to keep the relative <path> for accessing
 # other required files.
-@app.route("/object-resource/<path:path>")
-def download_download_url(path):
+@app.route("/s3-resource/<path:path>")
+def direct_download_url(path):
     bucket_name = "blackfynn-discover-use1"
     response = s3.get_object(
         Bucket=bucket_name,

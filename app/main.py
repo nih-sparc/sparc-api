@@ -129,6 +129,20 @@ def create_presigned_url(expiration=3600):
 
     return response
 
+# Reverse proxy for objects from S3, a simple get object
+# operation. This is used by scaffoldvuer and its 
+# important to keep the relative <path> for accessing
+# other required files.
+@app.route("/s3-resource/<path:path>")
+def direct_download_url(path):
+    bucket_name = "blackfynn-discover-use1"
+    response = s3.get_object(
+        Bucket=bucket_name,
+        Key=path,
+        RequestPayer="requester",
+    )
+    resource = response["Body"].read()
+    return resource
 
 @app.route("/sim/dataset/<id>")
 def sim_dataset(id):

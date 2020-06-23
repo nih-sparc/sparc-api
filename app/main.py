@@ -129,6 +129,7 @@ def create_presigned_url(expiration=3600):
 
     return response
 
+
 # Reverse proxy for objects from S3, a simple get object
 # operation. This is used by scaffoldvuer and its 
 # important to keep the relative <path> for accessing
@@ -143,6 +144,7 @@ def direct_download_url(path):
     )
     resource = response["Body"].read()
     return resource
+
 
 @app.route("/sim/dataset/<id>")
 def sim_dataset(id):

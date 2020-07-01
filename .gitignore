@@ -5,7 +5,7 @@ node_modules
 
 venv/
 env/
-.env
+*.env
 .nuxt
 
 *.pyc

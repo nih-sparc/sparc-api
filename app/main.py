@@ -8,7 +8,7 @@ import json
 import requests
 import logging
 from flask_marshmallow import Marshmallow
-# from blackfynn import Blackfynn
+from blackfynn import Blackfynn
 from app.serializer import ContactRequestSchema
 # from pymongo import MongoClient
 # import logging
@@ -164,5 +164,21 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
+@app.route("/get_email/<int:owner_id>", methods=["GET"])
+def get_owner_email(owner_id):
+    bf = Blackfynn(
+        api_token=Config.BLACKFYNN_API_TOKEN,
+        api_secret=Config.BLACKFYNN_API_SECRET,
+        env_override=False,
+        host=Config.BLACKFYNN_API_HOST
+    )
+    
+    # Filter to find user based on provided int id
+    org = bf._api._organization
+    members = bf._api.organizations.get_members(org)
+    res = list(filter(lambda x: x.int_id == owner_id, members))
 
-
+    if not res:
+        abort(404, description="Owner not found")
+    else:
+        return res[0].email

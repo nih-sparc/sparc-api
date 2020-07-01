@@ -24,5 +24,6 @@ If you do not have the NIH SPARC portal user environment variables setup already
 After the previous steps or if you already have those environment variables setup, run:
 
 ```
+pip install -r requirements-dev.txt
 pytest
 ```

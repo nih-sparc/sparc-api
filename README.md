@@ -13,3 +13,16 @@ python3 -m venv ./venv
 pip install -r requirements.txt
 gunicorn main:app
 ```
+
+# Testing
+
+If you do not have the NIH SPARC portal user environment variables setup already:
+
+1. Create a .env file with the configuration variables of the NIH SPARC portal user or add them to your bash profile.
+2. If you created a separate file, run source {fileName}.env.
+
+After the previous steps or if you already have those environment variables setup, run:
+
+```
+pytest
+```

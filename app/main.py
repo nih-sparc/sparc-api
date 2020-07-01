@@ -250,6 +250,8 @@ def thumbnail_by_image_id(image_id, recursive_call=False):
     }
     response = requests.request("GET", url, headers=headers)
     encoded_content = base64.b64encode(response.content)
+    # Response from this endpoint is binary on success so the easiest thing to do is
+    # check for an error response in encoded form.
     if encoded_content == b'eyJzdGF0dXMiOiJBZG1pbiB1c2VyIGF1dGhlbnRpY2F0aW9uIHJlcXVpcmVkIHRvIHZpZXcvZWRpdCB1c2VyIGluZm8uIFlvdSBtYXkgbmVlZCB0byBsb2cgb3V0IGFuZCBsb2cgYmFjayBpbiB0byByZXZlcmlmeSB5b3VyIGNyZWRlbnRpYWxzLiJ9'\
             and not recursive_call:
         # Authentication failure, try again after resetting token.

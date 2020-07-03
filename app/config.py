@@ -24,6 +24,7 @@ class Config(object):
     SPARC_PORTAL_AWS_SECRET = os.environ.get("SPARC_PORTAL_USER_SECRET")
     OSPARC_HOST = os.environ.get("OSPARC_HOST", "https://osparc.io")
     AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+    BIOLUCIDA_ENDPOINT = os.environ.get("BIOLUCIDA_ENDPOINT", "https://sparc.biolucida.net/api/v1")
     BIOLUCIDA_USERNAME = os.environ.get("BIOLUCIDA_USERNAME", "major-user")
     BIOLUCIDA_PASSWORD = os.environ.get("BIOLUCIDA_PASSWORD", "local-password")
     KNOWLEDGEBASE_KEY = os.environ.get("KNOWLEDGEBASE_KEY", "secret-key")

@@ -12,3 +12,5 @@ env/
 __pycache__/
 .idea
 *.iml
+
+tests/__init__.py

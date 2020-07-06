@@ -10,7 +10,7 @@ from botocore.exceptions import ClientError
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
-
+from blackfynn import Blackfynn
 from app.config import Config
 
 # from blackfynn import Blackfynn
@@ -72,16 +72,15 @@ class Biolucida(object):
 def resource_not_found(e):
     return jsonify(error=str(e)), 404
 
-
-# @app.before_first_request
-# def connect_to_blackfynn():
-#     global bf
-#     bf = Blackfynn(
-#         api_token=Config.BLACKFYNN_API_TOKEN,
-#         api_secret=Config.BLACKFYNN_API_SECRET,
-#         env_override=False,
-#         host=Config.BLACKFYNN_API_HOST
-#     )
+@app.before_first_request
+def connect_to_blackfynn():
+    global bf
+    bf = Blackfynn(
+        api_token=Config.BLACKFYNN_API_TOKEN,
+        api_secret=Config.BLACKFYNN_API_SECRET,
+        env_override=False,
+        host=Config.BLACKFYNN_API_HOST
+    )
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -235,6 +234,17 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
+@app.route("/get_email/<int:owner_id>", methods=["GET"])
+def get_owner_email(owner_id):
+    # Filter to find user based on provided int id
+    org = bf._api._organization
+    members = bf._api.organizations.get_members(org)
+    res = [x for x in members if x.int_id == owner_id]
+
+    if not res:
+        abort(404, description="Owner not found")
+    else:
+        return jsonify({"email": res[0].email})
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):

@@ -81,7 +81,6 @@ def connect_to_blackfynn():
         env_override=False,
         host=Config.BLACKFYNN_API_HOST
     )
-    print('connected to api')
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -239,12 +238,9 @@ def datasets_by_project_id(project_id):
 def get_owner_email(owner_id):
     # Filter to find user based on provided int id
     org = bf._api._organization
-    print(f"Org: {org}")
     members = bf._api.organizations.get_members(org)
-    print(f"Members: {members}")
     res = [x for x in members if x.int_id == owner_id]
-    print(f"Owner: {res}")
-    print(f"Owner ID: {owner_id}")
+
     if not res:
         abort(404, description="Owner not found")
     else:

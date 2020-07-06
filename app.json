@@ -3,7 +3,7 @@
     "test": {
       "scripts": {
         "test-setup": "pip install -r requirements-dev.txt",
-        "test": "pytest"
+        "test": "pytest -s"
       }
     }
   }

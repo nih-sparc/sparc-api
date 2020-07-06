@@ -1,2 +1,2 @@
+from .main import app
 from .config import Config
-from main import app

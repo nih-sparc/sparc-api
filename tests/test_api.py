@@ -14,6 +14,7 @@ def test_get_owner_email(client):
   portal_user_email = 'nih-data-portal@blackfynn.com'
 
   r = client.get(f"/get_owner_email/{portal_user_id}")
+  assert r.status_code == 200
   assert r.get_json()['email'] == portal_user_email
 
   r = client.get(f"/get_owner_email/{999999}")

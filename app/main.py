@@ -234,7 +234,7 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
-@app.route("/get_email/<int:owner_id>", methods=["GET"])
+@app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
     # Filter to find user based on provided int id
     org = bf._api._organization

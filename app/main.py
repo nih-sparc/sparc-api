@@ -248,10 +248,7 @@ def get_owner_email(owner_id):
 def thumbnail_by_image_id(image_id, recursive_call=False):
     bl = Biolucida()
 
-    print('=====================')
-    print('thumbnail:', image_id)
     with biolucida_lock:
-        print(bl.token())
         if not bl.token():
             authenticate_biolucida()
 
@@ -259,11 +256,9 @@ def thumbnail_by_image_id(image_id, recursive_call=False):
     headers = {
         'token': bl.token(),
     }
-    print(url)
-    print(headers)
+
     response = requests.request("GET", url, headers=headers)
     encoded_content = base64.b64encode(response.content)
-    print(encoded_content)
     # Response from this endpoint is binary on success so the easiest thing to do is
     # check for an error response in encoded form.
     if encoded_content == b'eyJzdGF0dXMiOiJBZG1pbiB1c2VyIGF1dGhlbnRpY2F0aW9uIHJlcXVpcmVkIHRvIHZpZXcvZWRpdCB1c2VyIGluZm8uIFlvdSBtYXkgbmVlZCB0byBsb2cgb3V0IGFuZCBsb2cgYmFjayBpbiB0byByZXZlcmlmeSB5b3VyIGNyZWRlbnRpYWxzLiJ9'\
@@ -295,8 +290,6 @@ def authenticate_biolucida():
     ]
     headers = {}
 
-    print('about to post to:', url)
-    print(payload)
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
     if response.status_code == requests.codes.ok:
         content = response.json()

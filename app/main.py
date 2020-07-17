@@ -23,7 +23,7 @@ app = Flask(__name__)
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV
 
-cors = CORS(app, resources={r"*": {"origins": Config.SPARC_APP_HOST}})
+CORS(app)
 
 ma = Marshmallow(app)
 email_sender = EmailSender()

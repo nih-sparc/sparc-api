@@ -18,7 +18,6 @@ from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
 
 # from pymongo import MongoClient
-# import logging
 
 
 app = Flask(__name__)

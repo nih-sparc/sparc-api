@@ -8,9 +8,7 @@ class BiolucidaTestCase(unittest.TestCase):
 
     def test_authenticate(self):
         bl = Biolucida()
-
         authenticate_biolucida()
-
         self.assertNotEqual('', bl.token())
 
     def test_get_image_info(self):

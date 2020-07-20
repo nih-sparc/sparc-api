@@ -10,7 +10,7 @@ from botocore.exceptions import ClientError
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
-
+from blackfynn import Blackfynn
 from app.config import Config
 
 # from blackfynn import Blackfynn
@@ -18,14 +18,12 @@ from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
 
 # from pymongo import MongoClient
-# import logging
-
 
 app = Flask(__name__)
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV
 
-cors = CORS(app, resources={r"*": {"origins": Config.SPARC_APP_HOST}})
+CORS(app)
 
 ma = Marshmallow(app)
 email_sender = EmailSender()
@@ -72,16 +70,15 @@ class Biolucida(object):
 def resource_not_found(e):
     return jsonify(error=str(e)), 404
 
-
-# @app.before_first_request
-# def connect_to_blackfynn():
-#     global bf
-#     bf = Blackfynn(
-#         api_token=Config.BLACKFYNN_API_TOKEN,
-#         api_secret=Config.BLACKFYNN_API_SECRET,
-#         env_override=False,
-#         host=Config.BLACKFYNN_API_HOST
-#     )
+@app.before_first_request
+def connect_to_blackfynn():
+    global bf
+    bf = Blackfynn(
+        api_token=Config.BLACKFYNN_API_TOKEN,
+        api_secret=Config.BLACKFYNN_API_SECRET,
+        env_override=False,
+        host=Config.BLACKFYNN_API_HOST
+    )
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -137,6 +134,17 @@ def create_presigned_url(expiration=3600):
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
     bucket_name = "blackfynn-discover-use1"
+
+    head_response = s3.head_object(
+        Bucket=bucket_name,
+        Key=path,
+        RequestPayer="requester",
+    )
+
+    content_length = head_response.get('ContentLength', None)
+    if content_length and content_length > 20971520:  # 20 MB
+        return abort(413, description=f"File too big to download: {content_length}")
+
     response = s3.get_object(
         Bucket=bucket_name,
         Key=path,
@@ -235,6 +243,17 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
+@app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
+def get_owner_email(owner_id):
+    # Filter to find user based on provided int id
+    org = bf._api._organization
+    members = bf._api.organizations.get_members(org)
+    res = [x for x in members if x.int_id == owner_id]
+
+    if not res:
+        abort(404, description="Owner not found")
+    else:
+        return jsonify({"email": res[0].email})
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):
@@ -248,6 +267,7 @@ def thumbnail_by_image_id(image_id, recursive_call=False):
     headers = {
         'token': bl.token(),
     }
+
     response = requests.request("GET", url, headers=headers)
     encoded_content = base64.b64encode(response.content)
     # Response from this endpoint is binary on success so the easiest thing to do is

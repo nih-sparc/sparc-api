@@ -143,7 +143,7 @@ def direct_download_url(path):
 
     content_length = head_response.get('ContentLength', None)
     if content_length and content_length > 20971520:  # 20 MB
-        return
+        return abort(413, description=f"File too big to download: {content_length}")
 
     response = s3.get_object(
         Bucket=bucket_name,

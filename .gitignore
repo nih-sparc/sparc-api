@@ -5,10 +5,12 @@ node_modules
 
 venv/
 env/
-.env
+*.env
 .nuxt
 
 *.pyc
 __pycache__/
 .idea
 *.iml
+
+tests/__init__.py

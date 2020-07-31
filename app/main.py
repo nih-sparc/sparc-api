@@ -13,11 +13,11 @@ from flask_marshmallow import Marshmallow
 from blackfynn import Blackfynn
 from app.config import Config
 
-# from blackfynn import Blackfynn
+from blackfynn import Blackfynn
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
 from app.process_kb_results import process_kb_results_recursive
-# from pymongo import MongoClient
+from pymongo import MongoClient
 
 app = Flask(__name__)
 # set environment variable
@@ -29,12 +29,12 @@ ma = Marshmallow(app)
 email_sender = EmailSender()
 mongo = None
 bf = None
-# s3 = boto3.client(
-#     "s3",
-#     aws_access_key_id=Config.SPARC_PORTAL_AWS_KEY,
-#     aws_secret_access_key=Config.SPARC_PORTAL_AWS_SECRET,
-#     region_name="us-east-1",
-# )
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=Config.SPARC_PORTAL_AWS_KEY,
+    aws_secret_access_key=Config.SPARC_PORTAL_AWS_SECRET,
+    region_name="us-east-1",
+)
 
 biolucida_lock = Lock()
 
@@ -70,20 +70,20 @@ class Biolucida(object):
 def resource_not_found(e):
     return jsonify(error=str(e)), 404
 
-# @app.before_first_request
-# def connect_to_blackfynn():
-#     global bf
-#     bf = Blackfynn(
-#         api_token=Config.BLACKFYNN_API_TOKEN,
-#         api_secret=Config.BLACKFYNN_API_SECRET,
-#         env_override=False,
-#         host=Config.BLACKFYNN_API_HOST
-#     )
+@app.before_first_request
+def connect_to_blackfynn():
+    global bf
+    bf = Blackfynn(
+        api_token=Config.BLACKFYNN_API_TOKEN,
+        api_secret=Config.BLACKFYNN_API_SECRET,
+        env_override=False,
+        host=Config.BLACKFYNN_API_HOST
+    )
 
-# @app.before_first_request
-# def connect_to_mongodb():
-#     global mongo
-#     mongo = MongoClient(Config.MONGODB_URI)
+@app.before_first_request
+def connect_to_mongodb():
+    global mongo
+    mongo = MongoClient(Config.MONGODB_URI)
 
 
 @app.route("/health")
@@ -191,7 +191,7 @@ def get_banner(dataset_id):
         }
         response = requests.get(f'https://api.blackfynn.io/datasets/{dataset_id}', params=params)
         discover_id = response.json()['publication']['publishedDataset']['id']
-        response = requests.get(f'https://api.blackfynn.io/discover/datasets/{discover_id}')
+        response = requests.get(f'{Config.DISCOVER_API_HOST}/datasets/{discover_id}')
         return response.json()
     except requests.exceptions.HTTPError as err:
         logging.error(err)

@@ -226,7 +226,7 @@ def datasets_by_project_id(project_id):
     json = req.json()["records"]
 
     # 2 - filter response to retain only awards with project_id
-    result = filter(lambda x: x["properties"]["hasAwardNumber"] == project_id, json)
+    result = filter(lambda x: "hasAwardNumber" in x["properties"] and x["properties"]["hasAwardNumber"] == project_id, json)
 
     ids = map(lambda x: str(x["datasetId"]), result)
 

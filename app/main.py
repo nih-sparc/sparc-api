@@ -174,8 +174,10 @@ def kb_search(query):
         logging.error(err)
         return json.dumps({'error': err})
 
-@app.route("/facet-search/<term>/<query>")
-def facet_search(term, query):
+
+@app.route("/facet-search/<term>/<facet>", defaults={'query': None})
+@app.route("/facet-search/<term>/<facet>/<query>")
+def facet_search(term, facet, query):
     type_map = {
         'species': ['organisms.subject.species.name', 'organisms.sample.species.name'],
         'gender': ['subjects.attributes.sex.value', 'samples.attributes.sex.value'],
@@ -192,18 +194,19 @@ def facet_search(term, query):
                 {
                     'term': {}
                 }
-
-
-
           }
       }
     }
     results = []
     for path in type_map[term]:
-        data['query']['bool']['filter']['term'] = {f'{path}': f'{query}'}
+        data['query']['bool']['filter']['term'] = {f'{path}': f'{facet}'}
+        params = {}
+        if query is None:
+            params = {'q': query}
         try:
             response = requests.get(
                 f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+                params=params,
                 json=data)
             results = process_kb_results_recursive(response.json())
         except requests.exceptions.HTTPError as err:

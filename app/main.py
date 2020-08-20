@@ -174,6 +174,85 @@ def kb_search(query):
         logging.error(err)
         return json.dumps({'error': err})
 
+@app.route("/facet-search/<term>/<query>")
+def facet_search(term, query):
+    type_map = {
+        'species': ['organisms.subject.species.name', 'organisms.sample.species.name'],
+        'gender': ['subjects.attributes.sex.value', 'samples.attributes.sex.value'],
+        'anatomy': ['anatomy.sampleSpecimenLocation.name']
+    }
+    data = {
+      "size": 20,
+      "from": 0,
+      "query": {
+          "bool": {
+              "must": [],
+              "should": [],
+              "filter":
+                {
+                    'term': {}
+                }
+
+
+
+          }
+      }
+    }
+    results = []
+    for path in type_map[term]:
+        data['query']['bool']['filter']['term'] = {f'{path}': f'{query}'}
+        try:
+            response = requests.get(
+                f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+                json=data)
+            results = process_kb_results_recursive(response.json())
+        except requests.exceptions.HTTPError as err:
+            logging.error(err)
+            return json.dumps({'error': err})
+    return results
+
+@app.route("/get-facets/<type>")
+def get_facets(type):
+    type_map = {
+        'species': ['organisms.subject.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
+        'gender': ['subjects.attributes.sex.value', 'samples.attributes.sex.value'],
+        'anatomy': ['anatomy.sampleSpecimenLocation.name']
+    }
+
+    data = {
+        "from": 0,
+        "size": 0,
+        "aggregations": {
+            f"{type}": {
+                "terms": {
+                    "field": "",
+                    "size": 200,
+                    "order": [
+                        {
+                            "_count": "desc"
+                        },
+                        {
+                            "_key": "asc"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+    results = []
+    for path in type_map[type]:
+        data['aggregations'][f'{type}']['terms']['field'] = path
+        response = requests.get(
+            f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        results.append(response.json())
+
+    terms = []
+    for result in results:
+        terms += result['aggregations'][f'{type}']['buckets']
+
+    return json.dumps(terms)
+
 
 @app.route("/banner/<dataset_id>")
 def get_banner(dataset_id):

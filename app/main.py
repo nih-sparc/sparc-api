@@ -70,15 +70,15 @@ class Biolucida(object):
 def resource_not_found(e):
     return jsonify(error=str(e)), 404
 
-@app.before_first_request
-def connect_to_blackfynn():
-    global bf
-    bf = Blackfynn(
-        api_token=Config.BLACKFYNN_API_TOKEN,
-        api_secret=Config.BLACKFYNN_API_SECRET,
-        env_override=False,
-        host=Config.BLACKFYNN_API_HOST
-    )
+# @app.before_first_request
+# def connect_to_blackfynn():
+#     global bf
+#     bf = Blackfynn(
+#         api_token=Config.BLACKFYNN_API_TOKEN,
+#         api_secret=Config.BLACKFYNN_API_SECRET,
+#         env_override=False,
+#         host=Config.BLACKFYNN_API_HOST
+#     )
 
 @app.before_first_request
 def connect_to_mongodb():
@@ -164,6 +164,7 @@ def sim_dataset(id):
         return jsonify(json)
 
 
+@app.route("/search/", defaults={'query': ''})
 @app.route("/search/<query>")
 def kb_search(query):
     try:
@@ -173,14 +174,6 @@ def kb_search(query):
         logging.error(err)
         return json.dumps({'error': err})
 
-@app.route("/search/")
-def kb_search_all():
-    try:
-        response = requests.get(f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}')
-        return process_kb_results_recursive(response.json())
-    except requests.exceptions.HTTPError as err:
-        logging.error(err)
-        return json.dumps({'error': err})
 
 @app.route("/banner/<dataset_id>")
 def get_banner(dataset_id):

@@ -175,9 +175,13 @@ def kb_search(query):
         return json.dumps({'error': err})
 
 
-@app.route("/facet-search/<term>/<facet>", defaults={'query': None})
-@app.route("/facet-search/<term>/<facet>/<query>")
-def facet_search(term, facet, query):
+@app.route("/filter-search/", defaults={'query': None})
+@app.route("/filter-search/<query>/")
+def filter_search(query):
+    term = request.args.get('term')
+    facet = request.args.get('facet')
+    print('term', term)
+    print('facet', facet)
     type_map = {
         'species': ['organisms.subject.species.name', 'organisms.sample.species.name'],
         'gender': ['subjects.attributes.sex.value', 'samples.attributes.sex.value'],
@@ -198,20 +202,32 @@ def facet_search(term, facet, query):
       }
     }
     results = []
-    for path in type_map[term]:
-        data['query']['bool']['filter']['term'] = {f'{path}': f'{facet}'}
-        params = {}
-        if query is None:
+    if term is not None and facet is not None:
+        data['query']['bool']['filter']['term'] = {f'{type_map[term][0]}': f'{facet}'}
+    else:
+        data = {}
+    params = {}
+    if query is not None:
+        if term is None:
             params = {'q': query}
-        try:
-            response = requests.get(
-                f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
-                params=params,
-                json=data)
-            results = process_kb_results_recursive(response.json())
-        except requests.exceptions.HTTPError as err:
-            logging.error(err)
-            return json.dumps({'error': err})
+        else:
+            data['query']['bool']['must'] = {
+              "query_string": {
+                "query": f"{query}",
+                "default_operator": "and",
+                "lenient": "true",
+                "type": "best_fields"
+              }
+            }
+    try:
+        response = requests.get(
+            f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            params=params,
+            json=data)
+        results = process_kb_results_recursive(response.json())
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
     return results
 
 @app.route("/get-facets/<type>")

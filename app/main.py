@@ -17,7 +17,7 @@ from blackfynn import Blackfynn
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
 from app.process_kb_results import process_kb_results_recursive
-from pymongo import MongoClient
+# from pymongo import MongoClient
 
 app = Flask(__name__)
 # set environment variable
@@ -70,20 +70,20 @@ class Biolucida(object):
 def resource_not_found(e):
     return jsonify(error=str(e)), 404
 
-# @app.before_first_request
-# def connect_to_blackfynn():
-#     global bf
-#     bf = Blackfynn(
-#         api_token=Config.BLACKFYNN_API_TOKEN,
-#         api_secret=Config.BLACKFYNN_API_SECRET,
-#         env_override=False,
-#         host=Config.BLACKFYNN_API_HOST
-#     )
-
 @app.before_first_request
-def connect_to_mongodb():
-    global mongo
-    mongo = MongoClient(Config.MONGODB_URI)
+def connect_to_blackfynn():
+    global bf
+    bf = Blackfynn(
+        api_token=Config.BLACKFYNN_API_TOKEN,
+        api_secret=Config.BLACKFYNN_API_SECRET,
+        env_override=False,
+        host=Config.BLACKFYNN_API_HOST
+    )
+
+# @app.before_first_request
+# def connect_to_mongodb():
+#     global mongo
+#     mongo = MongoClient(Config.MONGODB_URI)
 
 
 @app.route("/health")

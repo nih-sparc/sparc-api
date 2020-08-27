@@ -31,7 +31,6 @@ ma = Marshmallow(app)
 email_sender = EmailSender()
 mongo = None
 bf = None
-session_token = None
 s3 = boto3.client(
     "s3",
     aws_access_key_id=Config.SPARC_PORTAL_AWS_KEY,
@@ -85,26 +84,6 @@ def connect_to_blackfynn():
         host=Config.BLACKFYNN_API_HOST
     )
 
-
-def get_bf_session_token():
-    payload = {'tokenId': Config.BLACKFYNN_API_TOKEN, 'secret': Config.BLACKFYNN_API_SECRET}
-    response = requests.request("POST", 'https://api.blackfynn.io/account/api/session',json=payload)
-    global session_token
-    session_token = response.json()['session_token']
-    print('new token', session_token)
-    return
-
-
-@app.before_first_request
-def set_token_schedule():
-    get_bf_session_token()
-    schedule.every().hour.do(get_bf_session_token)
-    return
-
-@app.before_request
-def check_schedule():
-    schedule.run_pending()
-    return
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -304,7 +283,7 @@ def get_banner(dataset_id):
     try:
         params = {
             'includePublishedDataset': True,
-            'api_key': session_token
+            'api_key': bf._api.token
         }
         response = requests.get(f'https://api.blackfynn.io/datasets/{dataset_id}', params=params)
         discover_id = response.json()['publication']['publishedDataset']['id']

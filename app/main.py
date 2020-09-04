@@ -180,11 +180,16 @@ def kb_search(query):
         return json.dumps({'error': err})
 
 
-@app.route("/filter-search/", defaults={'query': None})
+@app.route("/filter-search/", defaults={'query': ''})
 @app.route("/filter-search/<query>/")
 def filter_search(query):
     term = request.args.get('term')
     facet = request.args.get('facet')
+    size = request.args.get('size')
+    start = request.args.get('start')
+    if size is None or start is None:
+        size = 20
+        start = 0
     print('term', term)
     print('facet', facet)
     type_map = {
@@ -193,8 +198,8 @@ def filter_search(query):
         'anatomy': ['anatomy.sampleSpecimenLocation.name']
     }
     data = {
-      "size": 20,
-      "from": 0,
+      "size": size,
+      "from": start,
       "query": {
           "bool": {
               "must": [],
@@ -210,9 +215,9 @@ def filter_search(query):
     if term is not None and facet is not None:
         data['query']['bool']['filter']['term'] = {f'{type_map[term][0]}': f'{facet}'}
     else:
-        data = {}
+        data['query']['bool']['filter'] = []
     params = {}
-    if query is not None:
+    if query is not '':
         if term is None:
             params = {'q': query}
         else:
@@ -225,6 +230,7 @@ def filter_search(query):
               }
             }
     try:
+        print(data)
         response = requests.get(
             f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             params=params,

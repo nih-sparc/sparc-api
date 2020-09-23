@@ -207,12 +207,12 @@ def datasets_by_project_id(project_id):
     # 1 - call discover to get awards on all datasets (let put a very high limit to make sure we do not miss any)
 
     req = requests.get(
-        "{}/search/records?limit=1000&offset=0&model=summary".format(
+        "{}/search/records?limit=1000&offset=0&model=award".format(
             Config.DISCOVER_API_HOST
         )
     )
 
-    json = req.json()["awards"]
+    json = req.json()["records"]
 
     # 2 - filter response to retain only awards with project_id
     result = filter(lambda x: "award_id" in x["properties"] and x["properties"]["award_id"] == project_id, json)

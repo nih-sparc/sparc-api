@@ -22,7 +22,7 @@ def test_get_owner_email(client):
 
 def test_get_datasets_by_project(client):
   # SPARC Portal project info
-  portal_project_id = 'OT2OD023848'
+  portal_project_id = 'OT2OD025340'
 
   r = client.get(f"/project/{999999}")
   assert r.status_code == 404

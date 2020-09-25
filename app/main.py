@@ -173,7 +173,7 @@ def sim_dataset(id):
 @app.route("/search/<query>")
 def kb_search(query):
     try:
-        response = requests.get(f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?q={query}&api_key={Config.KNOWLEDGEBASE_KEY}')
+        response = requests.get(f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?q={query}&api_key={Config.KNOWLEDGEBASE_KEY}')
         return process_kb_results_recursive(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
@@ -232,7 +232,7 @@ def filter_search(query):
     try:
         print(data)
         response = requests.get(
-            f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             params=params,
             json=data)
         results = process_kb_results_recursive(response.json())
@@ -273,7 +273,7 @@ def get_facets(type):
     for path in type_map[type]:
         data['aggregations'][f'{type}']['terms']['field'] = path
         response = requests.get(
-            f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
         results.append(response.json())
 

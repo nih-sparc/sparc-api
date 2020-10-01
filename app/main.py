@@ -81,7 +81,6 @@ def connect_to_blackfynn():
         api_token=Config.BLACKFYNN_API_TOKEN,
         api_secret=Config.BLACKFYNN_API_SECRET,
         env_override=False,
-        host=Config.BLACKFYNN_API_HOST
     )
 
 
@@ -194,8 +193,8 @@ def filter_search(query):
     print('facet', facet)
     type_map = {
         'species': ['organisms.subject.species.name', 'organisms.sample.species.name'],
-        'gender': ['subjects.attributes.sex.value', 'samples.attributes.sex.value'],
-        'anatomy': ['anatomy.sampleSpecimenLocation.name']
+        'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
+        'genotype': ['anatomy.organ.name.aggregate']
     }
     data = {
       "size": size,
@@ -245,8 +244,8 @@ def filter_search(query):
 def get_facets(type):
     type_map = {
         'species': ['organisms.subject.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
-        'gender': ['subjects.attributes.sex.value', 'samples.attributes.sex.value'],
-        'anatomy': ['anatomy.sampleSpecimenLocation.name']
+        'gender': ['attributes.subject.sex.value'],
+        'genotype': ['anatomy.organ.name.aggregate']
     }
 
     data = {

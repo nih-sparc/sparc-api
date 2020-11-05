@@ -182,15 +182,15 @@ def kb_search(query):
 @app.route("/filter-search/", defaults={'query': ''})
 @app.route("/filter-search/<query>/")
 def filter_search(query):
-    term = request.args.get('term')
-    facet = request.args.get('facet')
+    terms = request.args.getlist('term')
+    facets = request.args.getlist('facet')
     size = request.args.get('size')
     start = request.args.get('start')
     if size is None or start is None:
         size = 20
         start = 0
-    print('term', term)
-    print('facet', facet)
+    print('term', terms)
+    print('facet', facets)
     type_map = {
         'species': ['organisms.subject.species.name', 'organisms.sample.species.name'],
         'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
@@ -203,33 +203,26 @@ def filter_search(query):
           "bool": {
               "must": [],
               "should": [],
-              "filter":
-                {
-                    'term': {}
-                }
+              "filter": []
           }
       }
     }
-    results = []
-    if term is not None and facet is not None:
-        data['query']['bool']['filter']['term'] = {f'{type_map[term][0]}': f'{facet}'}
-    else:
-        data['query']['bool']['filter'] = []
+    for i, facet in enumerate(facets):
+        if terms[i] is not None and facet is not None:
+            data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}'}})
     params = {}
     if query is not '':
-        if term is None:
-            params = {'q': query}
-        else:
-            data['query']['bool']['must'] = {
-              "query_string": {
-                "query": f"{query}",
-                "default_operator": "and",
-                "lenient": "true",
-                "type": "best_fields"
-              }
-            }
+        data['query']['bool']['must'] = {
+          "query_string": {
+            "query": f"{query}",
+            "default_operator": "and",
+            "lenient": "true",
+            "type": "best_fields"
+          }
+        }
     try:
         print(data)
+        print(params)
         response = requests.get(
             f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             params=params,
@@ -291,9 +284,12 @@ def get_banner(dataset_id):
             'api_key': bf._api.token
         }
         response = requests.get(f'https://api.blackfynn.io/datasets/{dataset_id}', params=params)
-        discover_id = response.json()['publication']['publishedDataset']['id']
-        response = requests.get(f'{Config.DISCOVER_API_HOST}/datasets/{discover_id}')
-        return response.json()
+        if response.status_code == 200:
+            discover_id = response.json()['publication']['publishedDataset']['id']
+            response = requests.get(f'{Config.DISCOVER_API_HOST}/datasets/{discover_id}')
+            return response.json()
+        else:
+            return jsonify({'error': 'Image not found'}), 500
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return json.dumps({'error': err})

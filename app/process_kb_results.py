@@ -8,6 +8,7 @@ def process_kb_results_recursive(results):
     for i, hit in enumerate(hits):
         output.append({})
         flatten_dict_recursive(hit['_source'], output[i])
+        output[i]['scaffolds'] = getScaffolds(hit)
     return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
 
 
@@ -20,6 +21,12 @@ def flatten_dict_recursive(leveled_dict, output, keyList=[]):
         output[keyList] = leveled_dict
 
 
+def getScaffolds(dataset):
+    scaffolds = []
+    if 'scaffolds' in dataset['_source'].keys():
+        for scaffold in dataset['_source']['scaffolds']:
+            scaffolds.append(scaffold)
+    return scaffolds
 # This function flattens a nested dictionary and preserves lookup keys
 # (currently unused)
 def flatten_dict_recursive_with_lookups(leveled_dict, output, keyList=[], depth=0):

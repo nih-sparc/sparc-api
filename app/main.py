@@ -192,7 +192,7 @@ def filter_search(query):
     print('term', terms)
     print('facet', facets)
     type_map = {
-        'species': ['organisms.subject.species.name', 'organisms.sample.species.name'],
+        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name'],
         'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
         'genotype': ['anatomy.organ.name.aggregate']
     }
@@ -236,7 +236,7 @@ def filter_search(query):
 @app.route("/get-facets/<type>")
 def get_facets(type):
     type_map = {
-        'species': ['organisms.subject.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
+        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
         'gender': ['attributes.subject.sex.value'],
         'genotype': ['anatomy.organ.name.aggregate']
     }

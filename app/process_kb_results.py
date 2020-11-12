@@ -1,14 +1,23 @@
 import json
 from collections.abc import Mapping
 
+attributes = {
+    'scaffolds': ['scaffold'],
+    'samples': ['attributes','sample','subject'],
+    'name': ['item','name'],
+    'identifier': ['item', 'identifier'],
+    'uri': ['distributions', 'current', 'uri'],
+    'updated': ['dates', 'updated'],
+    'organs': ['anatomy', 'organ'],
+    'contributors': ['contributors']
+}
 
 def process_kb_results_recursive(results):
     output = []
     hits = results['hits']['hits']
     for i, hit in enumerate(hits):
-        output.append({})
-        flatten_dict_recursive(hit['_source'], output[i])
-        output[i]['scaffolds'] = getScaffolds(hit)
+        attr = getAttributes(attributes, hit)
+        output.append(attr)
     return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
 
 
@@ -27,6 +36,20 @@ def getScaffolds(dataset):
         for scaffold in dataset['_source']['scaffolds']:
             scaffolds.append(scaffold)
     return scaffolds
+
+def getAttributes(attributes, dataset):
+    found_attr = {}
+    for k, attr in attributes.items():
+        subset = dataset['_source']
+        key_attr = False
+        for key in attr:
+            if isinstance(subset, dict):
+                if key in subset.keys():
+                    subset = subset[key]
+                    key_attr = subset
+        found_attr[k] = key_attr
+    return found_attr
+
 # This function flattens a nested dictionary and preserves lookup keys
 # (currently unused)
 def flatten_dict_recursive_with_lookups(leveled_dict, output, keyList=[], depth=0):

@@ -13,6 +13,80 @@ attributes = {
     'csvFiles': ['objects']
 }
 
+def create_facet_query(type):
+    type_map = {
+        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
+        'gender': ['attributes.subject.sex.value'],
+        'genotype': ['anatomy.organ.name.aggregate']
+    }
+
+    data = {
+        "from": 0,
+        "size": 0,
+        "aggregations": {
+            f"{type}": {
+                "terms": {
+                    "field": "",
+                    "size": 200,
+                    "order": [
+                        {
+                            "_count": "desc"
+                        },
+                        {
+                            "_key": "asc"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    return type_map, data
+
+def create_filter_request(query, terms, facets, size, start):
+    if size is None:
+        size = 10
+    if start is None:
+        start = 0
+
+    # Type map is used to map scicrunch paths to given facet
+    type_map = {
+        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name'],
+        'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
+        'genotype': ['anatomy.organ.name.aggregate']
+    }
+
+    # Data structure of a scicrunch search
+    data = {
+      "size": size,
+      "from": start,
+      "query": {
+          "bool": {
+              "must": [],
+              "should": [],
+              "filter": []
+          }
+      }
+    }
+
+    # Add a filter for each facet
+    for i, facet in enumerate(facets):
+        if terms[i] is not None and facet is not None and 'All' not in facet:
+            data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}'}})
+
+    # Add queries if they exist
+    if query is not '':
+        data['query']['bool']['must'] = {
+          "query_string": {
+            "query": f"{query}",
+            "default_operator": "and",
+            "lenient": "true",
+            "type": "best_fields"
+          }
+        }
+    return data
+
+
 def process_kb_results(results):
     output = []
     hits = results['hits']['hits']

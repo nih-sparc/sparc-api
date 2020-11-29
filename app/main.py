@@ -15,7 +15,7 @@ from app.config import Config
 from blackfynn import Blackfynn
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
-from app.process_kb_results import process_kb_results
+from app.process_kb_results import *
 # from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -183,53 +183,14 @@ def filter_search(query):
     facets = request.args.getlist('facet')
     size = request.args.get('size')
     start = request.args.get('start')
-    if size is None:
-        size = 10
-    if start is None:
-        start = 0
 
-    # Type map is used to map scicrunch paths to given facet
-    type_map = {
-        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name'],
-        'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
-        'genotype': ['anatomy.organ.name.aggregate']
-    }
-
-    # Data structure of a scicrunch search
-    data = {
-      "size": size,
-      "from": start,
-      "query": {
-          "bool": {
-              "must": [],
-              "should": [],
-              "filter": []
-          }
-      }
-    }
-
-    # Add a filter for each facet
-    for i, facet in enumerate(facets):
-        if terms[i] is not None and facet is not None and 'All' not in facet:
-            data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}'}})
-    params = {}
-
-    # Add queries if they exist
-    if query is not '':
-        data['query']['bool']['must'] = {
-          "query_string": {
-            "query": f"{query}",
-            "default_operator": "and",
-            "lenient": "true",
-            "type": "best_fields"
-          }
-        }
+    # Create request
+    data = create_filter_request(query, terms, facets, size, start)
 
     # Send request to scicrunch
     try:
         response = requests.post(
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
-            params=params,
             json=data)
         results = process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
@@ -239,38 +200,16 @@ def filter_search(query):
 
 @app.route("/get-facets/<type>")
 def get_facets(type):
-    type_map = {
-        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
-        'gender': ['attributes.subject.sex.value'],
-        'genotype': ['anatomy.organ.name.aggregate']
-    }
 
-    data = {
-        "from": 0,
-        "size": 0,
-        "aggregations": {
-            f"{type}": {
-                "terms": {
-                    "field": "",
-                    "size": 200,
-                    "order": [
-                        {
-                            "_count": "desc"
-                        },
-                        {
-                            "_key": "asc"
-                        }
-                    ]
-                }
-            }
-        }
-    }
+    # Create facet query
+    type_map, data = create_facet_query(type)
+
+    # Make a request for each scicrunch parameter
     results = []
     for path in type_map[type]:
-
         data['aggregations'][f'{type}']['terms']['field'] = path
         response = requests.post(
-            f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
         results.append(response.json())
 

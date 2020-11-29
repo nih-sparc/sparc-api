@@ -169,7 +169,7 @@ def sim_dataset(id):
 @app.route("/search/<query>")
 def kb_search(query):
     try:
-        response = requests.get(f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?q={query}&api_key={Config.KNOWLEDGEBASE_KEY}')
+        response = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&api_key={Config.KNOWLEDGEBASE_KEY}')
         return process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
@@ -187,8 +187,6 @@ def filter_search(query):
         size = 10
     if start is None:
         start = 0
-    print('term', terms)
-    print('facet', facets)
 
     # Type map is used to map scicrunch paths to given facet
     type_map = {
@@ -229,10 +227,8 @@ def filter_search(query):
 
     # Send request to scicrunch
     try:
-        print(json.dumps(data))
-        print(params)
         response = requests.post(
-            f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             params=params,
             json=data)
         results = process_kb_results(response.json())
@@ -276,7 +272,6 @@ def get_facets(type):
         response = requests.post(
             f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
-        print(json.dumps(data))
         results.append(response.json())
 
     terms = []

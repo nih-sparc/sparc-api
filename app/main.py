@@ -16,7 +16,7 @@ from app.config import Config
 from blackfynn import Blackfynn
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
-from app.process_kb_results import process_kb_results_recursive
+from app.process_kb_results import process_kb_results
 # from pymongo import MongoClient
 import schedule
 import time
@@ -173,7 +173,7 @@ def sim_dataset(id):
 def kb_search(query):
     try:
         response = requests.get(f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?q={query}&api_key={Config.KNOWLEDGEBASE_KEY}')
-        return process_kb_results_recursive(response.json())
+        return process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return json.dumps({'error': err})
@@ -186,16 +186,21 @@ def filter_search(query):
     facets = request.args.getlist('facet')
     size = request.args.get('size')
     start = request.args.get('start')
-    if size is None or start is None:
-        size = 20
+    if size is None:
+        size = 10
+    if start is None:
         start = 0
     print('term', terms)
     print('facet', facets)
+
+    # Type map is used to map scicrunch paths to given facet
     type_map = {
         'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name'],
         'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
         'genotype': ['anatomy.organ.name.aggregate']
     }
+
+    # Data structure of a scicrunch search
     data = {
       "size": size,
       "from": start,
@@ -207,10 +212,14 @@ def filter_search(query):
           }
       }
     }
+
+    # Add a filter for each facet
     for i, facet in enumerate(facets):
-        if terms[i] is not None and facet is not None:
+        if terms[i] is not None and facet is not None and 'All' not in facet:
             data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}'}})
     params = {}
+
+    # Add queries if they exist
     if query is not '':
         data['query']['bool']['must'] = {
           "query_string": {
@@ -220,14 +229,16 @@ def filter_search(query):
             "type": "best_fields"
           }
         }
+
+    # Send request to scicrunch
     try:
-        print(data)
+        print(json.dumps(data))
         print(params)
-        response = requests.get(
+        response = requests.post(
             f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             params=params,
             json=data)
-        results = process_kb_results_recursive(response.json())
+        results = process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return json.dumps({'error': err})
@@ -263,10 +274,12 @@ def get_facets(type):
     }
     results = []
     for path in type_map[type]:
+
         data['aggregations'][f'{type}']['terms']['field'] = path
-        response = requests.get(
+        response = requests.post(
             f'https://scicrunch.org/api/1/elastic/SPARC_Datasets_new/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
+        print(json.dumps(data))
         results.append(response.json())
 
     terms = []
@@ -274,25 +287,6 @@ def get_facets(type):
         terms += result['aggregations'][f'{type}']['buckets']
 
     return json.dumps(terms)
-
-
-@app.route("/banner/<dataset_id>")
-def get_banner(dataset_id):
-    try:
-        params = {
-            'includePublishedDataset': True,
-            'api_key': bf._api.token
-        }
-        response = requests.get(f'https://api.blackfynn.io/datasets/{dataset_id}', params=params)
-        if response.status_code == 200:
-            discover_id = response.json()['publication']['publishedDataset']['id']
-            response = requests.get(f'{Config.DISCOVER_API_HOST}/datasets/{discover_id}')
-            return response.json()
-        else:
-            return jsonify({'error': 'Image not found'}), 500
-    except requests.exceptions.HTTPError as err:
-        logging.error(err)
-        return json.dumps({'error': err})
 
 
 def inject_markdown(resp):

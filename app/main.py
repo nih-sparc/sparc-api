@@ -134,6 +134,17 @@ def create_presigned_url(expiration=3600):
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
     bucket_name = "blackfynn-discover-use1"
+
+    head_response = s3.head_object(
+        Bucket=bucket_name,
+        Key=path,
+        RequestPayer="requester",
+    )
+
+    content_length = head_response.get('ContentLength', None)
+    if content_length and content_length > 20971520:  # 20 MB
+        return abort(413, description=f"File too big to download: {content_length}")
+
     response = s3.get_object(
         Bucket=bucket_name,
         Key=path,

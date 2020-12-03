@@ -69,15 +69,7 @@ class Biolucida(object):
 def resource_not_found(e):
     return jsonify(error=str(e)), 404
 
-@app.before_first_request
-def connect_to_blackfynn():
-    global bf
-    bf = Blackfynn(
-        api_token=Config.BLACKFYNN_API_TOKEN,
-        api_secret=Config.BLACKFYNN_API_SECRET,
-        env_override=False,
-        host=Config.BLACKFYNN_API_HOST
-    )
+
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -193,7 +185,10 @@ def filter_search(query):
         results = process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-        return json.dumps({'error': err})
+        return jsonify({'error': err, 'message': 'Scicrunch is not currently reachable, please try again later'})
+    except json.JSONDecodeError as e:
+        return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+                        'error': 'JSONDecodeError'})
     return results
 
 @app.route("/get-facets/<type>")
@@ -209,13 +204,18 @@ def get_facets(type):
         response = requests.post(
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
-        results.append(response.json())
+        try:
+            json_result = response.json()
+            results.append(json_result)
+        except BaseException as e:
+            return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+                            'error': 'JSONDecodeError'})
 
     terms = []
     for result in results:
         terms += result['aggregations'][f'{type}']['buckets']
 
-    return json.dumps(terms)
+    return jsonify(terms)
 
 
 def inject_markdown(resp):
@@ -272,7 +272,7 @@ def datasets_by_project_id(project_id):
     # 1 - call discover to get awards on all datasets (let put a very high limit to make sure we do not miss any)
 
     req = requests.get(
-        "{}/search/records?limit=1000&offset=0&model=summary".format(
+        "{}/search/records?limit=1000&offset=0&model=award".format(
             Config.DISCOVER_API_HOST
         )
     )
@@ -280,7 +280,7 @@ def datasets_by_project_id(project_id):
     json = req.json()["records"]
 
     # 2 - filter response to retain only awards with project_id
-    result = filter(lambda x: x["properties"]["hasAwardNumber"] == project_id, json)
+    result = filter(lambda x: "award_id" in x["properties"] and x["properties"]["award_id"] == project_id, json)
 
     ids = map(lambda x: str(x["datasetId"]), result)
 

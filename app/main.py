@@ -193,7 +193,10 @@ def filter_search(query):
         results = process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-        return json.dumps({'error': err})
+        return jsonify({'error': str(err), 'message': 'Scicrunch is not currently reachable, please try again later'}), 502
+    except json.JSONDecodeError as e:
+        return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+                        'error': 'JSONDecodeError'}), 502
     return results
 
 @app.route("/get-facets/<type>")
@@ -209,13 +212,18 @@ def get_facets(type):
         response = requests.post(
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
-        results.append(response.json())
+        try:
+            json_result = response.json()
+            results.append(json_result)
+        except BaseException as e:
+            return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+                            'error': 'JSONDecodeError'}), 502
 
     terms = []
     for result in results:
         terms += result['aggregations'][f'{type}']['buckets']
 
-    return json.dumps(terms)
+    return jsonify(terms)
 
 
 def inject_markdown(resp):

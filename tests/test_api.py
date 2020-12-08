@@ -36,3 +36,13 @@ def test_direct_download_url_large_file(client):
 
     assert r.status_code == 413
     assert 'File too big to download' in r.get_data().decode()
+
+def test_get_datasets_by_project(client):
+  # SPARC Portal project info
+  portal_project_id = 'OT2OD025340'
+
+  r = client.get(f"/project/{999999}")
+  assert r.status_code == 404
+
+  r = client.get(f"/project/{portal_project_id}")
+  assert r.status_code == 200

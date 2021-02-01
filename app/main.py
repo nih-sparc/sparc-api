@@ -13,10 +13,9 @@ from flask_marshmallow import Marshmallow
 from blackfynn import Blackfynn
 from app.config import Config
 
-# from blackfynn import Blackfynn
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
-
+from app.process_kb_results import *
 # from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -162,6 +161,69 @@ def sim_dataset(id):
         inject_markdown(json)
         inject_template_data(json)
         return jsonify(json)
+
+
+@app.route("/search/", defaults={'query': ''})
+@app.route("/search/<query>")
+def kb_search(query):
+    try:
+        response = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&api_key={Config.KNOWLEDGEBASE_KEY}')
+        return process_kb_results(response.json())
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+
+@app.route("/filter-search/", defaults={'query': ''})
+@app.route("/filter-search/<query>/")
+def filter_search(query):
+    terms = request.args.getlist('term')
+    facets = request.args.getlist('facet')
+    size = request.args.get('size')
+    start = request.args.get('start')
+
+    # Create request
+    data = create_filter_request(query, terms, facets, size, start)
+
+    # Send request to scicrunch
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        results = process_kb_results(response.json())
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return jsonify({'error': str(err), 'message': 'Scicrunch is not currently reachable, please try again later'}), 502
+    except json.JSONDecodeError as e:
+        return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+                        'error': 'JSONDecodeError'}), 502
+    return results
+
+@app.route("/get-facets/<type>")
+def get_facets(type):
+
+    # Create facet query
+    type_map, data = create_facet_query(type)
+
+    # Make a request for each scicrunch parameter
+    results = []
+    for path in type_map[type]:
+        data['aggregations'][f'{type}']['terms']['field'] = path
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        try:
+            json_result = response.json()
+            results.append(json_result)
+        except BaseException as e:
+            return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+                            'error': 'JSONDecodeError'}), 502
+
+    terms = []
+    for result in results:
+        terms += result['aggregations'][f'{type}']['buckets']
+
+    return jsonify(terms)
 
 
 def inject_markdown(resp):

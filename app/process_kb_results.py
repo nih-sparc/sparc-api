@@ -1,5 +1,9 @@
 import json
 
+# attributes is used to map desired parameters onto the path of keys needed in the scicrunch response.
+#  For example:
+#  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
+#  attributes > sample > subject
 attributes = {
     'scaffolds': ['scaffolds'],
     'samples': ['attributes','sample','subject'],
@@ -13,6 +17,10 @@ attributes = {
     'csvFiles': ['objects']
 }
 
+
+# create_facet_query(type): Generates facet search request data for scicrunch  given a 'type'; where
+# 'type' is either 'species', 'gender', or 'genotype' at this stage.
+#  Returns a tuple of the typemap and request data ( type_map, data )
 def create_facet_query(type):
     type_map = {
         'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
@@ -43,6 +51,11 @@ def create_facet_query(type):
 
     return type_map, data
 
+
+# create_facet_query(query, terms, facets, size, start): Generates filter search request data for scicrunch
+#  All inputs to facet query have defaults defined as 'None' (this is done so we can directly take in URL params
+#  as input).
+#  Returns a json query to be used in a scicrunch request as request json data
 def create_filter_request(query, terms, facets, size, start):
     if size is None:
         size = 10
@@ -87,27 +100,33 @@ def create_filter_request(query, terms, facets, size, start):
     return data
 
 
+# process_kb_results: Loop through scicrunch results pulling out desired attributes and processing doi's and csv files
 def process_kb_results(results):
     output = []
     hits = results['hits']['hits']
     for i, hit in enumerate(hits):
-        attr = getAttributes(attributes, hit)
+        attr = get_attributes(attributes, hit)
         attr['doi'] = convert_doi_to_url(attr['doi'])
         attr['csvFiles'] = find_csv_files(attr['csvFiles'])
         output.append(attr)
     return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
+
 
 def convert_doi_to_url(doi):
     if not doi:
         return doi
     return doi.replace('DOI:', 'https://doi.org/')
 
+
 def find_csv_files(obj_list):
     if not obj_list:
         return obj_list
     return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'text/csv']
 
-def getAttributes(attributes, dataset):
+
+# get_attributes: Use 'attributes' (defined at top of this document) to step through the large scicrunch result dict
+#  and cherrypick the attributes of interest
+def get_attributes(attributes, dataset):
     found_attr = {}
     for k, attr in attributes.items():
         subset = dataset['_source']

@@ -163,6 +163,7 @@ def sim_dataset(id):
         return jsonify(json)
 
 
+# /search/: Returns scicrunch results for a given <search> query
 @app.route("/search/", defaults={'query': ''})
 @app.route("/search/<query>")
 def kb_search(query):
@@ -174,6 +175,7 @@ def kb_search(query):
         return json.dumps({'error': err})
 
 
+# /filter-search/: Returns scicrunch results with optional params for facet filtering, sizing, and pagination
 @app.route("/filter-search/", defaults={'query': ''})
 @app.route("/filter-search/<query>/")
 def filter_search(query):
@@ -199,6 +201,8 @@ def filter_search(query):
                         'error': 'JSONDecodeError'}), 502
     return results
 
+
+# /get-facets/: Returns available scicrunch facets for filtering over given a <type> ('species', 'gender' etc)
 @app.route("/get-facets/<type>")
 def get_facets(type):
 
@@ -219,6 +223,7 @@ def get_facets(type):
             return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 
+    # Select terms from the results
     terms = []
     for result in results:
         terms += result['aggregations'][f'{type}']['buckets']

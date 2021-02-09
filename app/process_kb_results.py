@@ -129,7 +129,7 @@ def find_csv_files(obj_list):
 def get_attributes(attributes, dataset):
     found_attr = {}
     for k, attr in attributes.items():
-        subset = dataset['_source']
+        subset = dataset['_source'] # set our subest to the full dataset result
         key_attr = False
         for key in attr:
             if isinstance(subset, dict):

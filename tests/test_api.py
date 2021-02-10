@@ -47,7 +47,3 @@ def test_get_datasets_by_project(client):
   assert r.status_code == 200
 
 
-def test_scicrunch_keys():
-    response = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}')
-    no_errors = 'errormsg' not in response.json().keys()
-    assert no_errors

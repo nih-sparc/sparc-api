@@ -313,7 +313,7 @@ def authenticate_biolucida():
 
 
 #get the share link for the current map content
-@app.route("/map/getsharelink", methods=["POST"])
+@app.route("/map/getshareid", methods=["POST"])
 def get_share_link():
     #Do not commit to database when testing
     commit = True

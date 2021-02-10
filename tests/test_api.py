@@ -46,3 +46,27 @@ def test_get_datasets_by_project(client):
 
   r = client.get(f"/project/{portal_project_id}")
   assert r.status_code == 200
+
+def test_map_get_share_link_and_state(client):
+  # mock json for testing
+  testData = { "state" : { "type" : "scaffold", "value": 1234 } }
+
+  r = client.post(f"/map/getsharelink", json = {})
+  assert r.status_code == 400
+
+  r = client.post(f"/map/getsharelink", json = testData)
+  assert r.status_code == 200
+  assert "uuid" in r.get_json()
+
+  r = client.post(f"/map/getstate", json = r.get_json())
+  assert r.status_code == 200
+  returned_data = r.get_json()
+  assert "state" in returned_data
+  assert returned_data["state"]["type"] == "scaffold"
+  assert returned_data["state"]["value"] == 1234
+
+  r = client.post(f"/map/getstate", json = {"uuid": "1234567"})
+  assert r.status_code == 400
+
+  r = client.post(f"/map/getstate", json = {})
+  assert r.status_code == 400

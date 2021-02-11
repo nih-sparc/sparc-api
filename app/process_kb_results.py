@@ -103,7 +103,7 @@ def create_filter_request(query, terms, facets, size, start):
     return data
 
 
-# process_kb_results: Loop through scicrunch results pulling out desired attributes and processing doi's and csv files
+# process_kb_results: Loop through sci-crunch results pulling out desired attributes and processing DOIs and CSV files
 def process_kb_results(results):
     output = []
     hits = results['hits']['hits']

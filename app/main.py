@@ -163,7 +163,7 @@ def sim_dataset(id):
         return jsonify(json)
 
 
-# /search/: Returns scicrunch results for a given <search> query
+# /search/: Returns sci-crunch results for a given <search> query
 @app.route("/search/", defaults={'query': ''})
 @app.route("/search/<query>")
 def kb_search(query):
@@ -175,7 +175,7 @@ def kb_search(query):
         return json.dumps({'error': err})
 
 
-# /filter-search/: Returns scicrunch results with optional params for facet filtering, sizing, and pagination
+# /filter-search/: Returns sci-crunch results with optional params for facet filtering, sizing, and pagination
 @app.route("/filter-search/", defaults={'query': ''})
 @app.route("/filter-search/<query>/")
 def filter_search(query):
@@ -187,7 +187,7 @@ def filter_search(query):
     # Create request
     data = create_filter_request(query, terms, facets, size, start)
 
-    # Send request to scicrunch
+    # Send request to sci-crunch
     try:
         response = requests.post(
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
@@ -202,14 +202,14 @@ def filter_search(query):
     return results
 
 
-# /get-facets/: Returns available scicrunch facets for filtering over given a <type> ('species', 'gender' etc)
+# /get-facets/: Returns available sci-crunch facets for filtering over given a <type> ('species', 'gender' etc)
 @app.route("/get-facets/<type>")
 def get_facets(type):
 
     # Create facet query
     type_map, data = create_facet_query(type)
 
-    # Make a request for each scicrunch parameter
+    # Make a request for each sci-crunch parameter
     results = []
     for path in type_map[type]:
         data['aggregations'][f'{type}']['terms']['field'] = path

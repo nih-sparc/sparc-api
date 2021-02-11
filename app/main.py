@@ -1,3 +1,4 @@
+import json
 import base64
 import logging
 from threading import Lock
@@ -10,11 +11,12 @@ from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from blackfynn import Blackfynn
-from app.config import Config
 
+from app.config import Config
+from app.process_kb_results import create_facet_query, process_kb_results, create_filter_request
 from app.serializer import ContactRequestSchema
+
 from scripts.email_sender import EmailSender
-from app.process_kb_results import *
 
 app = Flask(__name__)
 # set environment variable

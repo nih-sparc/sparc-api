@@ -52,17 +52,17 @@ def create_facet_query(type_):
     return type_map, data
 
 
-# create_facet_query(query, terms, facets, size, start): Generates filter search request data for scicrunch
+# create_facet_query(query, terms, facets, size, start): Generates filter search request data for sci-crunch
 #  All inputs to facet query have defaults defined as 'None' (this is done so we can directly take in URL params
 #  as input).
-#  Returns a json query to be used in a scicrunch request as request json data
+#  Returns a json query to be used in a sci-crunch request as request json data
 def create_filter_request(query, terms, facets, size, start):
     if size is None:
         size = 10
     if start is None:
         start = 0
 
-    # Type map is used to map scicrunch paths to given facet
+    # Type map is used to map sci-crunch paths to given facet
     type_map = {
         'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name'],
         'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
@@ -88,7 +88,7 @@ def create_filter_request(query, terms, facets, size, start):
             data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}'}})
 
     # Add queries if they exist
-    if query is not '':
+    if query:
         query_options = {
             "query": f"{query}",
             "default_operator": "and",

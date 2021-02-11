@@ -6,8 +6,8 @@ import json
 #  attributes > sample > subject
 attributes = {
     'scaffolds': ['scaffolds'],
-    'samples': ['attributes','sample','subject'],
-    'name': ['item','name'],
+    'samples': ['attributes', 'sample', 'subject'],
+    'name': ['item', 'name'],
     'identifier': ['item', 'identifier'],
     'uri': ['distributions', 'current', 'uri'],
     'updated': ['dates', 'updated'],
@@ -71,15 +71,15 @@ def create_filter_request(query, terms, facets, size, start):
 
     # Data structure of a scicrunch search
     data = {
-      "size": size,
-      "from": start,
-      "query": {
-          "bool": {
-              "must": [],
-              "should": [],
-              "filter": []
-          }
-      }
+        "size": size,
+        "from": start,
+        "query": {
+            "bool": {
+                "must": [],
+                "should": [],
+                "filter": []
+            }
+        }
     }
 
     # Add a filter for each facet
@@ -90,12 +90,12 @@ def create_filter_request(query, terms, facets, size, start):
     # Add queries if they exist
     if query is not '':
         data['query']['bool']['must'] = {
-          "query_string": {
-            "query": f"{query}",
-            "default_operator": "and",
-            "lenient": "true",
-            "type": "best_fields"
-          }
+            "query_string": {
+                "query": f"{query}",
+                "default_operator": "and",
+                "lenient": "true",
+                "type": "best_fields"
+            }
         }
     return data
 
@@ -129,7 +129,7 @@ def find_csv_files(obj_list):
 def get_attributes(attributes, dataset):
     found_attr = {}
     for k, attr in attributes.items():
-        subset = dataset['_source'] # set our subest to the full dataset result
+        subset = dataset['_source']  # set our subest to the full dataset result
         key_attr = False
         for key in attr:
             if isinstance(subset, dict):
@@ -138,4 +138,3 @@ def get_attributes(attributes, dataset):
                     key_attr = subset
         found_attr[k] = key_attr
     return found_attr
-

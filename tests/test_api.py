@@ -1,7 +1,6 @@
 import pytest
 from app import app
 
-
 @pytest.fixture
 def client():
     # Spin up test flask app
@@ -46,3 +45,5 @@ def test_get_datasets_by_project(client):
 
   r = client.get(f"/project/{portal_project_id}")
   assert r.status_code == 200
+
+

@@ -1,4 +1,3 @@
-import json
 import base64
 import logging
 from threading import Lock
@@ -16,7 +15,6 @@ from app.config import Config
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
 from app.process_kb_results import *
-# from pymongo import MongoClient
 
 app = Flask(__name__)
 # set environment variable
@@ -68,6 +66,7 @@ class Biolucida(object):
 @app.errorhandler(404)
 def resource_not_found(e):
     return jsonify(error=str(e)), 404
+
 
 @app.before_first_request
 def connect_to_blackfynn():
@@ -154,13 +153,13 @@ def direct_download_url(path):
 
 
 @app.route("/sim/dataset/<id>")
-def sim_dataset(id):
+def sim_dataset(id_):
     if request.method == "GET":
-        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id))
-        json = req.json()
-        inject_markdown(json)
-        inject_template_data(json)
-        return jsonify(json)
+        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
+        json_response = req.json()
+        inject_markdown(json_response)
+        inject_template_data(json_response)
+        return jsonify(json_response)
 
 
 # /search/: Returns sci-crunch results for a given <search> query
@@ -195,38 +194,38 @@ def filter_search(query):
         results = process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-        return jsonify({'error': str(err), 'message': 'Scicrunch is not currently reachable, please try again later'}), 502
-    except json.JSONDecodeError as e:
-        return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+        return jsonify({'error': str(err), 'message': 'Sci-crunch is not currently reachable, please try again later'}), 502
+    except json.JSONDecodeError:
+        return jsonify({'message': 'Could not parse Sci-crunch output, please try again later',
                         'error': 'JSONDecodeError'}), 502
     return results
 
 
 # /get-facets/: Returns available sci-crunch facets for filtering over given a <type> ('species', 'gender' etc)
 @app.route("/get-facets/<type>")
-def get_facets(type):
+def get_facets(type_):
 
     # Create facet query
-    type_map, data = create_facet_query(type)
+    type_map, data = create_facet_query(type_)
 
     # Make a request for each sci-crunch parameter
     results = []
-    for path in type_map[type]:
-        data['aggregations'][f'{type}']['terms']['field'] = path
+    for path in type_map[type_]:
+        data['aggregations'][f'{type_}']['terms']['field'] = path
         response = requests.post(
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
         try:
             json_result = response.json()
             results.append(json_result)
-        except BaseException as e:
-            return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+        except json.JSONDecodeError:
+            return jsonify({'message': 'Could not parse Sci-crunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 
     # Select terms from the results
     terms = []
     for result in results:
-        terms += result['aggregations'][f'{type}']['buckets']
+        terms += result['aggregations'][f'{type_}']['buckets']
 
     return jsonify(terms)
 
@@ -238,18 +237,18 @@ def inject_markdown(resp):
 
 
 def inject_template_data(resp):
-    id = resp.get("id")
+    id_ = resp.get("id")
     version = resp.get("version")
-    if id is None or version is None:
+    if id_ is None or version is None:
         return
 
     try:
         response = s3.get_object(
             Bucket="blackfynn-discover-use1",
-            Key="{}/{}/files/template.json".format(id, version),
+            Key="{}/{}/files/template.json".format(id_, version),
             RequestPayer="requester",
         )
-    except ClientError as e:
+    except ClientError:
         # If the file is not under folder 'files', check under folder 'packages'
         logging.warning(
             "Required file template.json was not found under /files folder, trying under /packages..."
@@ -257,11 +256,11 @@ def inject_template_data(resp):
         try:
             response = s3.get_object(
                 Bucket="blackfynn-discover-use1",
-                Key="{}/{}/packages/template.json".format(id, version),
+                Key="{}/{}/packages/template.json".format(id_, version),
                 RequestPayer="requester",
             )
-        except ClientError as e2:
-            logging.error(e2)
+        except ClientError as e:
+            logging.error(e)
             return
 
     template = response["Body"].read()
@@ -290,10 +289,10 @@ def datasets_by_project_id(project_id):
         )
     )
 
-    json = req.json()["records"]
+    records = req.json()["records"]
 
     # 2 - filter response to retain only awards with project_id
-    result = filter(lambda x: "award_id" in x["properties"] and x["properties"]["award_id"] == project_id, json)
+    result = filter(lambda x: "award_id" in x["properties"] and x["properties"]["award_id"] == project_id, records)
 
     ids = map(lambda x: str(x["datasetId"]), result)
 
@@ -310,6 +309,7 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
+
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
     # Filter to find user based on provided int id
@@ -321,6 +321,7 @@ def get_owner_email(owner_id):
         abort(404, description="Owner not found")
     else:
         return jsonify({"email": res[0].email})
+
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):

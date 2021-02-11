@@ -1,6 +1,6 @@
 import json
 
-# attributes is used to map desired parameters onto the path of keys needed in the scicrunch response.
+# attributes is used to map desired parameters onto the path of keys needed in the sci-crunch response.
 #  For example:
 #  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
 #  attributes > sample > subject
@@ -18,10 +18,10 @@ attributes = {
 }
 
 
-# create_facet_query(type): Generates facet search request data for scicrunch  given a 'type'; where
+# create_facet_query(type): Generates facet search request data for sci-crunch  given a 'type'; where
 # 'type' is either 'species', 'gender', or 'genotype' at this stage.
 #  Returns a tuple of the typemap and request data ( type_map, data )
-def create_facet_query(type):
+def create_facet_query(type_):
     type_map = {
         'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
         'gender': ['attributes.subject.sex.value'],
@@ -32,7 +32,7 @@ def create_facet_query(type):
         "from": 0,
         "size": 0,
         "aggregations": {
-            f"{type}": {
+            f"{type_}": {
                 "terms": {
                     "field": "",
                     "size": 200,
@@ -69,13 +69,13 @@ def create_filter_request(query, terms, facets, size, start):
         'genotype': ['anatomy.organ.name.aggregate']
     }
 
-    # Data structure of a scicrunch search
+    # Data structure of a sci-crunch search
     data = {
         "size": size,
         "from": start,
         "query": {
             "bool": {
-                "must": [],
+                "must": {},
                 "should": [],
                 "filter": []
             }
@@ -89,12 +89,15 @@ def create_filter_request(query, terms, facets, size, start):
 
     # Add queries if they exist
     if query is not '':
+        query_options = {
+            "query": f"{query}",
+            "default_operator": "and",
+            "lenient": "true",
+            "type": "best_fields"
+        }
         data['query']['bool']['must'] = {
             "query_string": {
-                "query": f"{query}",
-                "default_operator": "and",
-                "lenient": "true",
-                "type": "best_fields"
+                query_options
             }
         }
     return data
@@ -124,12 +127,12 @@ def find_csv_files(obj_list):
     return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'text/csv']
 
 
-# get_attributes: Use 'attributes' (defined at top of this document) to step through the large scicrunch result dict
-#  and cherrypick the attributes of interest
-def get_attributes(attributes, dataset):
+# get_attributes: Use 'attributes' (defined at top of this document) to step through the large sci-crunch result dict
+#  and cherry-pick the attributes of interest
+def get_attributes(attributes_, dataset):
     found_attr = {}
-    for k, attr in attributes.items():
-        subset = dataset['_source']  # set our subest to the full dataset result
+    for k, attr in attributes_.items():
+        subset = dataset['_source']  # set our subset to the full dataset result
         key_attr = False
         for key in attr:
             if isinstance(subset, dict):

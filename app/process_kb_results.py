@@ -108,20 +108,20 @@ def process_kb_results(results):
     output = []
     hits = results['hits']['hits']
     for i, hit in enumerate(hits):
-        attr = get_attributes(attributes, hit)
-        attr['doi'] = convert_doi_to_url(attr['doi'])
-        attr['csvFiles'] = find_csv_files(attr['csvFiles'])
+        attr = _get_attributes(attributes, hit)
+        attr['doi'] = _convert_doi_to_url(attr['doi'])
+        attr['csvFiles'] = _find_csv_files(attr['csvFiles'])
         output.append(attr)
     return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
 
 
-def convert_doi_to_url(doi):
+def _convert_doi_to_url(doi):
     if not doi:
         return doi
     return doi.replace('DOI:', 'https://doi.org/')
 
 
-def find_csv_files(obj_list):
+def _find_csv_files(obj_list):
     if not obj_list:
         return obj_list
     return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'text/csv']
@@ -129,7 +129,7 @@ def find_csv_files(obj_list):
 
 # get_attributes: Use 'attributes' (defined at top of this document) to step through the large sci-crunch result dict
 #  and cherry-pick the attributes of interest
-def get_attributes(attributes_, dataset):
+def _get_attributes(attributes_, dataset):
     found_attr = {}
     for k, attr in attributes_.items():
         subset = dataset['_source']  # set our subset to the full dataset result

@@ -9,6 +9,7 @@ class Config(object):
     BLACKFYNN_API_SECRET = os.environ.get("BLACKFYNN_API_SECRET", "local-secret-key")
     BLACKFYNN_API_TOKEN = os.environ.get("BLACKFYNN_API_TOKEN", "local-api-key")
     BLACKFYNN_EMBARGO_TEAM_ID = os.environ.get("BLACKFYNN_EMBARGO_TEAM_ID")
+    DATABASE_URL = os.environ.get('DATABASE_URL')
     DISCOVER_API_HOST = os.environ.get(
         "DISCOVER_API_HOST", "https://api.blackfynn.io/discover"
     )
@@ -31,3 +32,4 @@ class Config(object):
     DEPLOY_ENV = os.environ.get("DEPLOY_ENV", "development")
     SPARC_APP_HOST = os.environ.get("SPARC_APP_HOST", "https://sparc-app.herokuapp.com")
     SCI_CRUNCH_HOST = os.environ.get("SCICRUNCH_HOST", "https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr")
+    MAPSTATE_TABLENAME = os.environ.get("MAPSTATE_TABLENAME", "mapstates")

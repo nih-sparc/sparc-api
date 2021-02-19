@@ -419,7 +419,7 @@ def create_wrike_task():
     assignees_list = "%22{}%22,%22{}%22,%22{}%22,%22{}%22,%22{}%22,%22{}%22".format(Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID)
 
     requests.post(
-        url="https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks?title={}&description={}customStatus=IEADBYQEJMBJODZU&responsibles=[{}]&followers=[{}]&follows=false&dates={%22type%22:%22Backlog%22}".format(
+        url="https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks?title={}&description={}customStatus=IEADBYQEJMBJODZU&responsibles=[{}]&followers=[{}]&follows=false&dates={\"type\":\"Backlog\"}".format(
             title, description, assignees_list, assignees_list
         ),
         headers=hed

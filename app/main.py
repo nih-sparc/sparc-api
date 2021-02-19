@@ -416,10 +416,10 @@ def create_wrike_task():
     title = request.args.get("title")
     description = request.args.get("description")
     hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
-    assignees_list = "%22{}%22,%22{}%22,%22{}%22,%22{}%22,%22{}%22,%22{}%22".format(Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID)
+    assignees_list = '"{}","{}","{}","{}","{}","{}"'.format(Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID)
 
     requests.post(
-        url="https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks?title={}&description={}customStatus=IEADBYQEJMBJODZU&responsibles=[{}]&followers=[{}]&follows=false&dates={\"type\":\"Backlog\"}".format(
+        url='https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks?title={}&description={}&customStatus=IEADBYQEJMBJODZU&responsibles=[{}]&followers=[{}]&follows=false&dates={"type":"Backlog"}'.format(
             title, description, assignees_list, assignees_list
         ),
         headers=hed

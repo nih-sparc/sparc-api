@@ -69,3 +69,7 @@ def test_map_get_share_id_and_state(client):
 
   r = client.post(f"/map/getstate", json = {})
   assert r.status_code == 400
+
+def test_create_wrike_task(client):
+    r =   r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api", "description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum..."})
+    assert r.status_code == 200

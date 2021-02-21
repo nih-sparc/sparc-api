@@ -80,6 +80,7 @@ def connect_to_blackfynn():
         host=Config.BLACKFYNN_API_HOST
     )
 
+
 # @app.before_first_request
 # def connect_to_mongodb():
 #     global mongo
@@ -128,18 +129,25 @@ def create_presigned_url(expiration=3600):
 
 
 # Reverse proxy for objects from S3, a simple get object
-# operation. This is used by scaffoldvuer and its 
+# operation. This is used by scaffoldvuer and it's
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
     bucket_name = "blackfynn-discover-use1"
 
-    head_response = s3.head_object(
-        Bucket=bucket_name,
-        Key=path,
-        RequestPayer="requester",
-    )
+    print('----------')
+    print(path)
+    try:
+
+        head_response = s3.head_object(
+            Bucket=bucket_name,
+            Key=path,
+            RequestPayer="requester",
+        )
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
 
     content_length = head_response.get('ContentLength', None)
     if content_length and content_length > 20971520:  # 20 MB
@@ -162,6 +170,56 @@ def sim_dataset(id_):
         inject_markdown(json_response)
         inject_template_data(json_response)
         return jsonify(json_response)
+
+
+@app.route("/search_dataset_by_mime_type/")
+def search_datasets():
+    mime_type = request.args.getlist('mime_type')[0]
+
+
+@app.route("/dataset_info_from_doi/")
+def get_dataset_info():
+    doi = request.args.getlist('doi')[0]
+    # query = {
+    #     "match": {"item.curie": "DOI"}
+    # }
+    # d = '10.26275/bjp1-ppqo'
+    query = {
+        "match": {
+            "item.curie": {
+                "query": f"DOI:{doi}",
+                "operator": "and"
+            }
+        }
+    }
+    # query = {
+    #             "match": {
+    #                 "item.identifier": {
+    #                     "query": f"{identifier}",
+    #                     "operator": "and"
+    #                 }
+    #             }
+    #         }
+
+    return dataset_search(query)
+
+
+def dataset_search(query):
+    try:
+        payload = {
+            "query": query
+        }
+        params = {
+            "api_key": Config.KNOWLEDGEBASE_KEY
+        }
+        response = requests.post(f'{Config.SCI_CRUNCH_HOST}/_search',
+                                 json=payload, params=params)
+
+        return process_kb_results(response.json())
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+
+        return jsonify({'error': err})
 
 
 # /search/: Returns sci-crunch results for a given <search> query
@@ -206,7 +264,6 @@ def filter_search(query):
 # /get-facets/: Returns available sci-crunch facets for filtering over given a <type> ('species', 'gender' etc)
 @app.route("/get-facets/<type>")
 def get_facets(type_):
-
     # Create facet query
     type_map, data = create_facet_query(type_)
 
@@ -282,7 +339,6 @@ def inject_template_data(resp):
 
 @app.route("/project/<project_id>", methods=["GET"])
 def datasets_by_project_id(project_id):
-
     # 1 - call discover to get awards on all datasets (let put a very high limit to make sure we do not miss any)
 
     req = requests.get(
@@ -325,6 +381,28 @@ def get_owner_email(owner_id):
         return jsonify({"email": res[0].email})
 
 
+@app.route("/file/", methods=["GET"])
+def fetch_file_from_s3():
+    # print(request.args)
+    doi = request.args.getlist('doi')
+    filepath = request.args.getlist('filepath')
+    print(doi, filepath)
+    # size = request.args.get('size')
+    # start = request.args.get('start')
+    abort(404, description="Not implemented")
+
+
+@app.route("/data_location/", methods=["GET"])
+def data_location_via_discover():
+    doi = request.args.getlist('doi')
+    print(doi)
+    print(bf)
+    print(dir(bf))
+    print(bf.datasets)
+    print(bf.get_dataset('10.26275', 'dwly-naxx'))
+    abort(404, description="Not implemented")
+
+
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):
     bl = Biolucida()
@@ -342,7 +420,7 @@ def thumbnail_by_image_id(image_id, recursive_call=False):
     encoded_content = base64.b64encode(response.content)
     # Response from this endpoint is binary on success so the easiest thing to do is
     # check for an error response in encoded form.
-    if encoded_content == b'eyJzdGF0dXMiOiJBZG1pbiB1c2VyIGF1dGhlbnRpY2F0aW9uIHJlcXVpcmVkIHRvIHZpZXcvZWRpdCB1c2VyIGluZm8uIFlvdSBtYXkgbmVlZCB0byBsb2cgb3V0IGFuZCBsb2cgYmFjayBpbiB0byByZXZlcmlmeSB5b3VyIGNyZWRlbnRpYWxzLiJ9'\
+    if encoded_content == b'eyJzdGF0dXMiOiJBZG1pbiB1c2VyIGF1dGhlbnRpY2F0aW9uIHJlcXVpcmVkIHRvIHZpZXcvZWRpdCB1c2VyIGluZm8uIFlvdSBtYXkgbmVlZCB0byBsb2cgb3V0IGFuZCBsb2cgYmFjayBpbiB0byByZXZlcmlmeSB5b3VyIGNyZWRlbnRpYWxzLiJ9' \
             and not recursive_call:
         # Authentication failure, try again after resetting token.
         with biolucida_lock:
@@ -356,6 +434,13 @@ def thumbnail_by_image_id(image_id, recursive_call=False):
 @app.route("/image/<image_id>", methods=["GET"])
 def image_info_by_image_id(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/{0}".format(image_id)
+    response = requests.request("GET", url)
+    return response.json()
+
+
+@app.route("/image_search/<dataset_id>", methods=["GET"])
+def image_search_by_dataset_id(dataset_id):
+    url = Config.BIOLUCIDA_ENDPOINT + "/imagemap/search_dataset/discover/{0}".format(dataset_id)
     response = requests.request("GET", url)
     return response.json()
 

@@ -14,7 +14,7 @@ attributes = {
     'organs': ['anatomy', 'organ'],
     'contributors': ['contributors'],
     'doi': ['item', 'curie'],
-    'csvFiles': ['objects']
+    'files': ['objects']
 }
 
 
@@ -110,8 +110,10 @@ def process_kb_results(results):
     for i, hit in enumerate(hits):
         attr = _get_attributes(attributes, hit)
         attr['doi'] = _convert_doi_to_url(attr['doi'])
-        attr['csvFiles'] = _find_csv_files(attr['csvFiles'])
-        output.append(attr)
+        attr.update(_sort_files_by_mime_type(attr['files']))
+
+        output.append(_manipulate_attr(attr))
+
     return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
 
 
@@ -121,10 +123,56 @@ def _convert_doi_to_url(doi):
     return doi.replace('DOI:', 'https://doi.org/')
 
 
-def _find_csv_files(obj_list):
+def _sort_files_by_mime_type(obj_list):
+    sorted_files = {}
     if not obj_list:
-        return obj_list
-    return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'text/csv']
+        return sorted_files
+
+    mapped_mime_types = {
+        'text/csv': 'csv',
+        'application/vnd.mbfbioscience.metadata+xml': 'mbf-segmentation',
+        'application/vnd.mbfbioscience.neurolucida+xml': 'mbf-segmentation',
+        'inode/vnd.abi.scaffold+directory': 'abi-scaffold-dir',
+        'inode/vnd.abi.scaffold+file': 'abi-scaffold-file',
+        'inode/vnd.abi.scaffold+thumbnail': 'abi-scaffold-thumbnail',
+        'image/png': 'generic-image',
+        'image/tiff': 'generic-image',
+        'image/tif': 'generic-image',
+        'image/jpeg': 'generic-image',
+        'image/jpx': 'large-3d-image',
+        'image/jp2': 'large-2d-image',
+        'video/mp4': 'mp4'
+    }
+    skipped_mime_types = [
+        'application/json',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'chemical/x-gamess-input',
+        'application/pdf',
+        'application/zip',
+        'application/xml',
+        'inode/directory',
+        'application/vnd.oasis.opendocument.database',
+        'text/plain',
+        'text/html',
+        'text/css',
+    ]
+
+    for obj in obj_list:
+        mime_type = obj.get('mimetype', 'not-specified')
+        if mime_type in mapped_mime_types:
+            if mapped_mime_types[mime_type] in sorted_files:
+                sorted_files[mapped_mime_types[mime_type]].append(obj)
+            else:
+                sorted_files[mapped_mime_types[mime_type]] = [obj]
+        elif mime_type == 'not-specified':
+            pass
+        elif mime_type in skipped_mime_types:
+            pass
+        else:
+            print('Unhandled mime type:', mime_type)
+
+    return sorted_files
 
 
 # get_attributes: Use 'attributes' (defined at top of this document) to step through the large sci-crunch result dict
@@ -141,3 +189,41 @@ def _get_attributes(attributes_, dataset):
                     key_attr = subset
         found_attr[k] = key_attr
     return found_attr
+
+
+# Manipulate the output to make it easier to use in the front-end.
+# Tasks performed:
+# - collate the scaffold data information onto the scaffolds list.
+def _manipulate_attr(output):
+    if 'scaffolds' in output and 'abi-scaffold-file' in output:
+        for scaffold in output['scaffolds']:
+            id_ = scaffold['dataset']['id']
+            scaffold_meta_file = _extract_dataset_path_remote_id(output, 'abi-scaffold-file', id_)
+
+            scaffold_thumbnail = None
+            if 'abi-scaffold-thumbnail' in output:
+                scaffold_thumbnail = _extract_dataset_path_remote_id(output, 'abi-scaffold-thumbnail', id_)
+
+            if scaffold_meta_file is not None:
+                scaffold['meta_file'] = scaffold_meta_file
+            if scaffold_thumbnail is not None:
+                scaffold['thumbnail'] = scaffold_thumbnail
+
+    return output
+
+
+def _extract_dataset_path_remote_id(data, key, id_):
+    extracted_data = None
+    for dataset_path_remote_id in data[key]:
+        if dataset_path_remote_id['dataset']['id'] == id_:
+            remote_id = ''
+            if 'remote' in dataset_path_remote_id:
+                remote_id = dataset_path_remote_id['remote']['id']
+            extracted_data = {
+                'path': dataset_path_remote_id['dataset']['path'],
+                'remote_id': remote_id
+            }
+            break
+
+    return extracted_data
+

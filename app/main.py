@@ -413,14 +413,26 @@ def get_map_state():
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
-    title = request.args.get("title")
-    description = request.args.get("description")
+    json_data = request.get_json()
+    title = json_data["title"]
+    description = json_data["description"]
+    print(json_data)
     hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
-    assignees_list = '"{}","{}","{}","{}","{}","{}"'.format(Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID)
+    url = 'https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks'
 
-    requests.post(
-        url='https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks?title={}&description={}&customStatus=IEADBYQEJMBJODZU&responsibles=[{}]&followers=[{}]&follows=false&dates={"type":"Backlog"}'.format(
-            title, description, assignees_list, assignees_list
-        ),
+    data = {
+    "title": title,
+    "description": description,
+    "customStatus": "IEADBYQEJMBJODZU",
+    "followers": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
+    "responsibles": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
+    "follow":False,
+    "dates":{"type":"Backlog"}
+    }
+
+    resp = requests.post(
+        url=url,
+        json=data,
         headers=hed
     )
+    return resp.json()

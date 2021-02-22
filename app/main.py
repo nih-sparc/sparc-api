@@ -1,6 +1,7 @@
 import json
 import base64
 import logging
+from urllib import parse
 from threading import Lock
 from datetime import datetime, timedelta
 
@@ -138,11 +139,12 @@ def direct_download_url(path):
 
     print('----------')
     print(path)
+    decoded_path = parse.unquote(path)
     try:
 
         head_response = s3.head_object(
             Bucket=bucket_name,
-            Key=path,
+            Key=decoded_path,
             RequestPayer="requester",
         )
     except requests.exceptions.HTTPError as err:
@@ -155,7 +157,7 @@ def direct_download_url(path):
 
     response = s3.get_object(
         Bucket=bucket_name,
-        Key=path,
+        Key=decoded_path,
         RequestPayer="requester",
     )
     resource = response["Body"].read()

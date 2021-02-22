@@ -1,5 +1,7 @@
 import pytest
 from app import app
+from app.config import Config
+import requests
 
 @pytest.fixture
 def client():
@@ -71,5 +73,16 @@ def test_map_get_share_id_and_state(client):
   assert r.status_code == 400
 
 def test_create_wrike_task(client):
-    r =   r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api", "description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum..."})
+    r =   r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api", "description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
     assert r.status_code == 200
+
+    # this part is only for cleaning the wrike board
+    returned_data = r.get_json()
+    task_id = returned_data["data"][0]["id"]
+    url = 'https://www.wrike.com/api/v4/tasks/{}'.format(task_id)
+    hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
+    resp = requests.delete(
+        url=url,
+        headers=hed
+    )
+    assert resp.status_code == 200

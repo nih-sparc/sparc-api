@@ -38,6 +38,8 @@ s3 = boto3.client(
 
 biolucida_lock = Lock()
 
+osparc_data = {}
+
 try:
   mapstate = MapState(Config.DATABASE_URL)
 except:
@@ -83,6 +85,12 @@ def connect_to_blackfynn():
         env_override=False,
         host=Config.BLACKFYNN_API_HOST
     )
+
+@app.before_first_request
+def get_osparc_file_viewers():
+    req = requests.get(url = f'{Config.OSPARC_HOST}/v0/viewers/filetypes')
+    viewers = req.json()
+    osparc_data["file_viewers"] = viewers["data"]
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -156,16 +164,6 @@ def direct_download_url(path):
     )
     resource = response["Body"].read()
     return resource
-
-
-@app.route("/sim/dataset/<id>")
-def sim_dataset(id):
-    if request.method == "GET":
-        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id))
-        json = req.json()
-        inject_markdown(json)
-        inject_template_data(json)
-        return jsonify(json)
 
 
 # /search/: Returns scicrunch results for a given <search> query
@@ -282,6 +280,17 @@ def inject_template_data(resp):
         "name": template_json.get("name"),
         "description": template_json.get("description"),
     }
+
+
+@app.route("/sim/dataset/<id>")
+def sim_dataset(id):
+    if request.method == "GET":
+        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id))
+        json = req.json()
+        inject_markdown(json)
+        inject_template_data(json)
+        json["osparc_data"] = osparc_data
+        return jsonify(json)
 
 
 @app.route("/project/<project_id>", methods=["GET"])

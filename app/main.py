@@ -118,9 +118,10 @@ def contact():
 def create_presigned_url(expiration=3600):
     bucket_name = "blackfynn-discover-use1"
     key = request.args.get("key")
+    contentType = request.args.get("contentType") or "application/octet-stream"
     response = s3.generate_presigned_url(
         "get_object",
-        Params={"Bucket": bucket_name, "Key": key, "RequestPayer": "requester"},
+        Params={"Bucket": bucket_name, "Key": key, "RequestPayer": "requester", "ResponseContentType": contentType},
         ExpiresIn=expiration,
     )
 
@@ -128,7 +129,7 @@ def create_presigned_url(expiration=3600):
 
 
 # Reverse proxy for objects from S3, a simple get object
-# operation. This is used by scaffoldvuer and its 
+# operation. This is used by scaffoldvuer and its
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")

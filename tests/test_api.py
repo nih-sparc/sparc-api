@@ -2,6 +2,7 @@ import pytest
 from app import app
 from app.config import Config
 import requests
+from requests.auth import HTTPBasicAuth
 
 @pytest.fixture
 def client():
@@ -73,6 +74,10 @@ def test_map_get_share_id_and_state(client):
   assert r.status_code == 400
 
 def test_create_wrike_task(client):
+    r =   r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api"})
+    assert r.status_code == 400
+    r =   r = client.post(f"/tasks", json = {"description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
+    assert r.status_code == 400
     r =   r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api", "description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
     assert r.status_code == 200
 
@@ -86,3 +91,20 @@ def test_create_wrike_task(client):
         headers=hed
     )
     assert resp.status_code == 200
+
+def test_subscribe_to_mailchimp(client):
+    r =   r = client.post(f"/mailchimp", json = {})
+    assert r.status_code == 400
+    r =   r = client.post(f"/mailchimp", json = {"email_address":"jeremy+test3@blackfynn.com"})
+    assert r.status_code == 200
+
+    # this part is only for cleaning the mailchimp list and allow the test to be rerun
+    returned_data = r.get_json()
+    member_hash = returned_data["id"]
+    url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/{}'.format(member_hash)
+    auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+    resp = requests.delete(
+        url=url,
+        auth=auth
+    )
+    assert resp.status_code == 204

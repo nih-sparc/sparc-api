@@ -17,6 +17,8 @@ from app.mapstate import MapState
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
 from app.process_kb_results import *
+from requests.auth import HTTPBasicAuth
+
 # from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -414,25 +416,50 @@ def get_map_state():
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
     json_data = request.get_json()
-    title = json_data["title"]
-    description = json_data["description"]
+    if json_data and 'title' in json_data and 'description' in json_data :
+        title = json_data["title"]
+        description = json_data["description"]
+        hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
+        url = 'https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks'
+
+        data = {
+            "title": title,
+            "description": description,
+            "customStatus": "IEADBYQEJMBJODZU",
+            "followers": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
+            "responsibles": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
+            "follow":False,
+            "dates":{"type":"Backlog"}
+        }
+
+        resp = requests.post(
+            url=url,
+            json=data,
+            headers=hed
+        )
+        return resp.json()
+    else:
+        abort(400, description="Missing title or description")
+
+@app.route("/mailchimp", methods=["POST"])
+def subscribe_to_mailchimp():
+    json_data = request.get_json()
     print(json_data)
-    hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
-    url = 'https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks'
+    if json_data and 'email_address' in json_data :
+        email_address = json_data["email_address"]
+        auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members'
 
-    data = {
-    "title": title,
-    "description": description,
-    "customStatus": "IEADBYQEJMBJODZU",
-    "followers": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
-    "responsibles": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
-    "follow":False,
-    "dates":{"type":"Backlog"}
-    }
+        data = {
+            "email_address": email_address,
+            "status": "subscribed"
+        }
 
-    resp = requests.post(
-        url=url,
-        json=data,
-        headers=hed
-    )
-    return resp.json()
+        resp = requests.post(
+            url=url,
+            json=data,
+            auth=auth
+        )
+        return resp.json()
+    else:
+        abort(400, description="Missing email_address")

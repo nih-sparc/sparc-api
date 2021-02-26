@@ -1,6 +1,7 @@
 import json
 import base64
 import logging
+import atexit
 from threading import Lock
 from datetime import datetime, timedelta
 
@@ -13,6 +14,8 @@ from flask_marshmallow import Marshmallow
 from blackfynn import Blackfynn
 from app.config import Config
 from app.mapstate import MapState
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
@@ -86,11 +89,24 @@ def connect_to_blackfynn():
         host=Config.BLACKFYNN_API_HOST
     )
 
+viewers_scheduler = BackgroundScheduler()
+
 @app.before_first_request
 def get_osparc_file_viewers():
+    logging.info('Getting oSPARC viewers')
     req = requests.get(url = f'{Config.OSPARC_HOST}/v0/viewers/filetypes')
     viewers = req.json()
     osparc_data["file_viewers"] = viewers["data"]
+    if not viewers_scheduler.running:
+        logging.info('Starting scheduler for oSPARC viewers acquisition')
+        viewers_scheduler.start()
+
+viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
+def shutdown_scheduler():
+    logging.info('Stopping scheduler for oSPARC viewers acquisition')
+    viewers_scheduler.shutdown()
+atexit.register(shutdown_scheduler)
+
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -289,8 +305,11 @@ def sim_dataset(id):
         json = req.json()
         inject_markdown(json)
         inject_template_data(json)
-        json["osparc_data"] = osparc_data
         return jsonify(json)
+
+@app.route("/get_osparc_data")
+def get_osparc_data():
+    return jsonify(osparc_data)
 
 
 @app.route("/project/<project_id>", methods=["GET"])

@@ -97,6 +97,11 @@ def get_osparc_file_viewers():
     req = requests.get(url = f'{Config.OSPARC_HOST}/v0/viewers/filetypes')
     viewers = req.json()
     osparc_data["file_viewers"] = viewers["data"]
+    osparc_data["file_viewers"].append({
+        "file_type": "JSON",
+        "redirection_url": "http://osparc.io/view?file_type=JSON",
+        "viewer_title": "JSON Blablabla"
+    })
     if not viewers_scheduler.running:
         logging.info('Starting scheduler for oSPARC viewers acquisition')
         viewers_scheduler.start()

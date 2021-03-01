@@ -438,29 +438,48 @@ def create_wrike_task():
             json=data,
             headers=hed
         )
-        return resp.json()
+
+        if resp.status_code == 200:
+            return jsonify(
+                title=title,
+                description=description,
+                task_id=resp.json()["data"][0]["id"]
+            )
+        else:
+            return resp.json()
     else:
         abort(400, description="Missing title or description")
 
 @app.route("/mailchimp", methods=["POST"])
 def subscribe_to_mailchimp():
     json_data = request.get_json()
-    print(json_data)
-    if json_data and 'email_address' in json_data :
+    if json_data and 'email_address' in json_data and 'first_name' in json_data and 'last_name' in json_data:
         email_address = json_data["email_address"]
+        first_name = json_data['first_name']
+        last_name = json_data['last_name']
         auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
         url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members'
 
         data = {
             "email_address": email_address,
-            "status": "subscribed"
+            "status": "subscribed",
+            "merge_fields" : {
+                "FNAME": first_name,
+                "LNAME": last_name
+            }
         }
-
         resp = requests.post(
             url=url,
             json=data,
             auth=auth
         )
-        return resp.json()
+
+        if resp.status_code == 200:
+            return jsonify(
+                email_address=email_address,
+                id=resp.json()["id"]
+            )
+        else:
+            return resp.json()
     else:
-        abort(400, description="Missing email_address")
+        abort(400, description="Missing email_address, first_name or last_name")

@@ -83,7 +83,7 @@ def test_create_wrike_task(client):
 
     # this part is only for cleaning the wrike board
     returned_data = r.get_json()
-    task_id = returned_data["data"][0]["id"]
+    task_id = returned_data["task_id"]
     url = 'https://www.wrike.com/api/v4/tasks/{}'.format(task_id)
     hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
     resp = requests.delete(

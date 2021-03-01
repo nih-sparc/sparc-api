@@ -437,14 +437,17 @@ def create_wrike_task():
             json=data,
             headers=hed
         )
-        return resp.json()
+        return jsonify(
+            title=title,
+            description=description,
+            task_id=resp.json()["data"][0]["id"]
+        )
     else:
         abort(400, description="Missing title or description")
 
 @app.route("/mailchimp", methods=["POST"])
 def subscribe_to_mailchimp():
     json_data = request.get_json()
-    print(json_data)
     if json_data and 'email_address' in json_data :
         email_address = json_data["email_address"]
         auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
@@ -460,6 +463,10 @@ def subscribe_to_mailchimp():
             json=data,
             auth=auth
         )
-        return resp.json()
+
+        return jsonify(
+            email_address=email_address,
+            id=resp.json()["id"]
+        )
     else:
         abort(400, description="Missing email_address")

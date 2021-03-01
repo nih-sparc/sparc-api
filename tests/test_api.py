@@ -110,9 +110,9 @@ def test_subscribe_to_mailchimp(client):
     # this part is only for cleaning the mailchimp list and allow the test to be rerun
     returned_data = r2.get_json()
     member_hash = returned_data["id"]
-    url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/{}'.format(member_hash)
+    url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/{}/actions/delete-permanent'.format(member_hash)
     auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-    resp = requests.delete(
+    resp = requests.post(
         url=url,
         auth=auth
     )

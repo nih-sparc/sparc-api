@@ -107,7 +107,7 @@ def test_subscribe_to_mailchimp(client):
     r2 = client.post(f"/mailchimp", json = {"email_address": email_address, "first_name":"Test", "last_name":"User"})
     assert r2.status_code == 200
 
-    # this part is only for cleaning the mailchimp list and allow the test to be rerun
+    # this part is only for cleaning the mailchimp list and not pollute the mailing list
     returned_data = r2.get_json()
     member_hash = returned_data["id"]
     url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/{}/actions/delete-permanent'.format(member_hash)

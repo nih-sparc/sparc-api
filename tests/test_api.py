@@ -95,7 +95,7 @@ def test_create_wrike_task(client):
 def test_subscribe_to_mailchimp(client):
     r =   r = client.post(f"/mailchimp", json = {})
     assert r.status_code == 400
-    r =   r = client.post(f"/mailchimp", json = {"email_address":"jeremy+test3@blackfynn.com"})
+    r =   r = client.post(f"/mailchimp", json = {"email_address":"jeremy+testuser@blackfynn.com", "first_name":"Test", "last_name":"User"})
     assert r.status_code == 200
 
     # this part is only for cleaning the mailchimp list and allow the test to be rerun

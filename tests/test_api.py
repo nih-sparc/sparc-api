@@ -2,6 +2,9 @@ import pytest
 from app import app
 from app.config import Config
 import requests
+import random
+import string
+
 from requests.auth import HTTPBasicAuth
 
 @pytest.fixture
@@ -9,7 +12,6 @@ def client():
     # Spin up test flask app
     app.config['TESTING'] = True
     return app.test_client()
-
 
 def test_get_owner_email(client):
     # SPARC Portal user info
@@ -74,15 +76,15 @@ def test_map_get_share_id_and_state(client):
   assert r.status_code == 400
 
 def test_create_wrike_task(client):
-    r =   r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api"})
+    r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api"})
     assert r.status_code == 400
-    r =   r = client.post(f"/tasks", json = {"description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
-    assert r.status_code == 400
-    r =   r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api", "description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
-    assert r.status_code == 200
+    r2 = client.post(f"/tasks", json = {"description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
+    assert r2.status_code == 400
+    r3 = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api", "description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
+    assert r3.status_code == 200
 
     # this part is only for cleaning the wrike board
-    returned_data = r.get_json()
+    returned_data = r3.get_json()
     task_id = returned_data["task_id"]
     url = 'https://www.wrike.com/api/v4/tasks/{}'.format(task_id)
     hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
@@ -93,13 +95,21 @@ def test_create_wrike_task(client):
     assert resp.status_code == 200
 
 def test_subscribe_to_mailchimp(client):
-    r =   r = client.post(f"/mailchimp", json = {})
+    r = client.post(f"/mailchimp", json = {})
     assert r.status_code == 400
-    r =   r = client.post(f"/mailchimp", json = {"email_address":"jeremy+testuser@blackfynn.com", "first_name":"Test", "last_name":"User"})
-    assert r.status_code == 200
+
+    letters = string.ascii_lowercase
+    email = ''.join(random.choice(letters) for i in range(8))
+    domain = ''.join(random.choice(letters) for i in range(6))
+
+    email_address = '{}@{}.com'.format(email,domain)
+
+    r2 = client.post(f"/mailchimp", json = {"email_address": email_address, "first_name":"Test", "last_name":"User"})
+    assert r2.status_code == 200
 
     # this part is only for cleaning the mailchimp list and allow the test to be rerun
-    returned_data = r.get_json()
+    returned_data = r2.get_json()
+    print(returned_data)
     member_hash = returned_data["id"]
     url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/{}'.format(member_hash)
     auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)

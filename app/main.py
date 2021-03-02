@@ -94,18 +94,16 @@ viewers_scheduler = BackgroundScheduler()
 @app.before_first_request
 def get_osparc_file_viewers():
     logging.info('Getting oSPARC viewers')
-    req = requests.get(url = f'{Config.OSPARC_HOST}/v0/viewers/filetypes')
+    # Gets a list of default viewers
+    req = requests.get(url = f'{Config.OSPARC_API_HOST}/viewers/default')
     viewers = req.json()
-    osparc_data["file_viewers"] = viewers["data"]
-    osparc_data["file_viewers"].append({
-        "file_type": "JSON",
-        "redirection_url": "http://osparc.io/view?file_type=JSON",
-        "viewer_title": "JSON Blablabla"
-    })
+    table = build_filetypes_table(viewers["data"])
+    osparc_data["file_viewers"] = table
     if not viewers_scheduler.running:
         logging.info('Starting scheduler for oSPARC viewers acquisition')
         viewers_scheduler.start()
 
+# Gets oSPARC viewers before the first request after startup and then once a day
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 def shutdown_scheduler():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -301,6 +299,16 @@ def inject_template_data(resp):
         "name": template_json.get("name"),
         "description": template_json.get("description"),
     }
+
+def build_filetypes_table(osparc_viewers):
+    table = {}
+    for viewer in osparc_viewers:
+        filetype = viewer["file_type"]
+        del viewer["file_type"]
+        if not table.get(filetype, False):
+            table[filetype] = []
+        table[filetype].append(viewer)
+    return table
 
 
 @app.route("/sim/dataset/<id>")

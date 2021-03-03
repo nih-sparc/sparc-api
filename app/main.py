@@ -300,10 +300,12 @@ def inject_template_data(resp):
         "description": template_json.get("description"),
     }
 
+# Constructs a table with where keys are the normalized (lowercased) file types
+# and the values an array of possible viewers
 def build_filetypes_table(osparc_viewers):
     table = {}
     for viewer in osparc_viewers:
-        filetype = viewer["file_type"]
+        filetype = viewer["file_type"].lower()
         del viewer["file_type"]
         if not table.get(filetype, False):
             table[filetype] = []

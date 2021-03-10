@@ -1,4 +1,5 @@
 import json
+import logging
 
 # attributes is used to map desired parameters onto the path of keys needed in the sci-crunch response.
 #  For example:
@@ -75,7 +76,7 @@ def create_filter_request(query, terms, facets, size, start):
         "from": start,
         "query": {
             "bool": {
-                "must": {},
+                "must": [],
                 "should": [],
                 "filter": []
             }
@@ -95,11 +96,9 @@ def create_filter_request(query, terms, facets, size, start):
             "lenient": "true",
             "type": "best_fields"
         }
-        data['query']['bool']['must'] = {
-            "query_string": {
-                query_options
-            }
-        }
+        data['query']['bool']['must'].append({
+            "query_string": query_options
+        })
     return data
 
 
@@ -170,7 +169,7 @@ def _sort_files_by_mime_type(obj_list):
         elif mime_type in skipped_mime_types:
             pass
         else:
-            print('Unhandled mime type:', mime_type)
+            logging.warning('Unhandled mime type:', mime_type)
 
     return sorted_files
 
@@ -226,4 +225,3 @@ def _extract_dataset_path_remote_id(data, key, id_):
             break
 
     return extracted_data
-

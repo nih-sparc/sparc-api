@@ -1,6 +1,7 @@
 import pytest
 from app import app
 
+
 @pytest.fixture
 def client():
     # Spin up test flask app
@@ -29,6 +30,14 @@ def test_direct_download_url_small_file(client):
     assert b"proximal colon" in r.data
 
 
+def test_direct_download_url_thumbnail(client):
+    small_s3_file = '95/1/files/derivative%2FScaffold%2Fthumbnail.png'
+    r = client.get(f"/s3-resource/{small_s3_file}")
+
+    assert r.status_code == 200
+    assert b"PNG" in r.data
+
+
 def test_direct_download_url_large_file(client):
     large_s3_file = '61%2F2%2Ffiles%2Fprimary%2Fsub-44%2Fsam-1%2Fmicroscopy%2Fsub-44sam-1C44-1Slide2p2MT_10x.nd2'
     r = client.get(f"/s3-resource/{large_s3_file}")
@@ -36,14 +45,15 @@ def test_direct_download_url_large_file(client):
     assert r.status_code == 413
     assert 'File too big to download' in r.get_data().decode()
 
+
 def test_get_datasets_by_project(client):
-  # SPARC Portal project info
-  portal_project_id = 'OT2OD025340'
+    # SPARC Portal project info
+    portal_project_id = 'OT2OD025340'
 
-  r = client.get(f"/project/{999999}")
-  assert r.status_code == 404
+    r = client.get(f"/project/{999999}")
+    assert r.status_code == 404
 
-  r = client.get(f"/project/{portal_project_id}")
-  assert r.status_code == 200
+    r = client.get(f"/project/{portal_project_id}")
+    assert r.status_code == 200
 
 

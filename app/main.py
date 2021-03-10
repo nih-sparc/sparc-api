@@ -1,7 +1,6 @@
 import json
 import base64
 import logging
-from urllib import parse
 from threading import Lock
 from datetime import datetime, timedelta
 
@@ -137,14 +136,11 @@ def create_presigned_url(expiration=3600):
 def direct_download_url(path):
     bucket_name = "blackfynn-discover-use1"
 
-    print('----------')
-    print(path)
-    decoded_path = parse.unquote(path)
     try:
 
         head_response = s3.head_object(
             Bucket=bucket_name,
-            Key=decoded_path,
+            Key=path,
             RequestPayer="requester",
         )
     except requests.exceptions.HTTPError as err:
@@ -157,7 +153,7 @@ def direct_download_url(path):
 
     response = s3.get_object(
         Bucket=bucket_name,
-        Key=decoded_path,
+        Key=path,
         RequestPayer="requester",
     )
     resource = response["Body"].read()
@@ -182,10 +178,6 @@ def search_datasets():
 @app.route("/dataset_info_from_doi/")
 def get_dataset_info():
     doi = request.args.getlist('doi')[0]
-    # query = {
-    #     "match": {"item.curie": "DOI"}
-    # }
-    # d = '10.26275/bjp1-ppqo'
     query = {
         "match": {
             "item.curie": {
@@ -264,7 +256,7 @@ def filter_search(query):
 
 
 # /get-facets/: Returns available sci-crunch facets for filtering over given a <type> ('species', 'gender' etc)
-@app.route("/get-facets/<type>")
+@app.route("/get-facets/<type_>")
 def get_facets(type_):
     # Create facet query
     type_map, data = create_facet_query(type_)

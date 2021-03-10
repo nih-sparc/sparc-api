@@ -160,7 +160,7 @@ def direct_download_url(path):
     return resource
 
 
-@app.route("/sim/dataset/<id>")
+@app.route("/sim/dataset/<id_>")
 def sim_dataset(id_):
     if request.method == "GET":
         req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))

@@ -20,6 +20,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
 from app.process_kb_results import *
+from requests.auth import HTTPBasicAuth
+
 # from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -149,9 +151,10 @@ def contact():
 def create_presigned_url(expiration=3600):
     bucket_name = "blackfynn-discover-use1"
     key = request.args.get("key")
+    contentType = request.args.get("contentType") or "application/octet-stream"
     response = s3.generate_presigned_url(
         "get_object",
-        Params={"Bucket": bucket_name, "Key": key, "RequestPayer": "requester"},
+        Params={"Bucket": bucket_name, "Key": key, "RequestPayer": "requester", "ResponseContentType": contentType},
         ExpiresIn=expiration,
     )
 
@@ -159,7 +162,7 @@ def create_presigned_url(expiration=3600):
 
 
 # Reverse proxy for objects from S3, a simple get object
-# operation. This is used by scaffoldvuer and its 
+# operation. This is used by scaffoldvuer and its
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
@@ -453,3 +456,73 @@ def get_map_state():
         abort(400, description="Key missing or did not find a match")
     else:
         abort(404, description="Database not available")
+
+@app.route("/tasks", methods=["POST"])
+def create_wrike_task():
+    json_data = request.get_json()
+    if json_data and 'title' in json_data and 'description' in json_data :
+        title = json_data["title"]
+        description = json_data["description"]
+        hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
+        url = 'https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks'
+
+        data = {
+            "title": title,
+            "description": description,
+            "customStatus": "IEADBYQEJMBJODZU",
+            "followers": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
+            "responsibles": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
+            "follow":False,
+            "dates":{"type":"Backlog"}
+        }
+
+        resp = requests.post(
+            url=url,
+            json=data,
+            headers=hed
+        )
+
+        if resp.status_code == 200:
+            return jsonify(
+                title=title,
+                description=description,
+                task_id=resp.json()["data"][0]["id"]
+            )
+        else:
+            return resp.json()
+    else:
+        abort(400, description="Missing title or description")
+
+@app.route("/mailchimp", methods=["POST"])
+def subscribe_to_mailchimp():
+    json_data = request.get_json()
+    if json_data and 'email_address' in json_data and 'first_name' in json_data and 'last_name' in json_data:
+        email_address = json_data["email_address"]
+        first_name = json_data['first_name']
+        last_name = json_data['last_name']
+        auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members'
+
+        data = {
+            "email_address": email_address,
+            "status": "subscribed",
+            "merge_fields" : {
+                "FNAME": first_name,
+                "LNAME": last_name
+            }
+        }
+        resp = requests.post(
+            url=url,
+            json=data,
+            auth=auth
+        )
+
+        if resp.status_code == 200:
+            return jsonify(
+                email_address=email_address,
+                id=resp.json()["id"]
+            )
+        else:
+            return resp.json()
+    else:
+        abort(400, description="Missing email_address, first_name or last_name")

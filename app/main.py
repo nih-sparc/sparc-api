@@ -13,6 +13,7 @@ from flask_marshmallow import Marshmallow
 from blackfynn import Blackfynn
 from app.config import Config
 from app.mapstate import MapState
+from blackfynn.base import UnauthorizedException as BFUnauthorizedException
 
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
@@ -79,12 +80,19 @@ def resource_not_found(e):
 @app.before_first_request
 def connect_to_blackfynn():
     global bf
-    bf = Blackfynn(
-        api_token=Config.BLACKFYNN_API_TOKEN,
-        api_secret=Config.BLACKFYNN_API_SECRET,
-        env_override=False,
-        host=Config.BLACKFYNN_API_HOST
-    )
+    try:
+        bf = Blackfynn(
+            api_token=Config.BLACKFYNN_API_TOKEN,
+            api_secret=Config.BLACKFYNN_API_SECRET,
+            env_override=False,
+            host=Config.BLACKFYNN_API_HOST
+        )
+    except requests.exceptions.HTTPError as err:
+        logging.error("Unable to connect to Blackfynn host")
+        logging.error(err)
+    except BFUnauthorizedException as err:
+        logging.error("Unable to authorise with Blackfynn Api")
+        logging.error(err)
 
 # @app.before_first_request
 # def connect_to_mongodb():

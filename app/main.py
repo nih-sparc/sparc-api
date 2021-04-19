@@ -10,10 +10,10 @@ from botocore.exceptions import ClientError
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
-from blackfynn import Blackfynn
+from pennsieve import Pennsieve
 from app.config import Config
 from app.mapstate import MapState
-from blackfynn.base import UnauthorizedException as BFUnauthorizedException
+from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
@@ -31,7 +31,7 @@ CORS(app)
 ma = Marshmallow(app)
 email_sender = EmailSender()
 mongo = None
-bf = None
+ps = None
 s3 = boto3.client(
     "s3",
     aws_access_key_id=Config.SPARC_PORTAL_AWS_KEY,
@@ -78,20 +78,20 @@ def resource_not_found(e):
     return jsonify(error=str(e)), 404
 
 @app.before_first_request
-def connect_to_blackfynn():
-    global bf
+def connect_to_pennsieve():
+    global ps
     try:
-        bf = Blackfynn(
+        ps = Pennsieve(
             api_token=Config.BLACKFYNN_API_TOKEN,
             api_secret=Config.BLACKFYNN_API_SECRET,
             env_override=False,
             host=Config.BLACKFYNN_API_HOST
         )
     except requests.exceptions.HTTPError as err:
-        logging.error("Unable to connect to Blackfynn host")
+        logging.error("Unable to connect to Pennsieve host")
         logging.error(err)
-    except BFUnauthorizedException as err:
-        logging.error("Unable to authorise with Blackfynn Api")
+    except PSUnauthorizedException as err:
+        logging.error("Unable to authorise with Pennsieve Api")
         logging.error(err)
 
 # @app.before_first_request
@@ -130,7 +130,7 @@ def contact():
 # Download a file from S3
 @app.route("/download")
 def create_presigned_url(expiration=3600):
-    bucket_name = "blackfynn-discover-use1"
+    bucket_name = "pennsieve-prod-discover-publish-use1"
     key = request.args.get("key")
     contentType = request.args.get("contentType") or "application/octet-stream"
     response = s3.generate_presigned_url(
@@ -148,12 +148,12 @@ def create_presigned_url(expiration=3600):
 # other required files.
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
-    bucket_name = "blackfynn-discover-use1"
+    bucket_name = "pennsieve-prod-discover-publish-use1"
 
     head_response = s3.head_object(
         Bucket=bucket_name,
         Key=path,
-        RequestPayer="requester",
+        RequestPayer="requester"
     )
 
     content_length = head_response.get('ContentLength', None)
@@ -163,7 +163,7 @@ def direct_download_url(path):
     response = s3.get_object(
         Bucket=bucket_name,
         Key=path,
-        RequestPayer="requester",
+        RequestPayer="requester"
     )
     resource = response["Body"].read()
     return resource
@@ -261,7 +261,7 @@ def inject_template_data(resp):
 
     try:
         response = s3.get_object(
-            Bucket="blackfynn-discover-use1",
+            Bucket="pennsieve-prod-discover-publish-use1",
             Key="{}/{}/files/template.json".format(id, version),
             RequestPayer="requester",
         )
@@ -272,7 +272,7 @@ def inject_template_data(resp):
         )
         try:
             response = s3.get_object(
-                Bucket="blackfynn-discover-use1",
+                Bucket="pennsieve-prod-discover-publish-use1",
                 Key="{}/{}/packages/template.json".format(id, version),
                 RequestPayer="requester",
             )
@@ -329,8 +329,8 @@ def datasets_by_project_id(project_id):
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
     # Filter to find user based on provided int id
-    org = bf._api._organization
-    members = bf._api.organizations.get_members(org)
+    org = ps._api._organization
+    members = ps._api.organizations.get_members(org)
     res = [x for x in members if x.int_id == owner_id]
 
     if not res:

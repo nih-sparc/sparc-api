@@ -11,7 +11,7 @@ class Config(object):
     BLACKFYNN_EMBARGO_TEAM_ID = os.environ.get("BLACKFYNN_EMBARGO_TEAM_ID")
     DATABASE_URL = os.environ.get('DATABASE_URL')
     DISCOVER_API_HOST = os.environ.get(
-        "DISCOVER_API_HOST", "https://api.blackfynn.io/discover"
+        "DISCOVER_API_HOST", "https://api.pennsieve.io/discover"
     )
     GRAPHENEDB_BOLT_PASSWORD = os.environ.get("GRAPHENEDB_BOLT_PASSWORD")
     GRAPHENEDB_BOLT_URL = os.environ.get("GRAPHENEDB_BOLT_URL")

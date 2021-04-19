@@ -93,6 +93,9 @@ def connect_to_pennsieve():
     except PSUnauthorizedException as err:
         logging.error("Unable to authorise with Pennsieve Api")
         logging.error(err)
+    except Exception as err:
+        logging.error("Unknown Error")
+        logging.error(err)
 
 # @app.before_first_request
 # def connect_to_mongodb():

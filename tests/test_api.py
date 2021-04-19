@@ -15,11 +15,6 @@ def client():
 
 def test_get_owner_email(client):
     # SPARC Portal user info
-    print(Config.PENNSIEVE_API_HOST)
-    print(Config.PENNSIEVE_API_TOKEN)
-    print(Config.PENNSIEVE_API_SECRET)
-    print(Config.SPARC_PORTAL_AWS_KEY)
-    print(Config.SPARC_PORTAL_AWS_SECRET)
     portal_user_id = 729
     portal_user_email = 'nih-data-portal@blackfynn.com'
 

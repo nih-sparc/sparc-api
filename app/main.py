@@ -82,10 +82,10 @@ def connect_to_pennsieve():
     global ps
     try:
         ps = Pennsieve(
-            api_token=Config.BLACKFYNN_API_TOKEN,
-            api_secret=Config.BLACKFYNN_API_SECRET,
+            api_token=Config.PENNSIEVE_API_TOKEN,
+            api_secret=Config.PENNSIEVE_API_SECRET,
             env_override=False,
-            host=Config.BLACKFYNN_API_HOST
+            host=Config.PENNSIEVE_API_HOST
         )
     except requests.exceptions.HTTPError as err:
         logging.error("Unable to connect to Pennsieve host")

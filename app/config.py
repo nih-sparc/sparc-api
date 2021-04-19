@@ -5,10 +5,10 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
     PORTAL_API_HOST = os.environ.get("PORTAL_API_HOST", "http://localhost:4000")
-    BLACKFYNN_API_HOST = os.environ.get("BLACKFYNN_API_HOST")
-    BLACKFYNN_API_SECRET = os.environ.get("BLACKFYNN_API_SECRET", "local-secret-key")
-    BLACKFYNN_API_TOKEN = os.environ.get("BLACKFYNN_API_TOKEN", "local-api-key")
-    BLACKFYNN_EMBARGO_TEAM_ID = os.environ.get("BLACKFYNN_EMBARGO_TEAM_ID")
+    PENNSIEVE_API_HOST = os.environ.get("PENNSIEVE_API_HOST")
+    PENNSIEVE_API_SECRET = os.environ.get("PENNSIEVE_API_SECRET", "local-secret-key")
+    PENNSIEVE_API_TOKEN = os.environ.get("PENNSIEVE_API_TOKEN", "local-api-key")
+    PENNSIEVE_EMBARGO_TEAM_ID = os.environ.get("PENNSIEVE_EMBARGO_TEAM_ID")
     DATABASE_URL = os.environ.get('DATABASE_URL')
     DISCOVER_API_HOST = os.environ.get(
         "DISCOVER_API_HOST", "https://api.pennsieve.io/discover"

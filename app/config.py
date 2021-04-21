@@ -5,13 +5,13 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
     PORTAL_API_HOST = os.environ.get("PORTAL_API_HOST", "http://localhost:4000")
-    BLACKFYNN_API_HOST = os.environ.get("BLACKFYNN_API_HOST")
-    BLACKFYNN_API_SECRET = os.environ.get("BLACKFYNN_API_SECRET", "local-secret-key")
-    BLACKFYNN_API_TOKEN = os.environ.get("BLACKFYNN_API_TOKEN", "local-api-key")
-    BLACKFYNN_EMBARGO_TEAM_ID = os.environ.get("BLACKFYNN_EMBARGO_TEAM_ID")
+    PENNSIEVE_API_HOST = os.environ.get("PENNSIEVE_API_HOST")
+    PENNSIEVE_API_SECRET = os.environ.get("PENNSIEVE_API_SECRET", "local-secret-key")
+    PENNSIEVE_API_TOKEN = os.environ.get("PENNSIEVE_API_TOKEN", "local-api-key")
+    PENNSIEVE_EMBARGO_TEAM_ID = os.environ.get("PENNSIEVE_EMBARGO_TEAM_ID")
     DATABASE_URL = os.environ.get('DATABASE_URL')
     DISCOVER_API_HOST = os.environ.get(
-        "DISCOVER_API_HOST", "https://api.blackfynn.io/discover"
+        "DISCOVER_API_HOST", "https://api.pennsieve.io/discover"
     )
     GRAPHENEDB_BOLT_PASSWORD = os.environ.get("GRAPHENEDB_BOLT_PASSWORD")
     GRAPHENEDB_BOLT_URL = os.environ.get("GRAPHENEDB_BOLT_URL")
@@ -33,3 +33,12 @@ class Config(object):
     SPARC_APP_HOST = os.environ.get("SPARC_APP_HOST", "https://sparc-app.herokuapp.com")
     SCI_CRUNCH_HOST = os.environ.get("SCICRUNCH_HOST", "https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr")
     MAPSTATE_TABLENAME = os.environ.get("MAPSTATE_TABLENAME", "mapstates")
+    WRIKE_TOKEN = os.environ.get("WRIKE_TOKEN")
+    SIM_CORE_TECH_LEAD_WRIKE_ID = os.environ.get("SIM_CORE_TECH_LEAD_WRIKE_ID")
+    MAP_CORE_TECH_LEAD_WRIKE_ID = os.environ.get("MAP_CORE_TECH_LEAD_WRIKE_ID")
+    DAT_CORE_TECH_LEAD_WRIKE_ID = os.environ.get("DAT_CORE_TECH_LEAD_WRIKE_ID")
+    K_CORE_TECH_LEAD_WRIKE_ID = os.environ.get("K_CORE_TECH_LEAD_WRIKE_ID")
+    CCB_HEAD_WRIKE_ID = os.environ.get("CCB_HEAD_WRIKE_ID")
+    MODERATOR_WRIKE_ID = os.environ.get("MODERATOR_WRIKE_ID")
+    MAILCHIMP_API_KEY = os.environ.get("MAILCHIMP_API_KEY")
+

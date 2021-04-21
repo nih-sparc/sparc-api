@@ -99,7 +99,7 @@ if __name__ == "__main__":
             )
         )
         if ds["content"]["intId"] in publishedIds or not any(
-            t["id"] == Config.BLACKFYNN_EMBARGO_TEAM_ID
+            t["id"] == Config.PENNSIEVE_EMBARGO_TEAM_ID
             for t in api._get(
                 api._uri(
                     "/datasets/{dsid}/collaborators/teams", dsid=ds["content"]["id"]

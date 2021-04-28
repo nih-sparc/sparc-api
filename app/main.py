@@ -39,9 +39,11 @@ s3 = boto3.client(
     aws_secret_access_key=Config.SPARC_PORTAL_AWS_SECRET,
     region_name="us-east-1",
 )
-
-os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
-os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
+try:
+    os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
+    os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
+except:
+    pass
 
 biolucida_lock = Lock()
 

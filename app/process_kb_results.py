@@ -85,7 +85,7 @@ def create_filter_request(query, terms, facets, size, start):
     # Add a filter for each facet
     for i, facet in enumerate(facets):
         if terms[i] is not None and facet is not None and 'All' not in facet:
-            data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}'}})
+            data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}', 'operator': 'AND'}})
 
     # Add queries if they exist
     if query is not '':
@@ -97,6 +97,7 @@ def create_filter_request(query, terms, facets, size, start):
             "type": "best_fields"
           }
         }
+    print(data)
     return data
 
 

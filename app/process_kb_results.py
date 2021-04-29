@@ -74,31 +74,48 @@ def create_filter_request(query, terms, facets, size, start):
       "size": size,
       "from": start,
       "query": {
-          "bool": {
-              "must": [],
-              "should": [],
-              "filter": []
+          "query_string": {
+              "query": ""
           }
       }
     }
 
-    # Add a filter for each facet
-    for i, facet in enumerate(facets):
-        if terms[i] is not None and facet is not None and 'All' not in facet:
-            data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}', 'operator': 'AND'}})
+    qs = facet_query_string(query, terms, facets, type_map)
+    data["query"]["query_string"]["query"] = qs
 
-    # Add queries if they exist
-    if query is not '':
-        data['query']['bool']['must'] = {
-          "query_string": {
-            "query": f"{query}",
-            "default_operator": "and",
-            "lenient": "true",
-            "type": "best_fields"
-          }
-        }
     print(data)
     return data
+
+
+def facet_query_string(query, terms, facets, type_map):
+
+    # Create AND OR structure. OR within facets and AND bewteen them
+    t = {}
+    for i, term in enumerate(terms):
+        if term not in t.keys():
+            t[term] = [facets[i]]
+        else:
+            t[term].append(facets[i])
+
+    # Add search query if it exists
+    qt = ""
+    if query is not "":
+        qt = query + " AND "
+
+    # Add the brackets and OR and AND parameters
+    for k in t:
+        qt += type_map[k][0] + ":("
+        for l in t[k]:
+            qt += f"({l})"
+            if l is not t[k][-1]:
+                qt += " OR "
+            else:
+                qt += ") "
+
+        if k is not list(t.keys())[-1]:
+            qt += " AND "
+
+    return qt
 
 
 # process_kb_results: Loop through scicrunch results pulling out desired attributes and processing doi's and csv files

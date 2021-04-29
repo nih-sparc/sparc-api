@@ -22,6 +22,10 @@ def test_scicrunch_filter(client):
     r = client.get('/filter-search/', query_string={'term': 'genotype', 'facet': 'heart'})
     assert json.loads(r.data)['numberOfHits'] > 4
 
+def test_scicrunch_boolean_logic(client):
+    r = client.get('/filter-search/', query_string={'term': 'gender', 'facet': 'male', 'term': 'gender', 'facet': 'female'})
+    assert json.loads(r.data)['numberOfHits'] > 20
+
 def test_getting_facets(client):
     r = client.get('/get-facets/genotype')
     facet_results = json.loads(r.data)

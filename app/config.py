@@ -41,4 +41,7 @@ class Config(object):
     CCB_HEAD_WRIKE_ID = os.environ.get("CCB_HEAD_WRIKE_ID")
     MODERATOR_WRIKE_ID = os.environ.get("MODERATOR_WRIKE_ID")
     MAILCHIMP_API_KEY = os.environ.get("MAILCHIMP_API_KEY")
+    OSPARC_API_URL=os.environ.get("OSPARC_API_URL", "https://api.staging.osparc.io")
+    OSPARC_API_KEY=os.environ.get("OSPARC_API_KEY")
+    OSPARC_API_SECRET=os.environ.get("OSPARC_API_SECRET")
 

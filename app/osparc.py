@@ -6,10 +6,10 @@ import tempfile
 from time import sleep
 
 
-def run_simulation(config):
+def run_simulation(model_url, config_json):
     temp_config_file = tempfile.NamedTemporaryFile(mode="w+")
 
-    json.dump(config, temp_config_file)
+    json.dump(config_json, temp_config_file)
 
     temp_config_file.seek(0)
 
@@ -41,7 +41,7 @@ def run_simulation(config):
             solver.id,
             solver.version,
             osparc.JobInputs({
-                "model_url": "https://models.physiomeproject.org/e/611/HumanSAN_Fabbri_Fantini_Wilders_Severi_2017.cellml",
+                "model_url": model_url,
                 "config_file": config_file
             }),
         )

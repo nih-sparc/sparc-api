@@ -21,6 +21,8 @@ from app.process_kb_results import *
 from requests.auth import HTTPBasicAuth
 import os
 
+import app.osparc as osparc
+
 # from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -501,3 +503,18 @@ def subscribe_to_mailchimp():
             return resp.json()
     else:
         abort(400, description="Missing email_address, first_name or last_name")
+
+
+@app.route("/simulation")
+def simulation():
+    res = osparc.run_simulation({
+        "simulation": {
+            "Ending point": 3,
+            "Point interval": 0.001
+        },
+        "output": [
+            "Membrane/V"
+        ]
+    })
+
+    return json.dumps(res)

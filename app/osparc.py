@@ -6,10 +6,10 @@ import tempfile
 from time import sleep
 
 
-def run_simulation(model_url, config_json):
+def run_simulation(model_url, json_config):
     temp_config_file = tempfile.NamedTemporaryFile(mode="w+")
 
-    json.dump(config_json, temp_config_file)
+    json.dump(json_config, temp_config_file)
 
     temp_config_file.seek(0)
 

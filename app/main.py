@@ -507,14 +507,15 @@ def subscribe_to_mailchimp():
 
 @app.route("/simulation")
 def simulation():
-    res = osparc.run_simulation({
-        "simulation": {
-            "Ending point": 3,
-            "Point interval": 0.001
-        },
-        "output": [
-            "Membrane/V"
-        ]
-    })
+    res = osparc.run_simulation("https://models.physiomeproject.org/e/611/HumanSAN_Fabbri_Fantini_Wilders_Severi_2017.cellml",
+                                {
+                                    "simulation": {
+                                        "Ending point": 3,
+                                        "Point interval": 0.001
+                                    },
+                                    "output": [
+                                        "Membrane/V"
+                                    ]
+                                })
 
     return json.dumps(res)

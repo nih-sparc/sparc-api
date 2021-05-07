@@ -507,15 +507,10 @@ def subscribe_to_mailchimp():
 
 @app.route("/simulation")
 def simulation():
-    res = osparc.run_simulation("https://models.physiomeproject.org/e/611/HumanSAN_Fabbri_Fantini_Wilders_Severi_2017.cellml",
-                                {
-                                    "simulation": {
-                                        "Ending point": 3,
-                                        "Point interval": 0.001
-                                    },
-                                    "output": [
-                                        "Membrane/V"
-                                    ]
-                                })
+    model_url = request.args.get("model_url")
+    json_config = request.args.get("json_config")
 
-    return json.dumps(res)
+    if (model_url != None) and (json_config != None):
+        return json.dumps(osparc.run_simulation(model_url, json.loads(json_config)))
+    else:
+        abort(400, description="Missing model URL and/or JSON configuration")

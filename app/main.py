@@ -12,7 +12,7 @@ from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
 from app.config import Config
-from app.mapstate import MapState
+from app.dbtable import MapTable, ScaffoldTable
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 
 from app.serializer import ContactRequestSchema
@@ -40,15 +40,26 @@ s3 = boto3.client(
     region_name="us-east-1",
 )
 
-os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
-os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
+try:
+  os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
+except:
+  print("SPARC_PORTAL_AWS_KEY not set")
+try:
+  os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
+except:
+  print("SPARC_PORTAL_AWS_SECRET not set")
 
 biolucida_lock = Lock()
 
 try:
-  mapstate = MapState(Config.DATABASE_URL)
+  maptable = MapTable(Config.DATABASE_URL)
 except:
-  mapstate = None
+  maptable = None
+
+try:
+  scaffoldtable = ScaffoldTable(Config.DATABASE_URL)
+except:
+  scaffoldtable = None
 
 class Biolucida(object):
     _token = ''
@@ -396,38 +407,52 @@ def authenticate_biolucida():
         content = response.json()
         bl.set_token(content['token'])
 
-
-#get the share link for the current map content
-@app.route("/map/getshareid", methods=["POST"])
-def get_share_link():
+def get_share_link(table):
     #Do not commit to database when testing
     commit = True
     if app.config["TESTING"]:
         commit = False
-    if mapstate:
+    if table:
         json_data = request.get_json()
         if json_data and 'state' in json_data:
             state = json_data['state']
-            uuid = mapstate.pushState(state, commit)
+            uuid = table.pushState(state, commit)
             return jsonify({"uuid": uuid})
         abort(400, description="State not specified")
     else:
         abort(404, description="Database not available")
 
+def get_saved_state(table):
+    if table:
+        json_data = request.get_json()
+        if json_data and 'uuid' in json_data:
+            uuid = json_data['uuid']
+            state = table.pullState(uuid)
+            if state:
+                return jsonify({"state": table.pullState(uuid)})
+        abort(400, description="Key missing or did not find a match")
+    else:
+        abort(404, description="Database not available")
+
+#get the share link for the current map content
+@app.route("/map/getshareid", methods=["POST"])
+def get_map_share_link():
+    return get_share_link(maptable)
 
 #get the map state using the share link id
 @app.route("/map/getstate", methods=["POST"])
 def get_map_state():
-    if mapstate:
-        json_data = request.get_json()
-        if json_data and 'uuid' in json_data:
-            uuid = json_data['uuid']
-            state = mapstate.pullState(uuid)
-            if state:
-                return jsonify({"state": mapstate.pullState(uuid)})
-        abort(400, description="Key missing or did not find a match")
-    else:
-        abort(404, description="Database not available")
+    return get_saved_state(maptable)
+
+#get the share link for the current map content
+@app.route("/scaffold/getshareid", methods=["POST"])
+def get_scaffold_share_link():
+    return get_share_link(scaffoldtable)
+
+#get the map state using the share link id
+@app.route("/scaffold/getstate", methods=["POST"])
+def get_scaffold_state():
+    return get_saved_state(scaffoldtable)
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():

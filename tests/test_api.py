@@ -75,6 +75,30 @@ def test_map_get_share_id_and_state(client):
   r = client.post(f"/map/getstate", json = {})
   assert r.status_code == 400
 
+def test_scaffold_get_share_id_and_state(client):
+  # mock json for testing
+  testData = { "state" : { "far" : 12.32, "near": 0.23 } }
+
+  r = client.post(f"/scaffold/getshareid", json = {})
+  assert r.status_code == 400
+
+  r = client.post(f"/scaffold/getshareid", json = testData)
+  assert r.status_code == 200
+  assert "uuid" in r.get_json()
+
+  r = client.post(f"/scaffold/getstate", json = r.get_json())
+  assert r.status_code == 200
+  returned_data = r.get_json()
+  assert "state" in returned_data
+  assert returned_data["state"]["far"] == 12.32
+  assert returned_data["state"]["near"] == 0.23
+
+  r = client.post(f"/map/getstate", json = {"uuid": "1234567"})
+  assert r.status_code == 400
+
+  r = client.post(f"/map/getstate", json = {})
+  assert r.status_code == 400
+
 def test_create_wrike_task(client):
     r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api"})
     assert r.status_code == 400

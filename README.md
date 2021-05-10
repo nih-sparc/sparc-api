@@ -10,12 +10,9 @@ Make sure you have python 3 installed `python3 --version`
 python3 -m venv ./venv
 . ./venv/bin/activate
 pip install -r requirements.txt
-pip install git+https://github.com/ITISFoundation/osparc-simcore-python-client.git
 pip install -r requirements-dev.txt
 gunicorn main:app
 ```
-
-**Note:** the latest version of the `osparc` package on [PyPI](https://pypi.org/project/osparc/) is version 0.3.10 while we need at least version 0.4.3, hence we currently need to install it off `osparc`'s [GitHub repository](https://github.com/ITISFoundation/osparc-simcore-python-client).
 
 # Testing
 

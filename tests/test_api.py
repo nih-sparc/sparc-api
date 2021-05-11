@@ -117,3 +117,13 @@ def test_subscribe_to_mailchimp(client):
         auth=auth
     )
     assert resp.status_code == 204
+
+def test_osparc_viewers(client):
+    r = client.get('/get_osparc_data')
+    assert r.status_code == 200
+    osparc_data = r.get_json()
+    assert 'file_viewers' in osparc_data
+
+def test_sim_dataset(client):
+    r = client.get('/sim/dataset/0')
+    assert r.status_code == 404

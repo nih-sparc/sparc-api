@@ -505,12 +505,11 @@ def subscribe_to_mailchimp():
         abort(400, description="Missing email_address, first_name or last_name")
 
 
-@app.route("/simulation")
+@app.route("/simulation", methods=["POST"])
 def simulation():
-    model_url = request.args.get("model_url")
-    json_config = request.args.get("json_config")
+    data = request.get_json()
 
-    if (model_url != None) and (json_config != None):
-        return json.dumps(osparc.run_simulation(model_url, json.loads(json_config)))
+    if data and "model_url" in data and "json_config" in data:
+        return json.dumps(osparc.run_simulation(data["model_url"], data["json_config"]))
     else:
         abort(400, description="Missing model URL and/or JSON configuration")

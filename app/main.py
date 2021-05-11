@@ -335,10 +335,12 @@ def build_filetypes_table(osparc_viewers):
 def sim_dataset(id):
     if request.method == "GET":
         req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id))
-        json = req.json()
-        inject_markdown(json)
-        inject_template_data(json)
-        return jsonify(json)
+        if req.ok:
+            json = req.json()
+            inject_markdown(json)
+            inject_template_data(json)
+            return jsonify(json)
+        abort(404, description="Resource not found")
 
 @app.route("/get_osparc_data")
 def get_osparc_data():

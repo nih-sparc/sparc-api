@@ -1,6 +1,5 @@
 from app.config import Config
 import json
-import os
 import osparc
 import tempfile
 from time import sleep
@@ -17,7 +16,7 @@ def run_simulation(model_url, json_config):
         api_client = osparc.ApiClient(osparc.Configuration(
             host=Config.OSPARC_API_URL,
             username=Config.OSPARC_API_KEY,
-            password=Config.OSPARC_API_SECRET,
+            password=Config.OSPARC_API_SECRET
         ))
 
         # Upload the configuration file.
@@ -43,7 +42,7 @@ def run_simulation(model_url, json_config):
             osparc.JobInputs({
                 "model_url": model_url,
                 "config_file": config_file
-            }),
+            })
         )
 
         # Start the simulation job.
@@ -96,7 +95,7 @@ def run_simulation(model_url, json_config):
     except Exception as e:
         res = {
             "status": "nok",
-            "description": e.args[0],
+            "description": e.args[0]
         }
 
     temp_config_file.close()

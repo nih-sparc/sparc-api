@@ -95,7 +95,7 @@ def run_simulation(model_url, json_config):
     except Exception as e:
         res = {
             "status": "nok",
-            "description": e.args[0]
+            "description": e.args[0] if len(e.args) > 0 else "unknown"
         }
 
     temp_config_file.close()

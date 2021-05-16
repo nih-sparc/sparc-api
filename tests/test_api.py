@@ -93,10 +93,10 @@ def test_scaffold_get_share_id_and_state(client):
   assert returned_data["state"]["far"] == 12.32
   assert returned_data["state"]["near"] == 0.23
 
-  r = client.post(f"/map/getstate", json = {"uuid": "1234567"})
+  r = client.post(f"/scaffold/getstate", json = {"uuid": "1234567"})
   assert r.status_code == 400
 
-  r = client.post(f"/map/getstate", json = {})
+  r = client.post(f"/scaffold/getstate", json = {})
   assert r.status_code == 400
 
 def test_create_wrike_task(client):

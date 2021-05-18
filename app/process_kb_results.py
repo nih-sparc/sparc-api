@@ -96,8 +96,8 @@ def facet_query_string(query, terms, facets, type_map):
 
     t = {}
     for i, term in enumerate(terms):
-        if (terms is None or facets[i] is not None or 'All' in facets[i]):  # Ignore 'All species' facets
-            pass
+        if (term is None or facets[i] is None or 'All' in facets[i]):  # Ignore 'All species' facets
+            continue
         else:
             if term not in t.keys():  # No duplicate terms for the typemap. OR will be handled later
                 t[term] = [facets[i]]
@@ -107,7 +107,7 @@ def facet_query_string(query, terms, facets, type_map):
     # Add search query if it exists
     qt = ""
     if query is not "":
-        qt = query + " AND "
+        qt = f'({query}) AND '
 
     # Add the brackets and OR and AND parameters
     for k in t:

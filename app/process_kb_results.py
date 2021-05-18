@@ -89,13 +89,20 @@ def create_filter_request(query, terms, facets, size, start):
 
 def facet_query_string(query, terms, facets, type_map):
 
-    # Create AND OR structure. OR within facets and AND bewteen them
+    # We will create AND OR structure. OR within facets and AND between them
+    # Example Output:
+    #
+    # "heart AND attributes.subject.sex.value:((male) OR (female))"
+
     t = {}
     for i, term in enumerate(terms):
-        if term not in t.keys():
-            t[term] = [facets[i]]
+        if (terms is None or facets[i] is not None or 'All' in facets[i]):  # Ignore 'All species' facets
+            pass
         else:
-            t[term].append(facets[i])
+            if term not in t.keys():  # No duplicate terms for the typemap. OR will be handled later
+                t[term] = [facets[i]]
+            else:
+                t[term].append(facets[i])
 
     # Add search query if it exists
     qt = ""
@@ -104,15 +111,15 @@ def facet_query_string(query, terms, facets, type_map):
 
     # Add the brackets and OR and AND parameters
     for k in t:
-        qt += type_map[k][0] + ":("
+        qt += type_map[k][0] + ":("  # facet term path and opening bracket
         for l in t[k]:
-            qt += f"({l})"
+            qt += f"({l})"  # bracket around terms incase there are spaces
             if l is not t[k][-1]:
-                qt += " OR "
+                qt += " OR "  # 'OR' if more terms in this facet are coming
             else:
                 qt += ") "
 
-        if k is not list(t.keys())[-1]:
+        if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
             qt += " AND "
 
     return qt

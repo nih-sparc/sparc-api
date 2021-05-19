@@ -62,6 +62,9 @@ def create_filter_request(query, terms, facets, size, start):
     if start is None:
         start = 0
 
+    if query is "" and len(terms) is 0 and len(facets) is 0:
+        return {"size": size, "from": start}
+
     # Type map is used to map scicrunch paths to given facet
     type_map = {
         'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name'],

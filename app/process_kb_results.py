@@ -86,7 +86,6 @@ def create_filter_request(query, terms, facets, size, start):
     qs = facet_query_string(query, terms, facets, type_map)
     data["query"]["query_string"]["query"] = qs
 
-    print(data)
     return data
 
 
@@ -102,10 +101,10 @@ def facet_query_string(query, terms, facets, type_map):
         if (term is None or facets[i] is None or 'All' in facets[i]):  # Ignore 'All species' facets
             continue
         else:
-            if term not in t.keys():  # No duplicate terms for the typemap. OR will be handled later
+            if term not in t.keys():  # If term hasn't been seen, add it to the list of terms
                 t[term] = [facets[i]]
             else:
-                t[term].append(facets[i])
+                t[term].append(facets[i])  # If term has been seen append it to it's term
 
     # Add search query if it exists
     qt = ""

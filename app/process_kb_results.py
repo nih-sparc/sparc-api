@@ -107,21 +107,17 @@ def facet_query_string(query, terms, facets, type_map):
     # Add search query if it exists
     qt = ""
     if query is not "":
-        qt = f'({query}) AND '
+        qt = f'({query})'
 
     # Add the brackets and OR and AND parameters
     for k in t:
-        qt += type_map[k][0] + ":("  # facet term path and opening bracket
+        qt += " AND " + type_map[k][0] + ":("  # facet term path and opening bracket
         for l in t[k]:
             qt += f"({l})"  # bracket around terms incase there are spaces
             if l is not t[k][-1]:
                 qt += " OR "  # 'OR' if more terms in this facet are coming
             else:
                 qt += ") "
-
-        if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
-            qt += " AND "
-
     return qt
 
 

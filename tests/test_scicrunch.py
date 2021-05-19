@@ -18,6 +18,10 @@ def test_scicrunch_search(client):
     assert r.status_code == 200
     assert json.loads(r.data)['numberOfHits'] > 4
 
+def test_scicrunch_all_data(client):
+    r = client.get('/filter-search/')
+    assert json.loads(r.data)['numberOfHits'] > 40
+
 def test_scicrunch_filter(client):
     r = client.get('/filter-search/', query_string={'term': 'genotype', 'facet': 'heart'})
     assert json.loads(r.data)['numberOfHits'] > 4

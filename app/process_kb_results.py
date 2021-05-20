@@ -137,6 +137,7 @@ def process_kb_results(results):
         attr = get_attributes(attributes, hit)
         attr['doi'] = convert_doi_to_url(attr['doi'])
         attr['csvFiles'] = find_csv_files(attr['csvFiles'])
+        attr['scaffolds'] = find_scaffold_json_files(hit['_source']['objects'])
         output.append(attr)
     return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
 
@@ -151,6 +152,12 @@ def find_csv_files(obj_list):
     if not obj_list:
         return obj_list
     return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'text/csv']
+
+
+def find_scaffold_json_files(obj_list):
+    if not obj_list:
+        return obj_list
+    return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'application/json' and "metadata.json" in obj.get('dataset', 'none')['path']]
 
 
 # get_attributes: Use 'attributes' (defined at top of this document) to step through the large scicrunch result dict

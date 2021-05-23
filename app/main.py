@@ -1,22 +1,29 @@
-import json
 import base64
+import boto3
+import json
 import logging
-from threading import Lock
+import os
+import requests
+
+
 from datetime import datetime, timedelta
 
-import boto3
-import requests
 from botocore.exceptions import ClientError
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
-from blackfynn import Blackfynn
+from pennsieve import Pennsieve
+from pennsieve.base import UnauthorizedException as PSUnauthorizedException
+from requests.auth import HTTPBasicAuth
+from scripts.email_sender import EmailSender
+from threading import Lock
 
 from app.config import Config
+from app.mapstate import MapState
 from app.process_kb_results import create_facet_query, process_kb_results, create_filter_request
 from app.serializer import ContactRequestSchema
 
-from scripts.email_sender import EmailSender
+
 
 app = Flask(__name__)
 # set environment variable
@@ -27,7 +34,7 @@ CORS(app)
 ma = Marshmallow(app)
 email_sender = EmailSender()
 mongo = None
-bf = None
+ps = None
 s3 = boto3.client(
     "s3",
     aws_access_key_id=Config.SPARC_PORTAL_AWS_KEY,
@@ -35,8 +42,15 @@ s3 = boto3.client(
     region_name="us-east-1",
 )
 
+os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
+os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
+
 biolucida_lock = Lock()
 
+try:
+  mapstate = MapState(Config.DATABASE_URL)
+except:
+  mapstate = None
 
 class Biolucida(object):
     _token = ''
@@ -71,14 +85,24 @@ def resource_not_found(e):
 
 
 @app.before_first_request
-def connect_to_blackfynn():
-    global bf
-    bf = Blackfynn(
-        api_token=Config.BLACKFYNN_API_TOKEN,
-        api_secret=Config.BLACKFYNN_API_SECRET,
-        env_override=False,
-        host=Config.BLACKFYNN_API_HOST
-    )
+def connect_to_pennsieve():
+    global ps
+    try:
+        ps = Pennsieve(
+            api_token=Config.PENNSIEVE_API_TOKEN,
+            api_secret=Config.PENNSIEVE_API_SECRET,
+            env_override=False,
+            host=Config.PENNSIEVE_API_HOST
+        )
+    except requests.exceptions.HTTPError as err:
+        logging.error("Unable to connect to Pennsieve host")
+        logging.error(err)
+    except PSUnauthorizedException as err:
+        logging.error("Unable to authorise with Pennsieve Api")
+        logging.error(err)
+    except Exception as err:
+        logging.error("Unknown Error")
+        logging.error(err)
 
 
 # @app.before_first_request
@@ -117,11 +141,12 @@ def contact():
 # Download a file from S3
 @app.route("/download")
 def create_presigned_url(expiration=3600):
-    bucket_name = "blackfynn-discover-use1"
+    bucket_name = "pennsieve-prod-discover-publish-use1"
     key = request.args.get("key")
+    contentType = request.args.get("contentType") or "application/octet-stream"
     response = s3.generate_presigned_url(
         "get_object",
-        Params={"Bucket": bucket_name, "Key": key, "RequestPayer": "requester"},
+        Params={"Bucket": bucket_name, "Key": key, "RequestPayer": "requester", "ResponseContentType": contentType},
         ExpiresIn=expiration,
     )
 
@@ -129,23 +154,18 @@ def create_presigned_url(expiration=3600):
 
 
 # Reverse proxy for objects from S3, a simple get object
-# operation. This is used by scaffoldvuer and it's
+# operation. This is used by scaffoldvuer and its
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
-    bucket_name = "blackfynn-discover-use1"
+    bucket_name = "pennsieve-prod-discover-publish-use1"
 
-    try:
-
-        head_response = s3.head_object(
-            Bucket=bucket_name,
-            Key=path,
-            RequestPayer="requester",
-        )
-    except requests.exceptions.HTTPError as err:
-        logging.error(err)
-        return json.dumps({'error': err})
+    head_response = s3.head_object(
+        Bucket=bucket_name,
+        Key=path,
+        RequestPayer="requester"
+    )
 
     content_length = head_response.get('ContentLength', None)
     if content_length and content_length > 20971520:  # 20 MB
@@ -154,7 +174,7 @@ def direct_download_url(path):
     response = s3.get_object(
         Bucket=bucket_name,
         Key=path,
-        RequestPayer="requester",
+        RequestPayer="requester"
     )
     resource = response["Body"].read()
     return resource
@@ -297,7 +317,7 @@ def inject_template_data(resp):
 
     try:
         response = s3.get_object(
-            Bucket="blackfynn-discover-use1",
+            Bucket="pennsieve-prod-discover-publish-use1",
             Key="{}/{}/files/template.json".format(id_, version),
             RequestPayer="requester",
         )
@@ -308,7 +328,7 @@ def inject_template_data(resp):
         )
         try:
             response = s3.get_object(
-                Bucket="blackfynn-discover-use1",
+                Bucket="pennsieve-prod-discover-publish-use1",
                 Key="{}/{}/packages/template.json".format(id_, version),
                 RequestPayer="requester",
             )
@@ -365,8 +385,8 @@ def datasets_by_project_id(project_id):
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
     # Filter to find user based on provided int id
-    org = bf._api._organization
-    members = bf._api.organizations.get_members(org)
+    org = ps._api._organization
+    members = ps._api.organizations.get_members(org)
     res = [x for x in members if x.int_id == owner_id]
 
     if not res:
@@ -390,10 +410,10 @@ def fetch_file_from_s3():
 def data_location_via_discover():
     doi = request.args.getlist('doi')
     print(doi)
-    print(bf)
-    print(dir(bf))
-    print(bf.datasets)
-    print(bf.get_dataset('10.26275', 'dwly-naxx'))
+    print(ps)
+    print(dir(ps))
+    print(ps.datasets)
+    print(ps.get_dataset('10.26275', 'dwly-naxx'))
     abort(404, description="Not implemented")
 
 
@@ -454,3 +474,108 @@ def authenticate_biolucida():
     if response.status_code == requests.codes.ok:
         content = response.json()
         bl.set_token(content['token'])
+
+
+# Get the share link for the current map content.
+@app.route("/map/getshareid", methods=["POST"])
+def get_share_link():
+    # Do not commit to database when testing.
+    commit = True
+    if app.config["TESTING"]:
+        commit = False
+    if mapstate:
+        json_data = request.get_json()
+        if json_data and 'state' in json_data:
+            state = json_data['state']
+            uuid = mapstate.pushState(state, commit)
+            return jsonify({"uuid": uuid})
+        abort(400, description="State not specified")
+    else:
+        abort(404, description="Database not available")
+
+
+# Get the map state using the share link id.
+@app.route("/map/getstate", methods=["POST"])
+def get_map_state():
+    if mapstate:
+        json_data = request.get_json()
+        if json_data and 'uuid' in json_data:
+            uuid = json_data['uuid']
+            state = mapstate.pullState(uuid)
+            if state:
+                return jsonify({"state": mapstate.pullState(uuid)})
+        abort(400, description="Key missing or did not find a match")
+    else:
+        abort(404, description="Database not available")
+
+
+@app.route("/tasks", methods=["POST"])
+def create_wrike_task():
+    json_data = request.get_json()
+    if json_data and 'title' in json_data and 'description' in json_data :
+        title = json_data["title"]
+        description = json_data["description"]
+        hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
+        url = 'https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks'
+
+        data = {
+            "title": title,
+            "description": description,
+            "customStatus": "IEADBYQEJMBJODZU",
+            "followers": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
+            "responsibles": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
+            "follow":False,
+            "dates":{"type":"Backlog"}
+        }
+
+        resp = requests.post(
+            url=url,
+            json=data,
+            headers=hed
+        )
+
+        if resp.status_code == 200:
+            return jsonify(
+                title=title,
+                description=description,
+                task_id=resp.json()["data"][0]["id"]
+            )
+        else:
+            return resp.json()
+    else:
+        abort(400, description="Missing title or description")
+
+
+@app.route("/mailchimp", methods=["POST"])
+def subscribe_to_mailchimp():
+    json_data = request.get_json()
+    if json_data and 'email_address' in json_data and 'first_name' in json_data and 'last_name' in json_data:
+        email_address = json_data["email_address"]
+        first_name = json_data['first_name']
+        last_name = json_data['last_name']
+        auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members'
+
+        data = {
+            "email_address": email_address,
+            "status": "subscribed",
+            "merge_fields" : {
+                "FNAME": first_name,
+                "LNAME": last_name
+            }
+        }
+        resp = requests.post(
+            url=url,
+            json=data,
+            auth=auth
+        )
+
+        if resp.status_code == 200:
+            return jsonify(
+                email_address=email_address,
+                id=resp.json()["id"]
+            )
+        else:
+            return resp.json()
+    else:
+        abort(400, description="Missing email_address, first_name or last_name")

@@ -146,6 +146,7 @@ def _sort_files_by_mime_type(obj_list):
         'application/json',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'chemical/x-gamess-input',
         'application/pdf',
         'application/zip',
@@ -155,10 +156,38 @@ def _sort_files_by_mime_type(obj_list):
         'text/plain',
         'text/html',
         'text/css',
+        'text/x-python',
+        'text/x-chdr',
+        'text/x-c++src',
+        'text/markdown',
+        'audio/midi',
+        'text/x-sh',
+        'image/vnd.zeiss.czi',
+        'image/vnd.nikon.nd2',
+        'image/x-coreldraw',
+        'application/x-matlab',
+        'application/x-matlab-data',
+        'application/vnd.cambridge-electronic-designced.spike2.64.data',
+        'application/vnd.cambridge-electronic-designced.spike2.32.data',
+        'application/vnd.cambridge-electronic-designced.spike2.resource+xml',
+        'application/octet-stream',
+        'application/x-bzip-compressed-fastq',
+        'text/tab-separated-values',
+        'image/gznii',
+        'application/x-tar',
+        'video/x-msvideo',
+        'application/vnd.ms-excel',
+        'application/x-msdos-program',
+        'chemical/x-ncbi-asn1-ascii',
+        'text/h323',
+        'application/rar',
+        'application/x-gz-compressed-fastq',
+        'application/fastq',
     ]
 
     for obj in obj_list:
         mime_type = obj.get('mimetype', 'not-specified')
+        print("object:", mime_type)
         if mime_type in mapped_mime_types:
             if mapped_mime_types[mime_type] in sorted_files:
                 sorted_files[mapped_mime_types[mime_type]].append(obj)

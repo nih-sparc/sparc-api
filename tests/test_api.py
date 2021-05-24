@@ -65,35 +65,35 @@ def test_get_datasets_by_project(client):
 
 def test_map_get_share_id_and_state(client):
     # mock json for testing
-    testData = { "state" : { "type" : "scaffold", "value": 1234 } }
+    test_data = {"state": {"type": "scaffold", "value": 1234}}
 
-    r = client.post(f"/map/getshareid", json = {})
+    r = client.post(f"/map/getshareid", json={})
     assert r.status_code == 400
 
-    r = client.post(f"/map/getshareid", json = testData)
+    r = client.post(f"/map/getshareid", json=test_data)
     assert r.status_code == 200
     assert "uuid" in r.get_json()
 
-    r = client.post(f"/map/getstate", json = r.get_json())
+    r = client.post(f"/map/getstate", json=r.get_json())
     assert r.status_code == 200
     returned_data = r.get_json()
     assert "state" in returned_data
     assert returned_data["state"]["type"] == "scaffold"
     assert returned_data["state"]["value"] == 1234
 
-    r = client.post(f"/map/getstate", json = {"uuid": "1234567"})
+    r = client.post(f"/map/getstate", json={"uuid": "1234567"})
     assert r.status_code == 400
 
-    r = client.post(f"/map/getstate", json = {})
+    r = client.post(f"/map/getstate", json={})
     assert r.status_code == 400
 
 
 def test_create_wrike_task(client):
-    r = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api"})
+    r = client.post(f"/tasks", json={"title": "test-integration-task-sparc-api"})
     assert r.status_code == 400
-    r2 = client.post(f"/tasks", json = {"description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
+    r2 = client.post(f"/tasks", json={"description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
     assert r2.status_code == 400
-    r3 = client.post(f"/tasks", json = {"title":"test-integration-task-sparc-api", "description":"test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
+    r3 = client.post(f"/tasks", json={"title": "test-integration-task-sparc-api", "description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
     assert r3.status_code == 200
 
     # this part is only for cleaning the wrike board
@@ -109,23 +109,23 @@ def test_create_wrike_task(client):
 
 
 def test_subscribe_to_mailchimp(client):
-    r = client.post(f"/mailchimp", json = {})
+    r = client.post(f"/mailchimp", json={})
     assert r.status_code == 400
 
     letters = string.ascii_lowercase
     email = ''.join(random.choice(letters) for i in range(8))
     domain = ''.join(random.choice(letters) for i in range(6))
 
-    email_address = '{}@{}.com'.format(email,domain)
+    email_address = '{}@{}.com'.format(email, domain)
 
-    r2 = client.post(f"/mailchimp", json = {"email_address": email_address, "first_name":"Test", "last_name":"User"})
+    r2 = client.post(f"/mailchimp", json={"email_address": email_address, "first_name": "Test", "last_name": "User"})
     assert r2.status_code == 200
 
     # this part is only for cleaning the mailchimp list and not pollute the mailing list
     returned_data = r2.get_json()
     member_hash = returned_data["id"]
     url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/{}/actions/delete-permanent'.format(member_hash)
-    auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+    auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
     resp = requests.post(
         url=url,
         auth=auth

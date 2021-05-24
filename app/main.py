@@ -197,7 +197,7 @@ def search_datasets():
 
 @app.route("/dataset_info_from_doi/")
 def get_dataset_info():
-    doi = request.args.getlist('doi')[0]
+    doi = request.args.get('doi')
     query = {
         "match": {
             "item.curie": {
@@ -237,11 +237,18 @@ def dataset_search(query):
 
 
 # /search/: Returns sci-crunch results for a given <search> query
-@app.route("/search/", defaults={'query': ''})
+@app.route("/search/", defaults={'query': '', 'limit': 10, 'start': 0})
 @app.route("/search/<query>")
-def kb_search(query):
+def kb_search(query, limit=10, start=0):
     try:
-        response = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&api_key={Config.KNOWLEDGEBASE_KEY}')
+        if request.args.get('limit') is not None:
+            limit = request.args.get('limit')
+        if request.args.get('query') is not None:
+            query = request.args.get('query')
+        if request.args.get('start') is not None:
+            start = request.args.get('start')
+
+        response = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&size={limit}&from={start}&api_key={Config.KNOWLEDGEBASE_KEY}')
         return process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)

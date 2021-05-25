@@ -1,6 +1,7 @@
 import json
 import base64
 import logging
+import atexit
 from threading import Lock
 from datetime import datetime, timedelta
 
@@ -14,6 +15,8 @@ from pennsieve import Pennsieve
 from app.config import Config
 from app.mapstate import MapState
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
@@ -44,6 +47,8 @@ os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
 os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
 
 biolucida_lock = Lock()
+
+osparc_data = {}
 
 try:
   mapstate = MapState(Config.DATABASE_URL)
@@ -100,6 +105,28 @@ def connect_to_pennsieve():
     except Exception as err:
         logging.error("Unknown Error")
         logging.error(err)
+
+viewers_scheduler = BackgroundScheduler()
+
+@app.before_first_request
+def get_osparc_file_viewers():
+    logging.info('Getting oSPARC viewers')
+    # Gets a list of default viewers
+    req = requests.get(url = f'{Config.OSPARC_API_HOST}/viewers/default')
+    viewers = req.json()
+    table = build_filetypes_table(viewers["data"])
+    osparc_data["file_viewers"] = table
+    if not viewers_scheduler.running:
+        logging.info('Starting scheduler for oSPARC viewers acquisition')
+        viewers_scheduler.start()
+
+# Gets oSPARC viewers before the first request after startup and then once a day
+viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
+def shutdown_scheduler():
+    logging.info('Stopping scheduler for oSPARC viewers acquisition')
+    viewers_scheduler.shutdown()
+atexit.register(shutdown_scheduler)
+
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -174,16 +201,6 @@ def direct_download_url(path):
     )
     resource = response["Body"].read()
     return resource
-
-
-@app.route("/sim/dataset/<id>")
-def sim_dataset(id):
-    if request.method == "GET":
-        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id))
-        json = req.json()
-        inject_markdown(json)
-        inject_template_data(json)
-        return jsonify(json)
 
 
 # /search/: Returns scicrunch results for a given <search> query
@@ -300,6 +317,34 @@ def inject_template_data(resp):
         "name": template_json.get("name"),
         "description": template_json.get("description"),
     }
+
+# Constructs a table with where keys are the normalized (lowercased) file types
+# and the values an array of possible viewers
+def build_filetypes_table(osparc_viewers):
+    table = {}
+    for viewer in osparc_viewers:
+        filetype = viewer["file_type"].lower()
+        del viewer["file_type"]
+        if not table.get(filetype, False):
+            table[filetype] = []
+        table[filetype].append(viewer)
+    return table
+
+
+@app.route("/sim/dataset/<id>")
+def sim_dataset(id):
+    if request.method == "GET":
+        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id))
+        if req.ok:
+            json = req.json()
+            inject_markdown(json)
+            inject_template_data(json)
+            return jsonify(json)
+        abort(404, description="Resource not found")
+
+@app.route("/get_osparc_data")
+def get_osparc_data():
+    return jsonify(osparc_data)
 
 
 @app.route("/project/<project_id>", methods=["GET"])

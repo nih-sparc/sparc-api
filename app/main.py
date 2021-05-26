@@ -42,12 +42,9 @@ s3 = boto3.client(
 
 try:
   os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
-except:
-  print("SPARC_PORTAL_AWS_KEY not set")
-try:
   os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
 except:
-  print("SPARC_PORTAL_AWS_SECRET not set")
+  pass
 
 biolucida_lock = Lock()
 

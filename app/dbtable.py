@@ -22,36 +22,36 @@ class ScaffoldState(base):
 
 class Table:
   def __init__(self, databaseURL, state):
-      db = create_engine(databaseURL)
-      global base
-      base.metadata.create_all(db)
-      Session = sessionmaker(db)
-      self._session = Session()
-      self._state = state
+        db = create_engine(databaseURL)
+        global base
+        base.metadata.create_all(db)
+        Session = sessionmaker(db)
+        self._session = Session()
+        self._state = state
 
   #push the state into the database and return an unique id
   def pushState(self, input, commit = False):
-      id = uuid.uuid4().hex[:8]
-      #get a new key in the rare case of duplication
-      while self._session.query(self._state).filter_by(uuid=id).first() is not None:
-          id = uuid.uuid4().hex[:8]
-      newState = self._state(uuid=id, data=input)
-      self._session.add(newState)
-      if commit:
-          self._session.commit()
-      return id
+        id = uuid.uuid4().hex[:8]
+        #get a new key in the rare case of duplication
+        while self._session.query(self._state).filter_by(uuid=id).first() is not None:
+            id = uuid.uuid4().hex[:8]
+        newState = self._state(uuid=id, data=input)
+        self._session.add(newState)
+        if commit:
+            self._session.commit()
+        return id
 
   def pullState(self, id):
     result = self._session.query(self._state).filter_by(uuid=id).first()
     if result:
-      return result.data
+        return result.data
     else:
-      return None
+        return None
 
 class MapTable(Table):
-  def __init__(self, databaseURL):
-    Table.__init__(self, databaseURL, MapState)
+    def __init__(self, databaseURL):
+        Table.__init__(self, databaseURL, MapState)
 
 class ScaffoldTable(Table):
-  def __init__(self, databaseURL):
-    Table.__init__(self, databaseURL, ScaffoldState)
+    def __init__(self, databaseURL):
+        Table.__init__(self, databaseURL, ScaffoldState)

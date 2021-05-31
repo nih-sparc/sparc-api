@@ -63,7 +63,10 @@ def create_filter_request(query, terms, facets, size, start):
     if start is None:
         start = 0
 
-    # Type map is used to map sci-crunch paths to given facet
+    if query is "" and len(terms) is 0 and len(facets) is 0:
+        return {"size": size, "from": start}
+
+    # Type map is used to map scicrunch paths to given facet
     type_map = {
         'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name'],
         'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
@@ -72,37 +75,62 @@ def create_filter_request(query, terms, facets, size, start):
 
     # Data structure of a sci-crunch search
     data = {
-        "size": size,
-        "from": start,
-        "query": {
-            "bool": {
-                "must": [],
-                "should": [],
-                "filter": []
-            }
-        }
+      "size": size,
+      "from": start,
+      "query": {
+          "query_string": {
+              "query": ""
+          }
+      }
     }
 
-    # Add a filter for each facet
-    for i, facet in enumerate(facets):
-        if terms[i] is not None and facet is not None and 'All' not in facet:
-            data['query']['bool']['filter'].append({'term': {f'{type_map[terms[i]][0]}': f'{facet}'}})
+    qs = facet_query_string(query, terms, facets, type_map)
+    data["query"]["query_string"]["query"] = qs
 
-    # Add queries if they exist
-    if query:
-        query_options = {
-            "query": f"{query}",
-            "default_operator": "and",
-            "lenient": "true",
-            "type": "best_fields"
-        }
-        data['query']['bool']['must'].append({
-            "query_string": query_options
-        })
     return data
 
 
-# process_kb_results: Loop through sci-crunch results pulling out desired attributes and processing DOIs and CSV files
+def facet_query_string(query, terms, facets, type_map):
+
+    # We will create AND OR structure. OR within facets and AND between them
+    # Example Output:
+    #
+    # "heart AND attributes.subject.sex.value:((male) OR (female))"
+
+    t = {}
+    for i, term in enumerate(terms):
+        if term is None or facets[i] is None or 'All' in facets[i]:  # Ignore 'All species' facets
+            continue
+        else:
+            if term not in t.keys():  # If term hasn't been seen, add it to the list of terms
+                t[term] = [facets[i]]
+            else:
+                t[term].append(facets[i])  # If term has been seen append it to it's term
+
+    # Add search query if it exists
+    qt = ""
+    if query is not "":
+        qt = f'({query})'
+
+    if query is not "" and len(t) > 0:
+        qt += " AND "
+
+    # Add the brackets and OR and AND parameters
+    for k in t:
+        qt += type_map[k][0] + ":("  # facet term path and opening bracket
+        for l in t[k]:
+            qt += f"({l})"  # bracket around terms incase there are spaces
+            if l is not t[k][-1]:
+                qt += " OR "  # 'OR' if more terms in this facet are coming
+            else:
+                qt += ") "
+
+        if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
+                qt += " AND "
+    return qt
+
+
+# process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
 def process_kb_results(results):
     output = []
     hits = results['hits']['hits']

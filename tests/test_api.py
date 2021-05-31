@@ -62,29 +62,52 @@ def test_get_datasets_by_project(client):
     r = client.get(f"/project/{portal_project_id}")
     assert r.status_code == 200
 
-
 def test_map_get_share_id_and_state(client):
     # mock json for testing
-    test_data = {"state": {"type": "scaffold", "value": 1234}}
+    test_data = { "state" : { "type" : "scaffold", "value": 1234 } }
 
-    r = client.post(f"/map/getshareid", json={})
+    r = client.post(f"/map/getshareid", json = {})
     assert r.status_code == 400
 
-    r = client.post(f"/map/getshareid", json=test_data)
+    r = client.post(f"/map/getshareid", json = test_data)
     assert r.status_code == 200
     assert "uuid" in r.get_json()
 
-    r = client.post(f"/map/getstate", json=r.get_json())
+    r = client.post(f"/map/getstate", json = r.get_json())
     assert r.status_code == 200
     returned_data = r.get_json()
     assert "state" in returned_data
     assert returned_data["state"]["type"] == "scaffold"
     assert returned_data["state"]["value"] == 1234
 
-    r = client.post(f"/map/getstate", json={"uuid": "1234567"})
+    r = client.post(f"/map/getstate", json = {"uuid": "1234567"})
     assert r.status_code == 400
 
-    r = client.post(f"/map/getstate", json={})
+    r = client.post(f"/map/getstate", json = {})
+    assert r.status_code == 400
+
+def test_scaffold_get_share_id_and_state(client):
+    # mock json for testing
+    testData = { "state" : { "far" : 12.32, "near": 0.23 } }
+
+    r = client.post(f"/scaffold/getshareid", json = {})
+    assert r.status_code == 400
+
+    r = client.post(f"/scaffold/getshareid", json = testData)
+    assert r.status_code == 200
+    assert "uuid" in r.get_json()
+
+    r = client.post(f"/scaffold/getstate", json = r.get_json())
+    assert r.status_code == 200
+    returned_data = r.get_json()
+    assert "state" in returned_data
+    assert returned_data["state"]["far"] == 12.32
+    assert returned_data["state"]["near"] == 0.23
+
+    r = client.post(f"/scaffold/getstate", json = {"uuid": "1234567"})
+    assert r.status_code == 400
+
+    r = client.post(f"/scaffold/getstate", json = {})
     assert r.status_code == 400
 
 
@@ -131,3 +154,15 @@ def test_subscribe_to_mailchimp(client):
         auth=auth
     )
     assert resp.status_code == 204
+
+
+def test_osparc_viewers(client):
+    r = client.get('/get_osparc_data')
+    assert r.status_code == 200
+    osparc_data = r.get_json()
+    assert 'file_viewers' in osparc_data
+
+
+def test_sim_dataset(client):
+    r = client.get('/sim/dataset/0')
+    assert r.status_code == 404

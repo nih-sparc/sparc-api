@@ -63,7 +63,7 @@ def create_filter_request(query, terms, facets, size, start):
     if start is None:
         start = 0
 
-    if query is "" and len(terms) is 0 and len(facets) is 0:
+    if query == "" and len(terms) == 0 and len(facets) == 0:
         return {"size": size, "from": start}
 
     # Type map is used to map scicrunch paths to given facet
@@ -109,10 +109,10 @@ def facet_query_string(query, terms, facets, type_map):
 
     # Add search query if it exists
     qt = ""
-    if query is not "":
+    if query != "":
         qt = f'({query})'
 
-    if query is not "" and len(t) > 0:
+    if query != "" and len(t) > 0:
         qt += " AND "
 
     # Add the brackets and OR and AND parameters

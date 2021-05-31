@@ -4,8 +4,7 @@ import json
 import logging
 import os
 import requests
-
-
+import atexit
 from datetime import datetime, timedelta
 
 from botocore.exceptions import ClientError
@@ -13,17 +12,18 @@ from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
+from app.dbtable import MapTable, ScaffoldTable
+
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from requests.auth import HTTPBasicAuth
 from scripts.email_sender import EmailSender
 from threading import Lock
 
 from app.config import Config
-from app.mapstate import MapState
 from app.process_kb_results import create_facet_query, process_kb_results, create_filter_request
 from app.serializer import ContactRequestSchema
 
-
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 # set environment variable
@@ -42,15 +42,26 @@ s3 = boto3.client(
     region_name="us-east-1",
 )
 
-os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
-os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
+try:
+    os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
+    os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
+except:
+    pass
 
 biolucida_lock = Lock()
 
+osparc_data = {}
+
 try:
-  mapstate = MapState(Config.DATABASE_URL)
+    maptable = MapTable(Config.DATABASE_URL)
 except:
-  mapstate = None
+    maptable = None
+
+try:
+    scaffoldtable = ScaffoldTable(Config.DATABASE_URL)
+except:
+    scaffoldtable = None
+
 
 class Biolucida(object):
     _token = ''
@@ -103,6 +114,34 @@ def connect_to_pennsieve():
     except Exception as err:
         logging.error("Unknown Error")
         logging.error(err)
+
+
+viewers_scheduler = BackgroundScheduler()
+
+
+@app.before_first_request
+def get_osparc_file_viewers():
+    logging.info('Getting oSPARC viewers')
+    # Gets a list of default viewers.
+    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers/default')
+    viewers = req.json()
+    table = build_filetypes_table(viewers["data"])
+    osparc_data["file_viewers"] = table
+    if not viewers_scheduler.running:
+        logging.info('Starting scheduler for oSPARC viewers acquisition')
+        viewers_scheduler.start()
+
+
+# Gets oSPARC viewers before the first request after startup and then once a day.
+viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
+
+
+def shutdown_scheduler():
+    logging.info('Stopping scheduler for oSPARC viewers acquisition')
+    viewers_scheduler.shutdown()
+
+
+atexit.register(shutdown_scheduler)
 
 
 # @app.before_first_request
@@ -178,16 +217,6 @@ def direct_download_url(path):
     )
     resource = response["Body"].read()
     return resource
-
-
-@app.route("/sim/dataset/<id_>")
-def sim_dataset(id_):
-    if request.method == "GET":
-        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
-        json_response = req.json()
-        inject_markdown(json_response)
-        inject_template_data(json_response)
-        return jsonify(json_response)
 
 
 @app.route("/search_dataset_by_mime_type/")
@@ -358,6 +387,36 @@ def inject_template_data(resp):
     }
 
 
+# Constructs a table with where keys are the normalized (lowercased) file types
+# and the values an array of possible viewers
+def build_filetypes_table(osparc_viewers):
+    table = {}
+    for viewer in osparc_viewers:
+        filetype = viewer["file_type"].lower()
+        del viewer["file_type"]
+        if not table.get(filetype, False):
+            table[filetype] = []
+        table[filetype].append(viewer)
+    return table
+
+
+@app.route("/sim/dataset/<id_>")
+def sim_dataset(id_):
+    if request.method == "GET":
+        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
+        if req.ok:
+            json_data = req.json()
+            inject_markdown(json_data)
+            inject_template_data(json_data)
+            return jsonify(json_data)
+        abort(404, description="Resource not found")
+
+
+@app.route("/get_osparc_data")
+def get_osparc_data():
+    return jsonify(osparc_data)
+
+
 @app.route("/project/<project_id>", methods=["GET"])
 def datasets_by_project_id(project_id):
     # 1 - call discover to get awards on all datasets (let put a very high limit to make sure we do not miss any)
@@ -483,43 +542,63 @@ def authenticate_biolucida():
         bl.set_token(content['token'])
 
 
-# Get the share link for the current map content.
-@app.route("/map/getshareid", methods=["POST"])
-def get_share_link():
-    # Do not commit to database when testing.
+def get_share_link(table):
+    # Do not commit to database when testing
     commit = True
     if app.config["TESTING"]:
         commit = False
-    if mapstate:
+    if table:
         json_data = request.get_json()
         if json_data and 'state' in json_data:
             state = json_data['state']
-            uuid = mapstate.pushState(state, commit)
+            uuid = table.pushState(state, commit)
             return jsonify({"uuid": uuid})
         abort(400, description="State not specified")
     else:
         abort(404, description="Database not available")
 
 
-# Get the map state using the share link id.
-@app.route("/map/getstate", methods=["POST"])
-def get_map_state():
-    if mapstate:
+def get_saved_state(table):
+    if table:
         json_data = request.get_json()
         if json_data and 'uuid' in json_data:
             uuid = json_data['uuid']
-            state = mapstate.pullState(uuid)
+            state = table.pullState(uuid)
             if state:
-                return jsonify({"state": mapstate.pullState(uuid)})
+                return jsonify({"state": table.pullState(uuid)})
         abort(400, description="Key missing or did not find a match")
     else:
         abort(404, description="Database not available")
 
 
+# Get the share link for the current map content.
+@app.route("/map/getshareid", methods=["POST"])
+def get_map_share_link():
+    return get_share_link(maptable)
+
+
+# Get the map state using the share link id.
+@app.route("/map/getstate", methods=["POST"])
+def get_map_state():
+    return get_saved_state(maptable)
+
+
+# Get the share link for the current map content.
+@app.route("/scaffold/getshareid", methods=["POST"])
+def get_scaffold_share_link():
+    return get_share_link(scaffoldtable)
+
+
+# Get the map state using the share link id.
+@app.route("/scaffold/getstate", methods=["POST"])
+def get_scaffold_state():
+    return get_saved_state(scaffoldtable)
+
+
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
     json_data = request.get_json()
-    if json_data and 'title' in json_data and 'description' in json_data :
+    if json_data and 'title' in json_data and 'description' in json_data:
         title = json_data["title"]
         description = json_data["description"]
         hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
@@ -529,10 +608,12 @@ def create_wrike_task():
             "title": title,
             "description": description,
             "customStatus": "IEADBYQEJMBJODZU",
-            "followers": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
-            "responsibles": [Config.CCB_HEAD_WRIKE_ID,Config.DAT_CORE_TECH_LEAD_WRIKE_ID,Config.MAP_CORE_TECH_LEAD_WRIKE_ID,Config.K_CORE_TECH_LEAD_WRIKE_ID,Config.SIM_CORE_TECH_LEAD_WRIKE_ID,Config.MODERATOR_WRIKE_ID],
-            "follow":False,
-            "dates":{"type":"Backlog"}
+            "followers": [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID,
+                          Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID],
+            "responsibles": [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID,
+                             Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID],
+            "follow": False,
+            "dates": {"type": "Backlog"}
         }
 
         resp = requests.post(
@@ -560,13 +641,13 @@ def subscribe_to_mailchimp():
         email_address = json_data["email_address"]
         first_name = json_data['first_name']
         last_name = json_data['last_name']
-        auth=HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+        auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
         url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members'
 
         data = {
             "email_address": email_address,
             "status": "subscribed",
-            "merge_fields" : {
+            "merge_fields": {
                 "FNAME": first_name,
                 "LNAME": last_name
             }

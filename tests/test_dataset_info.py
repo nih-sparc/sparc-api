@@ -204,3 +204,38 @@ def no_test_all_doi_dataset_search(client):
         print(doi, response['numberOfHits'])
 
     assert 3 == 2
+
+
+def test_doi_wcje_hxib_dataset_search(client):
+    # Mapping of ICN Neurons in a 3D Reconstructed Rat Heart
+    doi = "10.26275/wcje-hxib"
+    start = timer()
+    r = client.get('/dataset_info_from_doi/', query_string={'doi': doi})
+    # r = client.get('/search/contributors')
+    end = timer()
+    print('elapsed: ', end - start)
+    response = json.loads(r.data)
+    assert 1 == response['numberOfHits']
+    result = response['results'][0]
+    assert "Mapping of ICN Neurons in a 3D Reconstructed Rat Heart" == result['name']
+    keys = result.keys()
+    if 'generic-image' in keys:
+        print("Found generic image: ", len(result['generic-image']))
+    if 'large-2d-image' in keys:
+        print("Found large 2D image: ", len(result['large-2d-image']))
+    if 'abi-scaffold-file' in keys:
+        print("Found scaffold: ", len(result['abi-scaffold-file']))
+    if 'abi-scaffold-thumbnail' in keys:
+        print("Found scaffold: ", len(result['abi-scaffold-thumbnail']))
+    if 'mp4' in keys:
+        print("Found video: ", len(result['mp4']))
+
+    for file_ in result['files']:
+        mimetype = file_['mimetype']
+        if mimetype == "inode/directory":
+            pass
+        else:
+            print(file_['mimetype'], file_['dataset']['path'])
+
+    print(keys)
+    assert 'mbf-segmentation' in keys

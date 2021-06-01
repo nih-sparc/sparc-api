@@ -13,6 +13,11 @@ def test_scicrunch_keys(client):
     assert r.status_code == 200
     assert 'numberOfHits' in json.loads(r.data).keys()
 
+def test_scicrunch_dataset_doi(client):
+    r = client.get('/scicrunch-dataset/DOI%3A10.26275%2Fpzek-91wx')
+    assert json.loads(r.data)['hits']['hits'][0]['_id'] == "DOI:10.26275/pzek-91wx"
+
+
 def test_scicrunch_search(client):
     r = client.get('/search/heart')
     assert r.status_code == 200

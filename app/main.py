@@ -245,9 +245,9 @@ def filter_search(query):
         results = process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-        return jsonify({'error': str(err), 'message': 'Scicrunch is not currently reachable, please try again later'}), 502
+        return jsonify({'error': str(err), 'message': 'SciCrunch is not currently reachable, please try again later'}), 502
     except json.JSONDecodeError as e:
-        return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                         'error': 'JSONDecodeError'}), 502
     return results
 
@@ -270,7 +270,7 @@ def get_facets(type):
             json_result = response.json()
             results.append(json_result)
         except BaseException as e:
-            return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+            return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 
     # Select terms from the results

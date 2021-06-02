@@ -5,6 +5,7 @@ import json
 #  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
 #  attributes > sample > subject
 attributes = {
+    'additionalLinks': ['xrefs', 'additionalLinks'],
     'scaffolds': ['scaffolds'],
     'samples': ['attributes','sample','subject'],
     'name': ['item','name'],

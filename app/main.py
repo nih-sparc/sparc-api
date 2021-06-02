@@ -20,7 +20,7 @@ from scripts.email_sender import EmailSender
 from threading import Lock
 
 from app.config import Config
-from app.process_kb_results import create_facet_query, process_kb_results, create_filter_request
+from app.process_kb_results import create_facet_query, dataset_results, process_kb_results, create_filter_request
 from app.serializer import ContactRequestSchema
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -138,7 +138,8 @@ viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days
 
 def shutdown_scheduler():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
-    viewers_scheduler.shutdown()
+    if viewers_scheduler.running:
+        viewers_scheduler.shutdown()
 
 
 atexit.register(shutdown_scheduler)
@@ -206,8 +207,9 @@ def direct_download_url(path):
         RequestPayer="requester"
     )
 
-    content_length = head_response.get('ContentLength', None)
-    if content_length and content_length > 20971520:  # 20 MB
+    content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
+    # print(content_length, Config.DIRECT_DOWNLOAD_LIMIT, content_length > Config.DIRECT_DOWNLOAD_LIMIT)
+    if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
         return abort(413, description=f"File too big to download: {content_length}")
 
     response = s3.get_object(
@@ -216,6 +218,9 @@ def direct_download_url(path):
         RequestPayer="requester"
     )
     resource = response["Body"].read()
+    if response.get('ContentType', 'unknown') == 'application/octet-stream':
+        return base64.b64encode(resource)
+
     return resource
 
 
@@ -258,7 +263,7 @@ def dataset_search(query):
         response = requests.post(f'{Config.SCI_CRUNCH_HOST}/_search',
                                  json=payload, params=params)
 
-        return process_kb_results(response.json())
+        return dataset_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
 

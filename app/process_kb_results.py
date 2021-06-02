@@ -1,6 +1,12 @@
 import json
 import logging
 
+from app.config import Config
+
+_NOT_SPECIFIED = 'not-specified'
+_SKIP = 'skip'
+_COMMON_IMAGES = 'common-images'
+
 # attributes is used to map desired parameters onto the path of keys needed in the sci-crunch response.
 #  For example:
 #  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
@@ -131,7 +137,8 @@ def facet_query_string(query, terms, facets, type_map):
 
 
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
-def process_kb_results(results):
+
+def _prepare_kb_results(results):
     output = []
     hits = results['hits']['hits']
     for i, hit in enumerate(hits):
@@ -141,7 +148,31 @@ def process_kb_results(results):
 
         output.append(_manipulate_attr(attr))
 
-    return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
+    return output
+
+
+def process_kb_results(results):
+    return json.dumps({'numberOfHits': results['hits']['total'], 'results': _prepare_kb_results(results)})
+
+
+def _process_kb_result(result):
+    output = {}
+    if _COMMON_IMAGES in result:
+        output[_COMMON_IMAGES] = []
+        for common_image in result[_COMMON_IMAGES]:
+            if int(common_image['bytes']['count']) < Config.DIRECT_DOWNLOAD_LIMIT:
+                output[_COMMON_IMAGES].append(common_image)
+
+    return output
+
+
+def dataset_results(results):
+    processed_outputs = []
+    kb_results = _prepare_kb_results(results)
+    for kb_result in kb_results:
+        processed_outputs.append(_process_kb_result(kb_result))
+
+    return {'result': processed_outputs}
 
 
 def _convert_doi_to_url(doi):
@@ -150,11 +181,7 @@ def _convert_doi_to_url(doi):
     return doi.replace('DOI:', 'https://doi.org/')
 
 
-def _sort_files_by_mime_type(obj_list):
-    sorted_files = {}
-    if not obj_list:
-        return sorted_files
-
+def _mapped_mime_type(mime_type, obj):
     mapped_mime_types = {
         'text/csv': 'csv',
         'application/vnd.mbfbioscience.metadata+xml': 'mbf-segmentation',
@@ -162,10 +189,10 @@ def _sort_files_by_mime_type(obj_list):
         'inode/vnd.abi.scaffold+directory': 'abi-scaffold-dir',
         'inode/vnd.abi.scaffold+file': 'abi-scaffold-file',
         'inode/vnd.abi.scaffold+thumbnail': 'abi-scaffold-thumbnail',
-        'image/png': 'generic-image',
-        'image/tiff': 'generic-image',
-        'image/tif': 'generic-image',
-        'image/jpeg': 'generic-image',
+        'image/png': _COMMON_IMAGES,
+        'image/tiff': 'tiff-image',
+        'image/tif': 'tiff-image',
+        'image/jpeg': _COMMON_IMAGES,
         'image/jpx': 'large-3d-image',
         'image/jp2': 'large-2d-image',
         'video/mp4': 'mp4'
@@ -212,21 +239,46 @@ def _sort_files_by_mime_type(obj_list):
         'application/x-gz-compressed-fastq',
         'application/fastq',
     ]
+    if mime_type == _NOT_SPECIFIED:
+        return _SKIP
+
+    if mime_type in skipped_mime_types:
+        return _SKIP
+
+    if mime_type in mapped_mime_types:
+        if mime_type in ["image/jpeg", "image/png"]:
+            # print('=====================')
+            # print('jpeg obj: ', obj)
+            try:
+                # print(obj['dataset']['path'])
+                if obj['dataset']['path'].startswith('derivative'):
+                    return _SKIP
+            except KeyError:
+                return _SKIP
+            # print('=====================')
+        return mapped_mime_types[mime_type]
+
+    return _NOT_SPECIFIED
+
+
+def _sort_files_by_mime_type(obj_list):
+    sorted_files = {}
+    if not obj_list:
+        return sorted_files
 
     for obj in obj_list:
-        mime_type = obj.get('mimetype', 'not-specified')
-        print("object:", mime_type)
-        if mime_type in mapped_mime_types:
-            if mapped_mime_types[mime_type] in sorted_files:
-                sorted_files[mapped_mime_types[mime_type]].append(obj)
-            else:
-                sorted_files[mapped_mime_types[mime_type]] = [obj]
-        elif mime_type == 'not-specified':
-            pass
-        elif mime_type in skipped_mime_types:
+        mime_type = obj.get('mimetype', _NOT_SPECIFIED)
+        # print("object:", mime_type)
+        mapped_mime_type = _mapped_mime_type(mime_type, obj)
+        if mapped_mime_type == _NOT_SPECIFIED:
+            logging.warning('Unhandled mime type:', mime_type)
+        elif mapped_mime_type == _SKIP:
             pass
         else:
-            logging.warning('Unhandled mime type:', mime_type)
+            if mapped_mime_type in sorted_files:
+                sorted_files[mapped_mime_type].append(obj)
+            else:
+                sorted_files[mapped_mime_type] = [obj]
 
     return sorted_files
 

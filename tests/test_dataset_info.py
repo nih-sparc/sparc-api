@@ -156,6 +156,32 @@ doi_s = [
 ]
 
 
+def print_search_result(result):
+    keys = result.keys()
+
+    if 'generic-image' in keys:
+        print("Found generic image: ", len(result['generic-image']))
+    if 'large-2d-image' in keys:
+        print("Found large 2D image: ", len(result['large-2d-image']))
+    if 'abi-scaffold-file' in keys:
+        print("Found scaffold: ", len(result['abi-scaffold-file']))
+    if 'abi-scaffold-thumbnail' in keys:
+        print("Found scaffold: ", len(result['abi-scaffold-thumbnail']))
+    if 'mp4' in keys:
+        print("Found video: ", len(result['mp4']))
+
+
+def print_mime_paths(files):
+    for file_ in files:
+        mimetype = file_.get('mimetype', 'not-specified')
+        if mimetype == "inode/directory":
+            pass
+        elif mimetype == 'not-specified':
+            pass
+        else:
+            print(file_['mimetype'], file_['dataset']['path'])
+
+
 def no_test_doi_dataset_search(client):
     print("go")
     doi = "10.26275/uup7-b1zb"
@@ -169,25 +195,8 @@ def no_test_doi_dataset_search(client):
     assert 1 == response['numberOfHits']
     result = response['results'][0]
     print("Title :", result['name'])
-    print(result.keys())
-    keys = result.keys()
-    if 'generic-image' in keys:
-        print("Found generic image: ", len(result['generic-image']))
-    if 'large-2d-image' in keys:
-        print("Found large 2D image: ", len(result['large-2d-image']))
-    if 'abi-scaffold-file' in keys:
-        print("Found scaffold: ", len(result['abi-scaffold-file']))
-    if 'abi-scaffold-thumbnail' in keys:
-        print("Found scaffold: ", len(result['abi-scaffold-thumbnail']))
-    if 'mp4' in keys:
-        print("Found video: ", len(result['mp4']))
-
-    for file_ in result['files']:
-        mimetype = file_['mimetype']
-        if mimetype == "inode/directory":
-            pass
-        else:
-            print(file_['mimetype'], file_['dataset']['path'])
+    print_search_result(result)
+    print_mime_paths(result['files'])
 
     assert 3 == 2
 
@@ -201,7 +210,10 @@ def no_test_all_doi_dataset_search(client):
         end = timer()
         print('elapsed: ', end - start)
         response = json.loads(r.data)
-        print(doi, response['numberOfHits'])
+        assert 1 == response['numberOfHits']
+        result = response['results'][0]
+        print('DOI: ', doi)
+        print_search_result(result)
 
     assert 3 == 2
 
@@ -218,24 +230,101 @@ def test_doi_wcje_hxib_dataset_search(client):
     assert 1 == response['numberOfHits']
     result = response['results'][0]
     assert "Mapping of ICN Neurons in a 3D Reconstructed Rat Heart" == result['name']
-    keys = result.keys()
-    if 'generic-image' in keys:
-        print("Found generic image: ", len(result['generic-image']))
-    if 'large-2d-image' in keys:
-        print("Found large 2D image: ", len(result['large-2d-image']))
-    if 'abi-scaffold-file' in keys:
-        print("Found scaffold: ", len(result['abi-scaffold-file']))
-    if 'abi-scaffold-thumbnail' in keys:
-        print("Found scaffold: ", len(result['abi-scaffold-thumbnail']))
-    if 'mp4' in keys:
-        print("Found video: ", len(result['mp4']))
+    print_search_result(result)
+    print_mime_paths(result['files'])
 
-    for file_ in result['files']:
-        mimetype = file_['mimetype']
-        if mimetype == "inode/directory":
-            pass
-        else:
-            print(file_['mimetype'], file_['dataset']['path'])
+    assert 'mbf-segmentation' in ['keys']
 
-    print(keys)
-    assert 'mbf-segmentation' in keys
+
+def test_doi_nxfv_p3ol_dataset_search(client):
+    # Three mp4 videos
+    doi = "10.26275/nxfv-p3ol"
+    start = timer()
+    r = client.get('/dataset_info_from_doi/', query_string={'doi': doi})
+    # r = client.get('/search/contributors')
+    end = timer()
+    print('elapsed: ', end - start)
+    response = json.loads(r.data)
+    assert 1 == response['numberOfHits']
+    result = response['results'][0]
+    assert "CLARITY and three-dimensional (3D) imaging of the mouse and porcine colonic innervation" == result['name']
+    print_search_result(result)
+    print_mime_paths(result['files'])
+
+    assert 'mbf-segmentation' in ['keys']
+
+
+def test_doi_0y4e_eskx_dataset_search(client):
+    # Nine 2D Large images
+    doi = "10.26275/0y4e-eskx"
+    start = timer()
+    r = client.get('/dataset_info_from_doi/', query_string={'doi': doi})
+    # r = client.get('/search/contributors')
+    end = timer()
+    print('elapsed: ', end - start)
+    response = json.loads(r.data)
+    assert 1 == response['numberOfHits']
+    result = response['results'][0]
+    assert "Distribution of nitregic, cholinergic and all MP neurons along the colon using nNOS-GCaMP3 mice, ChAT-GCaMP3 and Wnt1-GCaMP3 mice" == result['name']
+    print_search_result(result)
+    print_mime_paths(result['files'])
+
+    assert 'mbf-segmentation' in ['keys']
+
+
+def test_doi_qh3q_elj6_dataset_search(client):
+    # Nine 2D Large images
+    doi = "10.26275/qh3q-elj6"
+    start = timer()
+    r = client.get('/dataset_info_from_doi/', query_string={'doi': doi})
+    # r = client.get('/search/contributors')
+    end = timer()
+    print('elapsed: ', end - start)
+    response = json.loads(r.data)
+    assert 1 == response['numberOfHits']
+    result = response['results'][0]
+    assert "Influence of left vagal stimulus pulse parameters on vagal and gastric activity in rat" == result['name']
+    print_search_result(result)
+    print_mime_paths(result['files'])
+
+    assert 'mbf-segmentation' in ['keys']
+
+
+def test_doi_4i5w_w7ai_dataset_search(client):
+    # Test plot annotation dataset.
+    doi = "10.26275/4i5w-w7ai"
+    start = timer()
+    r = client.get('/dataset_info_from_doi/', query_string={'doi': doi})
+    # r = client.get('/search/contributors')
+    end = timer()
+    print('elapsed: ', end - start)
+    response = json.loads(r.data)
+    assert 1 == response['numberOfHits']
+    result = response['results'][0]
+    assert "Influence of left vagal stimulus pulse parameters on vagal and gastric activity in rat" == result['name']
+    print_search_result(result)
+    print_mime_paths(result['files'])
+
+    print(result.keys())
+
+    assert 'mbf-segmentation' in result.keys()
+
+
+def test_doi_eyik_qjhm_dataset_search(client):
+    # Generic colon scaffold.
+    doi = "10.26275/eyik-qjhm"
+    start = timer()
+    r = client.get('/dataset_info_from_doi/', query_string={'doi': doi})
+    # r = client.get('/search/contributors')
+    end = timer()
+    print('elapsed: ', end - start)
+    response = json.loads(r.data)
+    assert 1 == response['numberOfHits']
+    result = response['results'][0]
+    assert "Generic mouse colon scaffold" == result['name']
+    print_search_result(result)
+    print_mime_paths(result['files'])
+    print(result.keys())
+    print(result['scaffolds'])
+
+    assert 'abi-scaffold-file' in result.keys()

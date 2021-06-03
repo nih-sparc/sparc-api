@@ -117,16 +117,31 @@ def facet_query_string(query, terms, facets, type_map):
 
     # Add the brackets and OR and AND parameters
     for k in t:
-        qt += type_map[k][0] + ":("  # facet term path and opening bracket
-        for l in t[k]:
-            qt += f"({l})"  # bracket around terms incase there are spaces
-            if l is not t[k][-1]:
-                qt += " OR "  # 'OR' if more terms in this facet are coming
-            else:
-                qt += ") "
+        if k == "datasets":
+            needParentheses = (qt or len(t) > 1) and (len(t[k]) > 1)
+            if needParentheses:
+                qt += "("
+            for l in t[k]:
+                if l == "scaffolds":
+                    qt += "item.name:((scaffold))"
+                elif l == "simulations":
+                    qt += "xrefs.additionalLinks.description:((CellML))"
+                if l is not t[k][-1]:
+                    qt += " OR "  # 'OR' if more terms in this facet are coming
+            if needParentheses:
+                qt += ")"
+        else:
+            qt += type_map[k][0] + ":("  # facet term path and opening bracket
+            for l in t[k]:
+                qt += f"({l})"  # bracket around terms incase there are spaces
+                if l is not t[k][-1]:
+                    qt += " OR "  # 'OR' if more terms in this facet are coming
+                else:
+                    qt += ")"
 
         if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
-                qt += " AND "
+            qt += " AND "
+    print(f'[qt] {qt}')
     return qt
 
 

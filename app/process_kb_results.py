@@ -128,7 +128,7 @@ def facet_query_string(query, terms, facets, type_map):
                 if l == "scaffolds":
                     qt += "item.name:((scaffold))"
                 elif l == "simulations":
-                    qt += "xrefs.additionalLinks.description:((CellML) OR (SedML))"
+                    qt += "xrefs.additionalLinks.description:((CellML) OR (SED-ML))"
                 if l is not t[k][-1]:
                     qt += " OR "  # 'OR' if more terms in this facet are coming
             if needParentheses:

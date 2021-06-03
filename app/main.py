@@ -1,29 +1,30 @@
+import atexit
 import base64
 import boto3
 import json
 import logging
 import os
 import requests
-import atexit
-from datetime import datetime, timedelta
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from botocore.exceptions import ClientError
+from datetime import datetime, timedelta
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
-from app.dbtable import MapTable, ScaffoldTable
-
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
+from PIL import Image
 from requests.auth import HTTPBasicAuth
 from scripts.email_sender import EmailSender
 from threading import Lock
+from xml.etree import ElementTree
 
 from app.config import Config
+from app.dbtable import MapTable, ScaffoldTable
 from app.process_kb_results import create_facet_query, dataset_results, process_kb_results, create_filter_request
 from app.serializer import ContactRequestSchema
-
-from apscheduler.schedulers.background import BackgroundScheduler
+from app.utilities import img_to_base64_str
 
 app = Flask(__name__)
 # set environment variable
@@ -181,16 +182,65 @@ def contact():
 # Download a file from S3
 @app.route("/download")
 def create_presigned_url(expiration=3600):
-    bucket_name = "pennsieve-prod-discover-publish-use1"
     key = request.args.get("key")
-    contentType = request.args.get("contentType") or "application/octet-stream"
+    content_type = request.args.get("contentType") or "application/octet-stream"
     response = s3.generate_presigned_url(
         "get_object",
-        Params={"Bucket": bucket_name, "Key": key, "RequestPayer": "requester", "ResponseContentType": contentType},
+        Params={"Bucket": Config.S3_BUCKET_NAME, "Key": key, "RequestPayer": "requester", "ResponseContentType": content_type},
         ExpiresIn=expiration,
     )
 
     return response
+
+
+@app.route("/xml-thumbnail/<path:path>")
+def extract_thumbnail_from_xml_file(path):
+    """
+    Extract a thumbnail from a mbf xml file.
+    First phase is to find the thumbnail element in the xml document.
+    Second phase is to convert the xml to a base64 png.
+    """
+    resource = None
+    start_tag_found = False
+    end_tag_found = False
+    start_byte = 0
+    offset = 256000
+    end_byte = offset
+    while not start_tag_found or not end_tag_found:
+        response = s3.get_object(
+            Bucket=Config.S3_BUCKET_NAME,
+            Key=path,
+            Range=f"bytes={start_byte}-{end_byte}",
+            RequestPayer="requester"
+        )
+        resource = response["Body"].read().decode('UTF-8')
+        start_tag_found = '<thumbnail ' in resource
+        end_tag_found = '</thumbnail>' in resource
+        if start_tag_found and not end_tag_found:
+            end_byte += offset
+        else:
+            start_byte += offset
+            end_byte += offset
+
+        if len(resource) < offset:
+            return abort(404, description=f"Could not find thumbnail in file: '{path}'")
+
+    if resource is None:
+        return abort(404, description=f"Could not find thumbnail in file: '{path}'")
+
+    start_thumbnail_element = resource[resource.find('<thumbnail '):]
+    thumbnail_xml = start_thumbnail_element[:start_thumbnail_element.find('</thumbnail>')] + '</thumbnail>'
+    xml = ElementTree.fromstring(thumbnail_xml)
+    size_info = xml.attrib
+    im_data = ''
+    for child in xml:
+        im_data += child.text[2:]
+
+    byte_im_data = bytes.fromhex(im_data)
+    im = Image.frombytes("RGB", (int(size_info['rows']), int(size_info['cols'])), byte_im_data)
+    base64_form = img_to_base64_str(im)
+
+    return base64_form
 
 
 # Reverse proxy for objects from S3, a simple get object
@@ -199,10 +249,8 @@ def create_presigned_url(expiration=3600):
 # other required files.
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
-    bucket_name = "pennsieve-prod-discover-publish-use1"
-
     head_response = s3.head_object(
-        Bucket=bucket_name,
+        Bucket=Config.S3_BUCKET_NAME,
         Key=path,
         RequestPayer="requester"
     )
@@ -213,7 +261,7 @@ def direct_download_url(path):
         return abort(413, description=f"File too big to download: {content_length}")
 
     response = s3.get_object(
-        Bucket=bucket_name,
+        Bucket=Config.S3_BUCKET_NAME,
         Key=path,
         RequestPayer="requester"
     )

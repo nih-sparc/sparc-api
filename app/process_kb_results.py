@@ -6,6 +6,9 @@ from app.config import Config
 _NOT_SPECIFIED = 'not-specified'
 _SKIP = 'skip'
 _COMMON_IMAGES = 'common-images'
+_SEGMENTATION_FILES = 'mbf-segmentation'
+
+_PASS_THROUGH_KEYS = [_COMMON_IMAGES, _SEGMENTATION_FILES]
 
 # attributes is used to map desired parameters onto the path of keys needed in the sci-crunch response.
 #  For example:
@@ -156,7 +159,7 @@ def process_kb_results(results):
 
 
 def _process_kb_result(result):
-    output = {}
+    output = dict(filter(lambda x: x[0] in _PASS_THROUGH_KEYS, result.items()))
     if _COMMON_IMAGES in result:
         output[_COMMON_IMAGES] = []
         for common_image in result[_COMMON_IMAGES]:
@@ -181,11 +184,43 @@ def _convert_doi_to_url(doi):
     return doi.replace('DOI:', 'https://doi.org/')
 
 
+_NEUROLUCIDA_FUDGES = [
+    # The file below is from dataset 37.
+    'package:b15f0795-9a5a-4a6c-9633-d843bcaf5983/files/1155468',
+    # The files below are from dataset 64.
+    'package:40181d25-fb4a-40c1-8778-c7425ae0b680/files/1106299',
+    'package:c882893d-c2c6-47a1-b907-85eb4ffa8cb8/files/550966',
+    'package:49eeb3ec-6eb0-427d-8b27-1e871f6cc13f/files/1155473',
+    # 'package:fee3f032-cb0b-4d81-b563-4faa32791be7/files/1155472',
+    'package:3935b9dd-6135-490c-8e17-809747670b81/files/1106335',
+    # 'package:171775cd-5d11-4157-a49a-dbeee7e083a6/files/1155471',
+    'package:01219a1c-c05f-402a-9316-073c6a774820/files/1155467',
+    # 'package:0cbd1568-a29b-4f8e-b042-b3d338200498/files/1155474',
+    # 'package:904323c9-0fd4-44de-b490-95a0e0bb90c0/files/1179673',
+    'package:8b6ca367-02fe-4b96-8d57-5ac14bb782fb/files/1106379',
+    # 'package:1c944008-4612-42fc-9fcf-4c03911a490a/files/1155475',
+    'package:a4db43f7-381a-4cd8-9317-e5e61aee7193/files/1155470',
+    'package:e835a8e2-d5be-4fa6-8388-2147c2f0a610/files/1155469',
+    'package:6f4230ca-d435-4a4b-af8e-492330f40d4c/files/1155466',
+    'package:284ac044-a1ea-46f0-9583-c36f6beaa1e6/files/1106306',
+    'package:c83ec8f6-880b-491d-a3e5-c6e47060cb24/files/1155463',
+    'package:57dcdc0f-880f-4221-8752-ce1227cb032d/files/1155465',
+    'package:3b2d9ce4-2563-4959-8ab5-d007cd058313/files/1155464'
+]
+
+
+def _fudge_object(obj):
+    if obj['remote']['id'] in _NEUROLUCIDA_FUDGES:
+        obj['mimetype'] = 'application/vnd.mbfbioscience.neurolucida+xml'
+
+    return obj
+
+
 def _mapped_mime_type(mime_type, obj):
     mapped_mime_types = {
         'text/csv': 'csv',
-        'application/vnd.mbfbioscience.metadata+xml': 'mbf-segmentation',
-        'application/vnd.mbfbioscience.neurolucida+xml': 'mbf-segmentation',
+        'application/vnd.mbfbioscience.metadata+xml': _SEGMENTATION_FILES,
+        'application/vnd.mbfbioscience.neurolucida+xml': _SEGMENTATION_FILES,
         'inode/vnd.abi.scaffold+directory': 'abi-scaffold-dir',
         'inode/vnd.abi.scaffold+file': 'abi-scaffold-file',
         'inode/vnd.abi.scaffold+thumbnail': 'abi-scaffold-thumbnail',
@@ -247,15 +282,11 @@ def _mapped_mime_type(mime_type, obj):
 
     if mime_type in mapped_mime_types:
         if mime_type in ["image/jpeg", "image/png"]:
-            # print('=====================')
-            # print('jpeg obj: ', obj)
             try:
-                # print(obj['dataset']['path'])
                 if obj['dataset']['path'].startswith('derivative'):
                     return _SKIP
             except KeyError:
                 return _SKIP
-            # print('=====================')
         return mapped_mime_types[mime_type]
 
     return _NOT_SPECIFIED
@@ -267,8 +298,17 @@ def _sort_files_by_mime_type(obj_list):
         return sorted_files
 
     for obj in obj_list:
-        mime_type = obj.get('mimetype', _NOT_SPECIFIED)
+        # Hacks are applied here.
+        obj = _fudge_object(obj)
+        #print('===========================')
+        #print(obj)
         # print("object:", mime_type)
+
+        mime_type = obj.get('mimetype', _NOT_SPECIFIED)
+        # if mime_type == 'application/xml':
+        #     print('===========================')
+        #     print(obj["remote"]["id"], obj["dataset"]["path"])
+
         mapped_mime_type = _mapped_mime_type(mime_type, obj)
         if mapped_mime_type == _NOT_SPECIFIED:
             logging.warning('Unhandled mime type:', mime_type)

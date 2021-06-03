@@ -27,11 +27,11 @@ def test_scicrunch_filter(client):
     assert json.loads(r.data)['numberOfHits'] > 4
 
 def test_scicrunch_filter_scaffolds(client):
-    r = client.get('/filter-search/Heart/?facet=scaffolds&term=datasets')
+    r = client.get('/filter-search/?facet=scaffolds&term=datasets')
     assert json.loads(r.data)['numberOfHits'] > 10
 
 def test_scicrunch_filter_simulations(client):
-    r = client.get('/filter-search/Heart/?facet=simulations&term=datasets')
+    r = client.get('/filter-search/?facet=simulations&term=datasets')
     assert json.loads(r.data)['numberOfHits'] > 0
 
 def test_scicrunch_basic_search(client):

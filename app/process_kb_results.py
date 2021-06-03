@@ -74,20 +74,23 @@ def create_filter_request(query, terms, facets, size, start):
     }
 
     # Data structure of a scicrunch search
-    data = {
-      "size": size,
-      "from": start,
-      "query": {
-          "query_string": {
-              "query": ""
-          }
-      }
-    }
-
     qs = facet_query_string(query, terms, facets, type_map)
-    data["query"]["query_string"]["query"] = qs
 
-    return data
+    if qs:
+        return {
+            "size": size,
+            "from": start,
+            "query": {
+                "query_string": {
+                    "query": qs
+                }
+            }
+        }
+
+    return {
+        "size": size,
+        "from": start,
+    }
 
 
 def facet_query_string(query, terms, facets, type_map):

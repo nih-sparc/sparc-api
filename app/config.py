@@ -43,3 +43,4 @@ class Config(object):
     MODERATOR_WRIKE_ID = os.environ.get("MODERATOR_WRIKE_ID")
     MAILCHIMP_API_KEY = os.environ.get("MAILCHIMP_API_KEY")
     DIRECT_DOWNLOAD_LIMIT = int(os.environ.get("DIRECT_DOWNLOAD_LIMIT", "20971520"))
+    S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"

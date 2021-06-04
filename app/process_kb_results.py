@@ -126,7 +126,7 @@ def facet_query_string(query, terms, facets, type_map):
                 qt += "("
             for l in t[k]:
                 if l == "scaffolds":
-                    qt += "item.name:((scaffold))"
+                    qt += "scaffolds.object.mimetype.name:((inode%2fvnd.abi.scaffold+directory))"
                 elif l == "simulations":
                     qt += "xrefs.additionalLinks.description:((CellML) OR (SED-ML))"
                 if l is not t[k][-1]:

@@ -176,16 +176,17 @@ def get_request_body_for_uberonid():
         "aggregations": {
             "curie": {
                 "terms": {
-                    "field": "anatomy.organ.curie.aggregate"
+                    "field": "anatomy.organ.curie.aggregate",
+                    "size": 200
                 },
                 "aggregations": {
                     "organ": {
                         "terms": {
-                            "field": "anatomy.organ.name.aggregate"
+                            "field": "anatomy.organ.name.aggregate",
+                            "size": 200
                         }
                     }
                 }
             }
         }
     }
-    

@@ -168,3 +168,24 @@ def get_attributes(attributes, dataset):
         found_attr[k] = key_attr
     return found_attr
 
+# get the request body for requesting list of uberon ids
+def get_request_body_for_uberonid():
+    return {
+        "from": 0,
+        "size": 0,
+        "aggregations": {
+            "curie": {
+                "terms": {
+                    "field": "anatomy.organ.curie.aggregate"
+                },
+                "aggregations": {
+                    "organ": {
+                        "terms": {
+                            "field": "anatomy.organ.name.aggregate"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    

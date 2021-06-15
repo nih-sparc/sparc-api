@@ -1,6 +1,7 @@
 import json
 import base64
 import logging
+import atexit
 from threading import Lock
 from datetime import datetime, timedelta
 
@@ -12,8 +13,10 @@ from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
 from app.config import Config
-from app.mapstate import MapState
+from app.dbtable import MapTable, ScaffoldTable
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.serializer import ContactRequestSchema
 from scripts.email_sender import EmailSender
@@ -39,18 +42,26 @@ s3 = boto3.client(
     aws_secret_access_key=Config.SPARC_PORTAL_AWS_SECRET,
     region_name="us-east-1",
 )
+
 try:
-    os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
-    os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
+  os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
+  os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
 except:
-    pass
+  pass
 
 biolucida_lock = Lock()
 
+osparc_data = {}
+
 try:
-  mapstate = MapState(Config.DATABASE_URL)
+  maptable = MapTable(Config.DATABASE_URL)
 except:
-  mapstate = None
+  maptable = None
+
+try:
+  scaffoldtable = ScaffoldTable(Config.DATABASE_URL)
+except:
+  scaffoldtable = None
 
 class Biolucida(object):
     _token = ''
@@ -102,6 +113,28 @@ def connect_to_pennsieve():
     except Exception as err:
         logging.error("Unknown Error")
         logging.error(err)
+
+viewers_scheduler = BackgroundScheduler()
+
+@app.before_first_request
+def get_osparc_file_viewers():
+    logging.info('Getting oSPARC viewers')
+    # Gets a list of default viewers
+    req = requests.get(url = f'{Config.OSPARC_API_HOST}/viewers/default')
+    viewers = req.json()
+    table = build_filetypes_table(viewers["data"])
+    osparc_data["file_viewers"] = table
+    if not viewers_scheduler.running:
+        logging.info('Starting scheduler for oSPARC viewers acquisition')
+        viewers_scheduler.start()
+
+# Gets oSPARC viewers before the first request after startup and then once a day
+viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
+def shutdown_scheduler():
+    logging.info('Stopping scheduler for oSPARC viewers acquisition')
+    viewers_scheduler.shutdown()
+atexit.register(shutdown_scheduler)
+
 
 # @app.before_first_request
 # def connect_to_mongodb():
@@ -177,16 +210,20 @@ def direct_download_url(path):
     resource = response["Body"].read()
     return resource
 
-
-@app.route("/sim/dataset/<id>")
-def sim_dataset(id):
-    if request.method == "GET":
-        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id))
-        json = req.json()
-        inject_markdown(json)
-        inject_template_data(json)
-        return jsonify(json)
-
+# /scicrunch/: Returns scicrunch results for a given <search> query
+@app.route("/scicrunch-dataset/<doi1>/<doi2>")
+def sci_doi(doi1,doi2):
+    doi = doi1 + '/' + doi2
+    print(doi)
+    data = create_doi_request(doi)
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
 
 # /search/: Returns scicrunch results for a given <search> query
 @app.route("/search/", defaults={'query': ''})
@@ -303,6 +340,34 @@ def inject_template_data(resp):
         "description": template_json.get("description"),
     }
 
+# Constructs a table with where keys are the normalized (lowercased) file types
+# and the values an array of possible viewers
+def build_filetypes_table(osparc_viewers):
+    table = {}
+    for viewer in osparc_viewers:
+        filetype = viewer["file_type"].lower()
+        del viewer["file_type"]
+        if not table.get(filetype, False):
+            table[filetype] = []
+        table[filetype].append(viewer)
+    return table
+
+
+@app.route("/sim/dataset/<id>")
+def sim_dataset(id):
+    if request.method == "GET":
+        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id))
+        if req.ok:
+            json = req.json()
+            inject_markdown(json)
+            inject_template_data(json)
+            return jsonify(json)
+        abort(404, description="Resource not found")
+
+@app.route("/get_osparc_data")
+def get_osparc_data():
+    return jsonify(osparc_data)
+
 
 @app.route("/project/<project_id>", methods=["GET"])
 def datasets_by_project_id(project_id):
@@ -398,38 +463,52 @@ def authenticate_biolucida():
         content = response.json()
         bl.set_token(content['token'])
 
-
-#get the share link for the current map content
-@app.route("/map/getshareid", methods=["POST"])
-def get_share_link():
+def get_share_link(table):
     #Do not commit to database when testing
     commit = True
     if app.config["TESTING"]:
         commit = False
-    if mapstate:
+    if table:
         json_data = request.get_json()
         if json_data and 'state' in json_data:
             state = json_data['state']
-            uuid = mapstate.pushState(state, commit)
+            uuid = table.pushState(state, commit)
             return jsonify({"uuid": uuid})
         abort(400, description="State not specified")
     else:
         abort(404, description="Database not available")
 
+def get_saved_state(table):
+    if table:
+        json_data = request.get_json()
+        if json_data and 'uuid' in json_data:
+            uuid = json_data['uuid']
+            state = table.pullState(uuid)
+            if state:
+                return jsonify({"state": table.pullState(uuid)})
+        abort(400, description="Key missing or did not find a match")
+    else:
+        abort(404, description="Database not available")
+
+#get the share link for the current map content
+@app.route("/map/getshareid", methods=["POST"])
+def get_map_share_link():
+    return get_share_link(maptable)
 
 #get the map state using the share link id
 @app.route("/map/getstate", methods=["POST"])
 def get_map_state():
-    if mapstate:
-        json_data = request.get_json()
-        if json_data and 'uuid' in json_data:
-            uuid = json_data['uuid']
-            state = mapstate.pullState(uuid)
-            if state:
-                return jsonify({"state": mapstate.pullState(uuid)})
-        abort(400, description="Key missing or did not find a match")
-    else:
-        abort(404, description="Database not available")
+    return get_saved_state(maptable)
+
+#get the share link for the current map content
+@app.route("/scaffold/getshareid", methods=["POST"])
+def get_scaffold_share_link():
+    return get_share_link(scaffoldtable)
+
+#get the map state using the share link id
+@app.route("/scaffold/getstate", methods=["POST"])
+def get_scaffold_state():
+    return get_saved_state(scaffoldtable)
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():

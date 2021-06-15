@@ -17,6 +17,23 @@ attributes = {
     'csvFiles': ['objects']
 }
 
+def create_doi_request(doi):
+
+    query = {
+        "query": {
+            "bool": {
+                "must": [{"match_all": {}}],
+                "should": [],
+                "filter": {
+                    "term": {
+                        "_id": doi
+                    }
+                }
+            }
+        }
+    }
+
+    return query
 
 # create_facet_query(type): Generates facet search request data for scicrunch  given a 'type'; where
 # 'type' is either 'species', 'gender', or 'genotype' at this stage.
@@ -146,6 +163,11 @@ def convert_doi_to_url(doi):
     if not doi:
         return doi
     return doi.replace('DOI:', 'https://doi.org/')
+
+def convert_url_to_doi(doi):
+    if not doi:
+        return doi
+    return doi.replace('https://doi.org/', 'DOI:')
 
 
 def find_csv_files(obj_list):

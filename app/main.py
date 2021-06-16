@@ -586,12 +586,13 @@ def get_available_uberonids(query):
         json=requestBody)
     try:
         json_result = response.json()
-        for item in json_result['aggregations']['curie']["buckets"]:
-            pair = {
-                'id': item['key'], 
-                'name': item['organ']['buckets'][0]['key']
-            }
-            result['uberon']['array'].append(pair)
+        for item in json_result['aggregations']['organ']["buckets"]:
+            if item['key']['id'] and item['key']['name']:
+                pair = {
+                    'id': item['key']['id'], 
+                    'name': item['key']['name']
+                }
+                result['uberon']['array'].append(pair)
     except BaseException as e:
         return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                 'error': 'JSONDecodeError'}), 502

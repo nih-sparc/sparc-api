@@ -175,23 +175,19 @@ def get_request_body_for_curies(species):
         "from": 0,
         "size": 0,
         "aggregations": {
-            "curie": {
-                "terms": {
-                    "field": "anatomy.organ.curie.aggregate",
+            "organ": {
+                "composite": {
+                    "sources": [
+                        {"id": {"terms": {"field": "anatomy.organ.curie.aggregate"}}},
+                        {"name": {"terms": {"field": "anatomy.organ.name.aggregate"}}} 
+                    ],
                     "size": 200
-                },
-                "aggregations": {
-                    "organ": {
-                        "terms": {
-                            "field": "anatomy.organ.name.aggregate",
-                            "size": 200
-                        }
-                    }
                 }
             }
         }
     }
 
+    # Construct the query if there is a list of species 
     if len(species) > 0:
         query = {
             "query_string": {

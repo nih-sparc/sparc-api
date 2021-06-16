@@ -566,11 +566,14 @@ def subscribe_to_mailchimp():
     else:
         abort(400, description="Missing email_address, first_name or last_name")
 
-# Get list of available name / uberonids pair
-@app.route("/get-uberons", methods=["GET"])
-def get_available_uberonids():
+# Get list of available name / curie pair
+@app.route("/get-organ-curies/", defaults={'query': ''})
+@app.route("/get-organ-curies/<query>/")
+def get_available_uberonids(query):
 
-    requestBody = get_request_body_for_uberonid()
+    species = request.args.getlist('species')
+
+    requestBody = get_request_body_for_curies(species)
 
     result = {
         'uberon': {

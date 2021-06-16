@@ -43,3 +43,13 @@ def test_getting_facets(client):
     facet_results = json.loads(r.data)
     facets = [facet_result['key'] for facet_result in facet_results]
     assert 'heart' in facets
+
+def test_getting_curies(client):
+    r = client.get('/get-organ-curies/')
+    uberons_results = json.loads(r.data)
+    total = len( uberons_results['uberon']['array'])
+    assert total > 0
+    r = client.get('/get-organ-curies/?species=human')
+    uberons_results = json.loads(r.data)
+    human = len( uberons_results['uberon']['array'])
+    assert total > human

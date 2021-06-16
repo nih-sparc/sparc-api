@@ -25,6 +25,7 @@ from requests.auth import HTTPBasicAuth
 import os
 
 import app.osparc as osparc
+import requests
 
 # from pymongo import MongoClient
 
@@ -577,3 +578,29 @@ def simulation():
         return json.dumps(osparc.run_simulation(data["model_url"], data["json_config"]))
     else:
         abort(400, description="Missing model URL and/or JSON configuration")
+
+
+@app.route("/pmr_latest_exposure", methods=["POST"])
+def pmr_latest_exposure():
+    data = request.get_json()
+
+    if data and "workspace_url" in data:
+        try:
+            resp = requests.get(data["workspace_url"],
+                                headers={"Accept": "application/vnd.physiome.pmr2.json.1"})
+            if resp.status_code == 200:
+                try:
+                    # Return the latest exposure for the given workspace.
+                    url = resp.json()["collection"]["items"][0]["links"][0]["href"]
+                except:
+                    # There is no latest exposure for the given workspace.
+                    url = ""
+                return jsonify(
+                    url=url
+                )
+            else:
+                return resp.json()
+        except:
+            abort(400, description="Invalid workspace URL")
+    else:
+        abort(400, description="Missing workspace URL")

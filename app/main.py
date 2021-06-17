@@ -22,7 +22,7 @@ from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable
-from app.process_kb_results import create_facet_query, dataset_results, process_kb_results, create_filter_request
+from app.process_kb_results import create_facet_query, reform_dataset_results, process_kb_results, create_filter_request
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 
@@ -193,13 +193,33 @@ def create_presigned_url(expiration=3600):
     return response
 
 
-@app.route("/xml-thumbnail/<path:path>")
-def extract_thumbnail_from_xml_file(path):
+@app.route("/thumbnail/neurolucida")
+def thumbnail_from_neurolucida_file():
+    query_args = request.args
+    if 'version' not in query_args or 'datasetId' not in query_args or 'path' not in query_args:
+        return abort(400, description=f"Query arguments are not valid.")
+
+    url = f"{Config.NEUROLUCIDA_HOST}/thumbnail"
+    response = requests.get(url, params=query_args)
+    if response.status_code == 200:
+        if response.headers.get('Content-Type', 'unknown') == 'image/png':
+            return base64.b64encode(response.content)
+
+    abort(400, 'Failed to retrieve thumbnail.')
+
+
+@app.route("/thumbnail/segmentation")
+def extract_thumbnail_from_xml_file():
     """
     Extract a thumbnail from a mbf xml file.
     First phase is to find the thumbnail element in the xml document.
     Second phase is to convert the xml to a base64 png.
     """
+    query_args = request.args
+    if 'path' not in query_args:
+        return abort(400, description=f"Query arguments are not valid.")
+
+    path = query_args['path']
     resource = None
     start_tag_found = False
     end_tag_found = False
@@ -280,14 +300,7 @@ def search_datasets():
 @app.route("/dataset_info_from_doi/")
 def get_dataset_info():
     doi = request.args.get('doi')
-    query = {
-        "match": {
-            "item.curie": {
-                "query": f"DOI:{doi}",
-                "operator": "and"
-            }
-        }
-    }
+    query = create_doi_query(doi)
     # query = {
     #             "match": {
     #                 "item.identifier": {
@@ -297,7 +310,18 @@ def get_dataset_info():
     #             }
     #         }
 
-    return dataset_search(query)
+    return reform_dataset_results(dataset_search(query))
+
+
+def create_doi_query(doi):
+    return {
+        "match": {
+            "item.curie": {
+                "query": f"DOI:{doi}",
+                "operator": "and"
+            }
+        }
+    }
 
 
 def dataset_search(query):
@@ -311,7 +335,7 @@ def dataset_search(query):
         response = requests.post(f'{Config.SCI_CRUNCH_HOST}/_search',
                                  json=payload, params=params)
 
-        return dataset_results(response.json())
+        return response.json()
     except requests.exceptions.HTTPError as err:
         logging.error(err)
 

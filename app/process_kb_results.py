@@ -163,13 +163,13 @@ def _process_kb_result(result):
     if _COMMON_IMAGES in result:
         output[_COMMON_IMAGES] = []
         for common_image in result[_COMMON_IMAGES]:
-            if int(common_image['bytes']['count']) < Config.DIRECT_DOWNLOAD_LIMIT:
+            if 'bytes' in common_image and int(common_image['bytes']['count']) < Config.DIRECT_DOWNLOAD_LIMIT:
                 output[_COMMON_IMAGES].append(common_image)
 
     return output
 
 
-def dataset_results(results):
+def reform_dataset_results(results):
     processed_outputs = []
     kb_results = _prepare_kb_results(results)
     for kb_result in kb_results:

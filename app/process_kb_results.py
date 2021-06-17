@@ -222,8 +222,10 @@ def _mapped_mime_type(mime_type, obj):
         'application/vnd.mbfbioscience.metadata+xml': _SEGMENTATION_FILES,
         'application/vnd.mbfbioscience.neurolucida+xml': _SEGMENTATION_FILES,
         'inode/vnd.abi.scaffold+directory': 'abi-scaffold-dir',
-        'inode/vnd.abi.scaffold+file': 'abi-scaffold-file',
+        'inode/vnd.abi.scaffold+file': 'abi-scaffold-metadata-file',
         'inode/vnd.abi.scaffold+thumbnail': 'abi-scaffold-thumbnail',
+        'text/vnd.abi.plot+Tab-separated-values': 'abi-plot',
+        'text/vnd.abi.plot+csv': 'abi-plot',
         'image/png': _COMMON_IMAGES,
         'image/tiff': 'tiff-image',
         'image/tif': 'tiff-image',
@@ -300,14 +302,8 @@ def _sort_files_by_mime_type(obj_list):
     for obj in obj_list:
         # Hacks are applied here.
         obj = _fudge_object(obj)
-        #print('===========================')
-        #print(obj)
-        # print("object:", mime_type)
 
         mime_type = obj.get('mimetype', _NOT_SPECIFIED)
-        # if mime_type == 'application/xml':
-        #     print('===========================')
-        #     print(obj["remote"]["id"], obj["dataset"]["path"])
 
         mapped_mime_type = _mapped_mime_type(mime_type, obj)
         if mapped_mime_type == _NOT_SPECIFIED:

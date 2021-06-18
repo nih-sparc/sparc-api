@@ -27,6 +27,23 @@ attributes = {
     'files': ['objects']
 }
 
+def create_doi_request(doi):
+
+    query = {
+        "query": {
+            "bool": {
+                "must": [{"match_all": {}}],
+                "should": [],
+                "filter": {
+                    "term": {
+                        "_id": doi
+                    }
+                }
+            }
+        }
+    }
+
+    return query
 
 # create_facet_query(type): Generates facet search request data for sci-crunch  given a 'type'; where
 # 'type' is either 'species', 'gender', or 'genotype' at this stage.
@@ -212,6 +229,8 @@ _NEUROLUCIDA_FUDGES = [
 def _fudge_object(obj):
     if obj['remote']['id'] in _NEUROLUCIDA_FUDGES:
         obj['mimetype'] = 'application/vnd.mbfbioscience.neurolucida+xml'
+    if obj.get('mimetype', 'none') == 'application/json' and "metadata.json" in obj.get('dataset', 'none')['path']:
+        obj['mimetype'] = 'inode/vnd.abi.scaffold+file'
 
     return obj
 

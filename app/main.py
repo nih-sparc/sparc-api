@@ -291,6 +291,20 @@ def direct_download_url(path):
 
     return resource
 
+# /scicrunch/: Returns scicrunch results for a given <search> query
+@app.route("/scicrunch-dataset/<doi1>/<doi2>")
+def sci_doi(doi1,doi2):
+    doi = doi1 + '/' + doi2
+    print(doi)
+    data = create_doi_request(doi)
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
 
 @app.route("/search_dataset_by_mime_type/")
 def search_datasets():

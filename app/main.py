@@ -225,6 +225,34 @@ def sci_doi(doi1,doi2):
         logging.error(err)
         return json.dumps({'error': err})
 
+
+# /scicrunch-organ-query/: Returns results for given organ curie. These can be processed by the sidebar
+@app.route("/scicrunch-organ-query/<curie>")
+def sci_organ(curie):
+    data = {
+        "size": 20,
+        "from": 0,
+        "query": {
+            "query_string": {
+                "fields": [
+                    "*organ.curie"
+                ],
+                "query": curie
+            }
+        }
+    }
+
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        return process_kb_results(response.json())
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+
+
 # /search/: Returns scicrunch results for a given <search> query
 @app.route("/search/", defaults={'query': ''})
 @app.route("/search/<query>")

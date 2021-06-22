@@ -226,38 +226,22 @@ def sci_doi(doi1,doi2):
         return json.dumps({'error': err})
 
 
-# /scicrunch-organ-query/: Returns results for given organ curie. These can be processed by the sidebar
-@app.route("/scicrunch-organ-query/<curie>")
-def sci_organ(curie):
+# /scicrunch-query-string/: Returns results for given organ curie. These can be processed by the sidebar
+@app.route("/scicrunch-query-string/<field>/<curie>")
+def sci_organ(field, curie):
+    # field example: "*organ.curie"
     data = {
         "size": 20,
         "from": 0,
         "query": {
             "query_string": {
                 "fields": [
-                    "*organ.curie"
+                    field
                 ],
                 "query": curie
             }
         }
     }
-
-    # # /scicrunch-organ-query/: Returns results for given organ curie. These can be processed by the sidebar
-    # @app.route("/scicrunch-query-string/<field>/<curie>")
-    # def sci_organ(field, curie):
-    #     # field example: "*organ.curie"
-    #     data = {
-    #         "size": 20,
-    #         "from": 0,
-    #         "query": {
-    #             "query_string": {
-    #                 "fields": [
-    #                     field
-    #                 ],
-    #                 "query": curie
-    #             }
-    #         }
-    #     }
 
     try:
         response = requests.post(

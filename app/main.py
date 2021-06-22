@@ -242,6 +242,23 @@ def sci_organ(curie):
         }
     }
 
+    # # /scicrunch-organ-query/: Returns results for given organ curie. These can be processed by the sidebar
+    # @app.route("/scicrunch-query-string/<field>/<curie>")
+    # def sci_organ(field, curie):
+    #     # field example: "*organ.curie"
+    #     data = {
+    #         "size": 20,
+    #         "from": 0,
+    #         "query": {
+    #             "query_string": {
+    #                 "fields": [
+    #                     field
+    #                 ],
+    #                 "query": curie
+    #             }
+    #         }
+    #     }
+
     try:
         response = requests.post(
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',

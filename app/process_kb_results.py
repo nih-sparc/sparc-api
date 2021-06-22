@@ -173,13 +173,13 @@ def convert_url_to_doi(doi):
 def find_csv_files(obj_list):
     if not obj_list:
         return obj_list
-    return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'text/csv']
+    return [obj for obj in obj_list if obj.get('mimetype', {}).get('name', 'none') == 'text/csv']
 
 
 def find_scaffold_json_files(obj_list):
     if not obj_list:
         return obj_list
-    return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'application/json' and "metadata.json" in obj.get('dataset', 'none')['path']]
+    return [obj for obj in obj_list if obj.get('mimetype', {}).get('name', 'none') == 'application/json' and "metadata.json" in obj.get('dataset', 'none')['path']]
 
 
 # get_attributes: Use 'attributes' (defined at top of this document) to step through the large scicrunch result dict

@@ -227,17 +227,17 @@ def sci_doi(doi1,doi2):
 
 
 # /scicrunch-query-string/: Returns results for given organ curie. These can be processed by the sidebar
-@app.route("/scicrunch-query-string/<field>/<curie>")
-def sci_organ(field, curie):
+@app.route("/scicrunch-query-string/")
+def sci_organ():
+    fields = request.args.getlist('field')
+    curie = request.args.get('curie')
     # field example: "*organ.curie"
     data = {
         "size": 20,
         "from": 0,
         "query": {
             "query_string": {
-                "fields": [
-                    field
-                ],
+                "fields": fields,
                 "query": curie
             }
         }

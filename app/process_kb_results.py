@@ -153,8 +153,9 @@ def process_kb_results(results):
     for i, hit in enumerate(hits):
         attr = get_attributes(attributes, hit)
         attr['doi'] = convert_doi_to_url(attr['doi'])
-        attr['csvFiles'] = find_csv_files(attr['csvFiles'])
-        attr['scaffolds'] = find_scaffold_json_files(hit['_source']['objects'])
+        objects = find_csv_files(attr['csvFiles']) # Have to do this as not all datsets return objects
+        attr['csvFiles'] = objects
+        attr['scaffolds'] = find_scaffold_json_files(objects)
         output.append(attr)
     return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
 

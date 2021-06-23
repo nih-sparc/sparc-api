@@ -17,6 +17,23 @@ attributes = {
     'csvFiles': ['objects']
 }
 
+def create_doi_request(doi):
+
+    query = {
+        "query": {
+            "bool": {
+                "must": [{"match_all": {}}],
+                "should": [],
+                "filter": {
+                    "term": {
+                        "_id": doi
+                    }
+                }
+            }
+        }
+    }
+
+    return query
 
 # create_facet_query(type): Generates facet search request data for scicrunch  given a 'type'; where
 # 'type' is either 'species', 'gender', or 'genotype' at this stage.
@@ -136,7 +153,9 @@ def process_kb_results(results):
     for i, hit in enumerate(hits):
         attr = get_attributes(attributes, hit)
         attr['doi'] = convert_doi_to_url(attr['doi'])
-        attr['csvFiles'] = find_csv_files(attr['csvFiles'])
+        objects = attr['csvFiles']  # Have to do this as not all datsets return objects
+        attr['csvFiles'] = find_csv_files(objects)
+        attr['scaffolds'] = find_scaffold_json_files(objects)
         output.append(attr)
     return json.dumps({'numberOfHits': results['hits']['total'], 'results': output})
 
@@ -146,11 +165,22 @@ def convert_doi_to_url(doi):
         return doi
     return doi.replace('DOI:', 'https://doi.org/')
 
+def convert_url_to_doi(doi):
+    if not doi:
+        return doi
+    return doi.replace('https://doi.org/', 'DOI:')
+
 
 def find_csv_files(obj_list):
     if not obj_list:
         return obj_list
-    return [obj for obj in obj_list if obj.get('mimetype', 'none') == 'text/csv']
+    return [obj for obj in obj_list if obj.get('mimetype', {}).get('name', 'none') == 'text/csv']
+
+
+def find_scaffold_json_files(obj_list):
+    if not obj_list:
+        return obj_list
+    return [obj for obj in obj_list if obj.get('additional_mimetype', {}).get('name', 'none') == 'inode/vnd.abi.scaffold+file']
 
 
 # get_attributes: Use 'attributes' (defined at top of this document) to step through the large scicrunch result dict

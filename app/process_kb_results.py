@@ -5,6 +5,7 @@ import json
 #  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
 #  attributes > sample > subject
 attributes = {
+    'additionalLinks': ['xrefs', 'additionalLinks'],
     'scaffolds': ['scaffolds'],
     'samples': ['attributes','sample','subject'],
     'name': ['item','name'],
@@ -79,7 +80,7 @@ def create_filter_request(query, terms, facets, size, start):
     if start is None:
         start = 0
 
-    if query is "" and len(terms) is 0 and len(facets) is 0:
+    if not query and not terms and not facets:
         return {"size": size, "from": start}
 
     # Type map is used to map scicrunch paths to given facet
@@ -90,20 +91,23 @@ def create_filter_request(query, terms, facets, size, start):
     }
 
     # Data structure of a scicrunch search
-    data = {
-      "size": size,
-      "from": start,
-      "query": {
-          "query_string": {
-              "query": ""
-          }
-      }
-    }
-
     qs = facet_query_string(query, terms, facets, type_map)
-    data["query"]["query_string"]["query"] = qs
 
-    return data
+    if qs:
+        return {
+            "size": size,
+            "from": start,
+            "query": {
+                "query_string": {
+                    "query": qs
+                }
+            }
+        }
+
+    return {
+        "size": size,
+        "from": start,
+    }
 
 
 def facet_query_string(query, terms, facets, type_map):
@@ -125,24 +129,38 @@ def facet_query_string(query, terms, facets, type_map):
 
     # Add search query if it exists
     qt = ""
-    if query is not "":
+    if query:
         qt = f'({query})'
 
-    if query is not "" and len(t) > 0:
+    if query and t:
         qt += " AND "
 
     # Add the brackets and OR and AND parameters
     for k in t:
-        qt += type_map[k][0] + ":("  # facet term path and opening bracket
-        for l in t[k]:
-            qt += f"({l})"  # bracket around terms incase there are spaces
-            if l is not t[k][-1]:
-                qt += " OR "  # 'OR' if more terms in this facet are coming
-            else:
-                qt += ") "
+        if k == "datasets":
+            needParentheses = (qt or len(t) > 1) and (len(t[k]) > 1)
+            if needParentheses:
+                qt += "("
+            for l in t[k]:
+                if l == "scaffolds":
+                    qt += "scaffolds.object.mimetype.name:((inode%2fvnd.abi.scaffold+directory))"
+                elif l == "simulations":
+                    qt += "xrefs.additionalLinks.description:((CellML) OR (SED-ML))"
+                if l is not t[k][-1]:
+                    qt += " OR "  # 'OR' if more terms in this facet are coming
+            if needParentheses:
+                qt += ")"
+        else:
+            qt += type_map[k][0] + ":("  # facet term path and opening bracket
+            for l in t[k]:
+                qt += f"({l})"  # bracket around terms incase there are spaces
+                if l is not t[k][-1]:
+                    qt += " OR "  # 'OR' if more terms in this facet are coming
+                else:
+                    qt += ")"
 
         if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
-                qt += " AND "
+            qt += " AND "
     return qt
 
 

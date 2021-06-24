@@ -24,6 +24,9 @@ from app.process_kb_results import *
 from requests.auth import HTTPBasicAuth
 import os
 
+import app.osparc as osparc
+import requests
+
 # from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -286,9 +289,9 @@ def filter_search(query):
         results = process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-        return jsonify({'error': str(err), 'message': 'Scicrunch is not currently reachable, please try again later'}), 502
+        return jsonify({'error': str(err), 'message': 'SciCrunch is not currently reachable, please try again later'}), 502
     except json.JSONDecodeError as e:
-        return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                         'error': 'JSONDecodeError'}), 502
     return results
 
@@ -311,7 +314,7 @@ def get_facets(type):
             json_result = response.json()
             results.append(json_result)
         except BaseException as e:
-            return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+            return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 
     # Select terms from the results
@@ -608,3 +611,39 @@ def subscribe_to_mailchimp():
             return resp.json()
     else:
         abort(400, description="Missing email_address, first_name or last_name")
+
+
+@app.route("/simulation", methods=["POST"])
+def simulation():
+    data = request.get_json()
+
+    if data and "model_url" in data and "json_config" in data:
+        return json.dumps(osparc.run_simulation(data["model_url"], data["json_config"]))
+    else:
+        abort(400, description="Missing model URL and/or JSON configuration")
+
+
+@app.route("/pmr_latest_exposure", methods=["POST"])
+def pmr_latest_exposure():
+    data = request.get_json()
+
+    if data and "workspace_url" in data:
+        try:
+            resp = requests.get(data["workspace_url"],
+                                headers={"Accept": "application/vnd.physiome.pmr2.json.1"})
+            if resp.status_code == 200:
+                try:
+                    # Return the latest exposure for the given workspace.
+                    url = resp.json()["collection"]["items"][0]["links"][0]["href"]
+                except:
+                    # There is no latest exposure for the given workspace.
+                    url = ""
+                return jsonify(
+                    url=url
+                )
+            else:
+                return resp.json()
+        except:
+            abort(400, description="Invalid workspace URL")
+    else:
+        abort(400, description="Missing workspace URL")

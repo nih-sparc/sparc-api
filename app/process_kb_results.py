@@ -210,11 +210,12 @@ def get_attributes(attributes, dataset):
     for k, attr in attributes.items():
         subset = dataset['_source'] # set our subest to the full dataset result
         key_attr = False
-        for key in attr:
+        for n, key in enumerate(attr): # step through attributes
             if isinstance(subset, dict):
-                if key in subset.keys():
+                if key in subset.keys(): # continue if keys are found
                     subset = subset[key]
-                    key_attr = subset
+                    if n+1 is len(attr): # if we made it to the end, save this subset
+                        key_attr = subset
         found_attr[k] = key_attr
     return found_attr
 

@@ -143,7 +143,7 @@ def facet_query_string(query, terms, facets, type_map):
                 qt += "("
             for l in t[k]:
                 if l == "scaffolds":
-                    qt += "scaffolds.object.mimetype.name:((inode%2fvnd.abi.scaffold+directory))"
+                    qt += "objects.additional_mimetype.name:((inode%2fvnd.abi.scaffold) AND (file))"
                 elif l == "simulations":
                     qt += "xrefs.additionalLinks.description:((CellML) OR (SED-ML))"
                 if l is not t[k][-1]:
@@ -198,8 +198,6 @@ def find_csv_files(obj_list):
 def find_scaffold_json_files(obj_list):
     if not obj_list:
         return obj_list
-    for obj in obj_list:
-        print(obj.get('name'), obj.get('additional_mimetype', {}).get('name', 'none'))
     return [obj for obj in obj_list if obj.get('additional_mimetype', {}).get('name', 'none') == 'inode/vnd.abi.scaffold+file']
 
 

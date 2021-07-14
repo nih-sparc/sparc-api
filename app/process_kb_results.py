@@ -18,6 +18,7 @@ attributes = {
 }
 
 
+
 # create_facet_query(type): Generates facet search request data for scicrunch  given a 'type'; where
 # 'type' is either 'species', 'gender', or 'genotype' at this stage.
 #  Returns a tuple of the typemap and request data ( type_map, data )
@@ -74,21 +75,23 @@ def create_filter_request(query, terms, facets, size, start):
         'organ': ['anatomy.organ.name.aggregate']
     }
 
-    # Data structure of a scicrunch search
-    data = {
-      "size": size,
-      "from": start,
-      "query": {
-          "query_string": {
-              "query": ""
-          }
-      }
-    }
-
     qs = facet_query_string(query, terms, facets, type_map)
-    data["query"]["query_string"]["query"] = qs
 
-    return data
+    if qs:
+        return {
+            "size": size,
+            "from": start,
+            "query": {
+                "query_string": {
+                    "query": qs
+                }
+            }
+        }
+
+    return {
+        "size": size,
+        "from": start,
+    }
 
 
 def facet_query_string(query, terms, facets, type_map):

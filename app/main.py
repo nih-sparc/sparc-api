@@ -3,7 +3,6 @@ import base64
 import boto3
 import json
 import logging
-import os
 import requests
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -16,15 +15,19 @@ from pennsieve import Pennsieve
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
 from requests.auth import HTTPBasicAuth
+
+from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query
 from scripts.email_sender import EmailSender
 from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable
-from app.process_kb_results import create_facet_query, reform_dataset_results, process_kb_results, create_filter_request
+from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
+
+from timeit import default_timer as timer
 
 app = Flask(__name__)
 # set environment variable
@@ -43,11 +46,6 @@ s3 = boto3.client(
     region_name="us-east-1",
 )
 
-try:
-    os.environ["AWS_ACCESS_KEY_ID"] = Config.SPARC_PORTAL_AWS_KEY
-    os.environ["AWS_SECRET_ACCESS_KEY"] = Config.SPARC_PORTAL_AWS_SECRET
-except:
-    pass
 
 biolucida_lock = Lock()
 
@@ -55,12 +53,12 @@ osparc_data = {}
 
 try:
     maptable = MapTable(Config.DATABASE_URL)
-except:
+except AttributeError:
     maptable = None
 
 try:
     scaffoldtable = ScaffoldTable(Config.DATABASE_URL)
-except:
+except AttributeError:
     scaffoldtable = None
 
 
@@ -276,7 +274,6 @@ def direct_download_url(path):
     )
 
     content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
-    # print(content_length, Config.DIRECT_DOWNLOAD_LIMIT, content_length > Config.DIRECT_DOWNLOAD_LIMIT)
     if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
         return abort(413, description=f"File too big to download: {content_length}")
 
@@ -285,17 +282,18 @@ def direct_download_url(path):
         Key=path,
         RequestPayer="requester"
     )
+
+    encode_base64 = request.args.get("encodeBase64")
     resource = response["Body"].read()
-    if response.get('ContentType', 'unknown') == 'application/octet-stream':
+    if encode_base64 is not None:
         return base64.b64encode(resource)
 
     return resource
 
-# /scicrunch/: Returns scicrunch results for a given <search> query
+
 @app.route("/scicrunch-dataset/<doi1>/<doi2>")
-def sci_doi(doi1,doi2):
+def sci_doi(doi1, doi2):
     doi = doi1 + '/' + doi2
-    print(doi)
     data = create_doi_request(doi)
     try:
         response = requests.post(
@@ -306,48 +304,52 @@ def sci_doi(doi1,doi2):
         logging.error(err)
         return json.dumps({'error': err})
 
-@app.route("/search_dataset_by_mime_type/")
-def search_datasets():
-    mime_type = request.args.getlist('mime_type')[0]
 
-
-@app.route("/dataset_info_from_doi/")
-def get_dataset_info():
+@app.route("/dataset_info/using_doi")
+def get_dataset_info_doi():
     doi = request.args.get('doi')
     query = create_doi_query(doi)
-    # query = {
-    #             "match": {
-    #                 "item.identifier": {
-    #                     "query": f"{identifier}",
-    #                     "operator": "and"
-    #                 }
-    #             }
-    #         }
 
     return reform_dataset_results(dataset_search(query))
 
 
-def create_doi_query(doi):
-    return {
-        "match": {
-            "item.curie": {
-                "query": f"DOI:{doi}",
-                "operator": "and"
-            }
-        }
-    }
+@app.route("/dataset_info/using_title")
+def get_dataset_info_title():
+    title = request.args.get('title')
+    query = create_title_query(title)
+
+    return reform_dataset_results(dataset_search(query, raw=True))
 
 
-def dataset_search(query):
+@app.route("/current_doi_list")
+def get_all_doi():
+    query = create_doi_aggregate()
+    results = reform_aggregation_results(dataset_search(query, raw=True))
+    doi_results = []
+    for result in results['doi']['buckets']:
+        doi_results.append(result['key']['curie'])
+
+    return {'results': doi_results}
+
+
+def dataset_search(query, raw=False):
     try:
-        payload = {
-            "query": query
-        }
+        if raw:
+            payload = query
+        else:
+            payload = {
+                "query": query
+            }
+
         params = {
             "api_key": Config.KNOWLEDGEBASE_KEY
         }
+        print(params, payload)
+        start = timer()
         response = requests.post(f'{Config.SCI_CRUNCH_HOST}/_search',
                                  json=payload, params=params)
+        end = timer()
+        print("elapsed request time:", end - start)
 
         return response.json()
     except requests.exceptions.HTTPError as err:
@@ -368,8 +370,29 @@ def kb_search(query, limit=10, start=0):
         if request.args.get('start') is not None:
             start = request.args.get('start')
 
+        print(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&size={limit}&from={start}&api_key={Config.KNOWLEDGEBASE_KEY}')
         response = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&size={limit}&from={start}&api_key={Config.KNOWLEDGEBASE_KEY}')
-        return process_kb_results(response.json())
+        return process_results(response.json())
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+
+# /search/: Returns sci-crunch results for a given <search> query
+@app.route("/searcht/", defaults={'query': '', 'limit': 10, 'start': 0})
+@app.route("/searcht/<query>")
+def kb_search_t(query, limit=10, start=0):
+    try:
+        if request.args.get('limit') is not None:
+            limit = request.args.get('limit')
+        if request.args.get('query') is not None:
+            query = request.args.get('query')
+        if request.args.get('start') is not None:
+            start = request.args.get('start')
+
+        print(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&size={limit}&from={start}&api_key={Config.KNOWLEDGEBASE_KEY}')
+        response = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&size={limit}&from={start}&api_key={Config.KNOWLEDGEBASE_KEY}')
+        return response.json()
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return json.dumps({'error': err})
@@ -392,7 +415,7 @@ def filter_search(query):
         response = requests.post(
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
-        results = process_kb_results(response.json())
+        results = process_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return jsonify({'error': str(err), 'message': 'Sci-crunch is not currently reachable, please try again later'}), 502
@@ -550,28 +573,6 @@ def get_owner_email(owner_id):
         abort(404, description="Owner not found")
     else:
         return jsonify({"email": res[0].email})
-
-
-@app.route("/file/", methods=["GET"])
-def fetch_file_from_s3():
-    # print(request.args)
-    doi = request.args.getlist('doi')
-    filepath = request.args.getlist('filepath')
-    print(doi, filepath)
-    # size = request.args.get('size')
-    # start = request.args.get('start')
-    abort(404, description="Not implemented")
-
-
-@app.route("/data_location/", methods=["GET"])
-def data_location_via_discover():
-    doi = request.args.getlist('doi')
-    print(doi)
-    print(ps)
-    print(dir(ps))
-    print(ps.datasets)
-    print(ps.get_dataset('10.26275', 'dwly-naxx'))
-    abort(404, description="Not implemented")
 
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])

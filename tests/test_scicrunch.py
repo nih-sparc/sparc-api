@@ -2,6 +2,7 @@ import json
 import pytest
 from app import app
 from app.main import create_doi_query, dataset_search
+from app.scicrunch_requests import create_query_string
 
 
 @pytest.fixture
@@ -62,34 +63,142 @@ def test_getting_facets(client):
 
 def test_response_version(client):
     doi = "10.26275/duz8-mq3n"
-    r = client.get('/dataset_info_from_doi/', query_string={'doi': doi})
-    print(r.data)
-    data = r.data
-    assert 'version' in data
+    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
+    data = r.data.decode('utf-8')
+    json_data = json.loads(data)
+    assert len(json_data['result']) == 1
+    assert 'version' in json_data['result'][0]
+
+
+source_structure = {
+    'type': dict,
+    'required': ['contributors', 'dataItem', 'dates', 'distributions',
+                 {'item':
+                     {
+                         'type': dict,
+                         'required': [{'version': {'type': dict, 'required': ['keyword'], 'optional': []}}, 'types', 'contentTypes', 'names', 'statistics', 'keywords', 'published', 'description',
+                                      'name', 'readme', 'identifier', 'docid', 'curie'],
+                         'optional': ['techniques', 'modalities']
+                     }}, 'organization', 'provenance', 'supportingAwards'],
+    'optional': ['anatomy', 'attributes', 'diseases',
+                 {'objects':
+                     {
+                         'type': list,
+                         'item': {
+                             'type': dict,
+                             'required': ['bytes', 'dataset', 'distributions', 'identifier', 'mimetype', 'name', 'updated'],
+                             'optional': []}
+                     }
+                 }, 'organisms', 'protocols', 'publication', 'xrefs']
+}
+raw_structure_base = {
+    'type': dict,
+    'required': [
+        {'hits': {
+            'type': dict,
+            'required': [
+                {'hits':
+                     {'type': list,
+                      'item': {
+                          'type': dict,
+                          'required': ['_index', '_type', '_id', '_score',
+                                       {'_source': source_structure}
+                                       ],
+                          'optional': ['_ignored']}
+                      }
+                 }
+            ],
+            'optional': [],
+        }
+        }
+    ],
+    'optional': []
+}
+
+
+class StructureDefinitionError(Exception):
+    pass
+
+
+def _test_sub_structure(data, structure, required=True):
+    for st in structure:
+        if isinstance(st, str):
+            if required and st not in data:
+                print(f'failed: {st}')
+                return False
+
+            continue
+
+        # req should have exactly one key
+        if not len(st.keys()) == 1:
+            raise StructureDefinitionError
+
+        key = next(iter(st))
+        if required and key not in data:
+            print(f'key failed: {key}')
+            return False
+
+        # if key == '_source':
+        #     a = list(data[key].keys())
+        #     a.sort()
+        #     print(a)
+        if key in data and not _test_structure(data[key], st[key]):
+            print(f'structure failed: {key} - {st[key]["type"]}, {type(data[key])} - {st[key]} - {len(data[key])}')
+            return False
+
+    return True
+
+
+def _test_structure(data, structure):
+    structure_type = structure['type']
+    # print('=============================')
+    # print(structure)
+    if isinstance(data, structure_type):
+        if structure_type is dict:
+            if not _test_sub_structure(data, structure['required'], required=True):
+                return False
+
+            if not _test_sub_structure(data, structure['optional'], required=False):
+                return False
+        elif structure_type is list:
+            for list_item in data:
+                if not _test_structure(list_item, structure['item']):
+                    return False
+        else:
+            print('type if not dict or list', type(data))
+
+        return True
+
+    return False
 
 
 def test_raw_response_structure(client):
-    # 10.26275/duz8-mq3n
     # 10.26275/zdxd-84xz
     # 10.26275/duz8-mq3n
-    query = create_doi_query("10.26275/duz8-mq3n")
-    data = dataset_search(query)
-    print(data.keys())
-    print(data['took'])
-    print(data['hits']['total'])
-    print(data['hits']['hits'][0].keys())
-    print(data['hits']['hits'][0]['_source'].keys())
-    print("===============")
+    query = create_query_string("computational")
+    data = dataset_search(query, raw=True)
     # print(data['hits']['hits'][0]['_source']['objects'])
     # print(data['hits']['hits'][0]['_source']['item'])
-    if 'version' in data['hits']['hits'][0]['_source']['item']:
-        print(data['hits']['hits'][0]['_source']['item']['version'])
-    objs = data['hits']['hits'][0]['_source']['objects']
-    for o in objs:
-        mimetype = o.get('mimetype', 'not-specified')
+    assert _test_structure(data, raw_structure_base)
+    assert 'hits' in data
+    assert 'hits' in data['hits']
+    assert isinstance(data['hits']['hits'], list)
+    for hit in data['hits']['hits']:
+        if 'version' in hit['_source']['item']:
+            print(hit['_source']['item']['version']['keyword'])
+        else:
+            print('no version')
+
+    for hit in data['hits']['hits']:
+        print(hit['_source'].keys())
+    objects = data['hits']['hits'][0]['_source']['objects']
+    for o in objects:
+        mimetype = o.get('mimetype', 'not-specified').get('name', 'no-name')
         # print('mimetype: ', mimetype)
         if mimetype == 'image/png':
-            print(o)
+            # print(o)
+            print('.', end="")
 
+    print()
     # for k in data['hits']['hits'][0]:
     #     print(k, data['hits']['hits'][0][k])

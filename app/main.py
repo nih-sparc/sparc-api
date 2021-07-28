@@ -344,12 +344,11 @@ def dataset_search(query, raw=False):
         params = {
             "api_key": Config.KNOWLEDGEBASE_KEY
         }
-        print(params, payload)
-        start = timer()
+        # start = timer()
         response = requests.post(f'{Config.SCI_CRUNCH_HOST}/_search',
                                  json=payload, params=params)
-        end = timer()
-        print("elapsed request time:", end - start)
+        # end = timer()
+        # print("elapsed request time:", end - start)
 
         return response.json()
     except requests.exceptions.HTTPError as err:

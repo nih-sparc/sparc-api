@@ -309,12 +309,12 @@ def sort_files_by_mime_type(obj_list):
 
 
 def process_result(result):
-    print('=====================')
-    if isinstance(result['files'], list):
-        print(len(result['files']))
-    else:
-        print('what is this?', result['files'])
-        # return dict(filter(lambda x: x[0] in PASS_THROUGH_KEYS, result.items()))
+    # print('=====================')
+    # if isinstance(result['files'], list):
+    #     print(len(result['files']))
+    # else:
+    #     print('what is this?', result['files'])
+    # return dict(filter(lambda x: x[0] in PASS_THROUGH_KEYS, result.items()))
 
     # for f in result['files']:
     #     if 'additional_mimetype' in f:

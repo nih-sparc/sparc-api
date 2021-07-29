@@ -217,110 +217,18 @@ def test_all_known_doi_search(client):
             print(f'Multiple results for {doi}!!')
 
 
-def test_doi_dataset_search(client):
-    doi = "10.26275/0ce8-cuwi"
-    start = timer()
-    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
-    end = timer()
-    print('elapsed: ', end - start)
-    response = json.loads(r.data)
-    assert 1 == len(response['result'])
-    result = response['result'][0]
-    print(f'took: {result["took"]}')
-    print("Title :", result['name'])
-    print_search_result(result)
-    print_mime_paths(result['files'])
-
-    assert 3 == 2
-
-
-def test_doi_wcje_hxib_dataset_search(client):
-    # Mapping of ICN Neurons in a 3D Reconstructed Rat Heart
-    doi = "10.26275/wcje-hxib"
-    start = timer()
-    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
-    # r = client.get('/search/contributors')
-    end = timer()
-    print('elapsed: ', end - start)
-    response = json.loads(r.data)
-    assert 'result' in response
-    assert len(response['result']) == 1
-    result = response['result'][0]
-    assert "Mapping of ICN Neurons in a 3D Reconstructed Rat Heart" == result['item']['name']
-    print(result)
-    print_search_result(result)
-
-    assert 'mbf-segmentation' in result
-
-
-def test_doi_nxfv_p3ol_dataset_search(client):
-    # Three mp4 videos
-    doi = "10.26275/nxfv-p3ol"
-    start = timer()
-    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
-    # r = client.get('/search/contributors')
-    end = timer()
-    print('elapsed: ', end - start)
-    response = json.loads(r.data)
-    assert 'result' in response
-    assert len(response['result']) == 1
-    result = response['result'][0]
-    assert "CLARITY and three-dimensional (3D) imaging of the mouse and porcine colonic innervation" == result['item']['name']
-    print_search_result(result)
-    print_mime_paths(result['files'])
-
-    assert 'mbf-segmentation' in ['keys']
-
-
-def test_doi_0y4e_eskx_dataset_search(client):
-    # Nine 2D Large images
-    doi = "10.26275/0y4e-eskx"
-    start = timer()
-    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
-    # r = client.get('/search/contributors')
-    end = timer()
-    print('elapsed: ', end - start)
-    response = json.loads(r.data)
-    assert 'result' in response
-    assert len(response['result']) == 1
-    result = response['result'][0]
-    assert "Distribution of nitregic, cholinergic and all MP neurons along the colon using nNOS-GCaMP3 mice, ChAT-GCaMP3 and Wnt1-GCaMP3 mice" == result['item']['name']
-    print_search_result(result)
-    print_mime_paths(result['files'])
-
-    assert 'mbf-segmentation' in ['keys']
-
-
-def test_doi_qh3q_elj6_dataset_search(client):
-    # Nine 2D Large images
-    doi = "10.26275/qh3q-elj6"
-    start = timer()
-    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
-    # r = client.get('/search/contributors')
-    end = timer()
-    print('elapsed: ', end - start)
-    response = json.loads(r.data)
-    assert 'result' in response
-    assert len(response['result']) == 1
-    result = response['result'][0]
-    assert "Influence of left vagal stimulus pulse parameters on vagal and gastric activity in rat" == result['item']['name']
-    print_search_result(result)
-    print_mime_paths(result['files'])
-
-    assert 'mbf-segmentation' in ['keys']
-
-
 def test_generic_mouse_colon_dataset_search(client):
     title = "Generic mouse colon scaffold"
     start = timer()
     r = client.get('/dataset_info/using_title', query_string={'title': title})
     end = timer()
+    print()
     print('elapsed: ', end - start)
     response = json.loads(r.data)
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    print(result)
+    # print(result)
     assert "Generic mouse colon scaffold" == result['name']
     print_search_result(result)
 
@@ -351,16 +259,17 @@ def test_doi_plot_annotation_dataset_search_version_1(client):
     start = timer()
     r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
     end = timer()
+    print()
     print('elapsed: ', end - start)
     response = json.loads(r.data)
     assert 'result' in response
-    assert len(response['result']) == 1
-    result = response['result'][0]
-    assert "Test case for physiological data visualisation" == result['name']
-    print_search_result(result)
-    print(result)
+    assert len(response['result']) == 0
+    # result = response['result'][0]
+    # assert "Test case for physiological data visualisation" == result['name']
+    # print_search_result(result)
+    # print(result)
 
-    assert PLOT_FILE in result
+    # assert PLOT_FILE in result
 
 
 def test_doi_plot_annotation_dataset_search_version_2(client):
@@ -370,15 +279,14 @@ def test_doi_plot_annotation_dataset_search_version_2(client):
     start = timer()
     r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
     end = timer()
+    print()
     print('elapsed: ', end - start)
     response = json.loads(r.data)
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
     assert "Test case for physiological data visualisation" == result['name']
-    print_search_result(result)
-    print(result)
-
+    # print_search_result(result)
     assert PLOT_FILE in result
 
 

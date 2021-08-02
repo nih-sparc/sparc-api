@@ -225,12 +225,19 @@ def extract_thumbnail_from_xml_file():
     offset = 256000
     end_byte = offset
     while not start_tag_found or not end_tag_found:
-        response = s3.get_object(
-            Bucket=Config.S3_BUCKET_NAME,
-            Key=path,
-            Range=f"bytes={start_byte}-{end_byte}",
-            RequestPayer="requester"
-        )
+        try:
+            response = s3.get_object(
+                Bucket=Config.S3_BUCKET_NAME,
+                Key=path,
+                Range=f"bytes={start_byte}-{end_byte}",
+                RequestPayer="requester"
+            )
+        except ClientError as ex:
+            if ex.response['Error']['Code'] == 'NoSuchKey':
+                return abort(404, description=f"Could not find file: '{path}'")
+            else:
+                return abort(404, description=f"Unknown error for file: '{path}'")
+
         resource = response["Body"].read().decode('UTF-8')
         start_tag_found = '<thumbnail ' in resource
         end_tag_found = '</thumbnail>' in resource

@@ -28,7 +28,7 @@ def test_scicrunch_all_data(client):
     assert json.loads(r.data)['numberOfHits'] > 40
 
 def test_scicrunch_filter(client):
-    r = client.get('/filter-search/', query_string={'term': 'genotype', 'facet': 'heart'})
+    r = client.get('/filter-search/', query_string={'term': 'organ', 'facet': 'heart'})
     assert json.loads(r.data)['numberOfHits'] > 4
 
 def test_scicrunch_filter_scaffolds(client):
@@ -52,7 +52,18 @@ def test_scicrunch_combined_facet_text(client):
     assert json.loads(r.data)['numberOfHits'] > 1
 
 def test_getting_facets(client):
-    r = client.get('/get-facets/genotype')
+    r = client.get('/get-facets/organ')
     facet_results = json.loads(r.data)
     facets = [facet_result['key'] for facet_result in facet_results]
     assert 'heart' in facets
+
+def test_scaffold_files(client):
+    r = client.get('/filter-search/?facet=scaffolds&term=datasets&size=40')
+    results = json.loads(r.data)
+    assert results['numberOfHits'] > 0
+    for item in results['results']:
+        uri = item['pennsieve']['uri']
+        path = item['scaffolds'][0]['dataset']['path']
+        key = f"{uri}files/{path}".replace('s3://pennsieve-prod-discover-publish-use1/', '')
+        r = client.get(f"/s3-resource/{key}")
+        assert r.status_code == 200

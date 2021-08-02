@@ -15,7 +15,8 @@ attributes = {
     'organs': ['anatomy', 'organ'],
     'contributors': ['contributors'],
     'doi': ['item', 'curie'],
-    'csvFiles': ['objects']
+    'csvFiles': ['objects'],
+    'pennsieve': ['pennsieve']
 }
 
 def create_doi_request(doi):

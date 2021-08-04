@@ -319,6 +319,8 @@ def process_result(result):
     # for f in result['files']:
     #     if 'additional_mimetype' in f:
     #         print(f['additional_mimetype'])
+    # print(result)
+
     output = dict(filter(lambda x: x[0] in PASS_THROUGH_KEYS, result.items()))
     if COMMON_IMAGES in result:
         output[COMMON_IMAGES] = []

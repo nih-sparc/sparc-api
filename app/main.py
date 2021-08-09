@@ -16,7 +16,8 @@ from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
 from requests.auth import HTTPBasicAuth
 
-from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query
+from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
+    create_identifier_query
 from scripts.email_sender import EmailSender
 from threading import Lock
 from xml.etree import ElementTree
@@ -324,6 +325,14 @@ def get_dataset_info_doi():
 def get_dataset_info_title():
     title = request.args.get('title')
     query = create_title_query(title)
+
+    return reform_dataset_results(dataset_search(query, raw=True))
+
+
+@app.route("/dataset_info/using_object_identifier")
+def get_dataset_info_identifier():
+    identifier = request.args.get('identifier')
+    query = create_identifier_query(identifier)
 
     return reform_dataset_results(dataset_search(query, raw=True))
 

@@ -317,3 +317,31 @@ def test_title_plot_annotation_dataset_search(client):
     assert 'type' in plot_description
     assert 'attrs' in plot_description
     assert plot_description['type'] == 'plot'
+
+
+def test_identifier_dataset_search(client):
+    print()
+    identifier = "package:6723ec25-e87f-4506-8893-c924e2b0766a"
+    start = timer()
+    r = client.get('/dataset_info/using_object_identifier', query_string={'identifier': identifier})
+    end = timer()
+    print('elapsed: ', end - start)
+    response = json.loads(r.data)
+    assert 'result' in response
+    assert len(response['result']) == 1
+    result = response['result'][0]
+    assert "Test case for physiological data visualisation" == result['name']
+
+    assert PLOT_FILE in result
+    assert len(result[PLOT_FILE])
+
+    first_result = result[PLOT_FILE][0]
+    assert 'datacite' in first_result
+    assert 'supplemental_json_metadata' in first_result['datacite']
+    assert 'isDescribedBy' in first_result['datacite']
+    assert 'description' in first_result['datacite']['supplemental_json_metadata']
+    plot_description = json.loads(first_result['datacite']['supplemental_json_metadata']['description'])
+    assert 'version' in plot_description
+    assert 'type' in plot_description
+    assert 'attrs' in plot_description
+    assert plot_description['type'] == 'plot'

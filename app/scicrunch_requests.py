@@ -42,6 +42,24 @@ def create_title_query(title):
     }
 
 
+def create_identifier_query(identifier):
+    parts = identifier.split(':')
+    query = f'*{parts[1]}'
+
+    return {
+        "size": 10,
+        "from": 0,
+        "query": {
+            "query_string": {
+                "fields": [
+                    "*identifier"
+                ],
+                "query": query
+            }
+        }
+    }
+
+
 def create_field_query(field, search_term, size=10, from_=0):
     return {
         "size": size,

@@ -13,6 +13,11 @@ def test_scicrunch_keys(client):
     assert r.status_code == 200
     assert 'numberOfHits' in json.loads(r.data).keys()
 
+def test_scicrunch_dataset_doi(client):
+    r = client.get('/scicrunch-dataset/DOI%3A10.26275%2Fpzek-91wx')
+    assert json.loads(r.data)['hits']['hits'][0]['_id'] == "DOI:10.26275/pzek-91wx"
+
+
 def test_scicrunch_search(client):
     r = client.get('/search/heart')
     assert r.status_code == 200
@@ -23,8 +28,16 @@ def test_scicrunch_all_data(client):
     assert json.loads(r.data)['numberOfHits'] > 40
 
 def test_scicrunch_filter(client):
-    r = client.get('/filter-search/', query_string={'term': 'genotype', 'facet': 'heart'})
+    r = client.get('/filter-search/', query_string={'term': 'organ', 'facet': 'heart'})
     assert json.loads(r.data)['numberOfHits'] > 4
+
+def test_scicrunch_filter_scaffolds(client):
+    r = client.get('/filter-search/?facet=scaffolds&term=datasets')
+    assert json.loads(r.data)['numberOfHits'] > 10
+
+def test_scicrunch_filter_simulations(client):
+    r = client.get('/filter-search/?facet=simulations&term=datasets')
+    assert json.loads(r.data)['numberOfHits'] > 0
 
 def test_scicrunch_basic_search(client):
     r = client.get('/filter-search/Heart/?facet=All+Species&term=species')
@@ -39,7 +52,7 @@ def test_scicrunch_combined_facet_text(client):
     assert json.loads(r.data)['numberOfHits'] > 1
 
 def test_getting_facets(client):
-    r = client.get('/get-facets/genotype')
+    r = client.get('/get-facets/organ')
     facet_results = json.loads(r.data)
     facets = [facet_result['key'] for facet_result in facet_results]
     assert 'heart' in facets
@@ -53,3 +66,14 @@ def test_getting_curies(client):
     uberons_results = json.loads(r.data)
     human = len( uberons_results['uberon']['array'])
     assert total > human
+    
+def test_scaffold_files(client):
+    r = client.get('/filter-search/?facet=scaffolds&term=datasets&size=40')
+    results = json.loads(r.data)
+    assert results['numberOfHits'] > 0
+    for item in results['results']:
+        uri = item['pennsieve']['uri']
+        path = item['scaffolds'][0]['dataset']['path']
+        key = f"{uri}files/{path}".replace('s3://pennsieve-prod-discover-publish-use1/', '')
+        r = client.get(f"/s3-resource/{key}")
+        assert r.status_code == 200

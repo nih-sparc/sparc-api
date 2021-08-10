@@ -24,6 +24,9 @@ from app.process_kb_results import *
 from requests.auth import HTTPBasicAuth
 import os
 
+import app.osparc as osparc
+import requests
+
 # from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -210,6 +213,59 @@ def direct_download_url(path):
     resource = response["Body"].read()
     return resource
 
+# /scicrunch/: Returns scicrunch results for a given <search> query
+@app.route("/scicrunch-dataset/<doi1>/<doi2>")
+def sci_doi(doi1,doi2):
+    doi = doi1 + '/' + doi2
+    print(doi)
+    data = create_doi_request(doi)
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+# /pubmed/<id> Used as a proxy for making requests to pubmed
+@app.route("/pubmed/<id>")
+@app.route("/pubmed/<id>/")
+def pubmed(id):
+    try:
+        response = requests.get(f'https://pubmed.ncbi.nlm.nih.gov/{id}/')
+        return response.text
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+# /scicrunch-query-string/: Returns results for given organ curie. These can be processed by the sidebar
+@app.route("/scicrunch-query-string/")
+def sci_organ():
+    fields = request.args.getlist('field')
+    curie = request.args.get('curie')
+    # field example: "*organ.curie"
+    data = {
+        "size": 20,
+        "from": 0,
+        "query": {
+            "query_string": {
+                "fields": fields,
+                "query": curie
+            }
+        }
+    }
+
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        return process_kb_results(response.json())
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+
 
 # /search/: Returns scicrunch results for a given <search> query
 @app.route("/search/", defaults={'query': ''})
@@ -243,9 +299,9 @@ def filter_search(query):
         results = process_kb_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-        return jsonify({'error': str(err), 'message': 'Scicrunch is not currently reachable, please try again later'}), 502
+        return jsonify({'error': str(err), 'message': 'SciCrunch is not currently reachable, please try again later'}), 502
     except json.JSONDecodeError as e:
-        return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                         'error': 'JSONDecodeError'}), 502
     return results
 
@@ -268,7 +324,7 @@ def get_facets(type):
             json_result = response.json()
             results.append(json_result)
         except BaseException as e:
-            return jsonify({'message': 'Could not parse Scicrunch output, please try again later',
+            return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 
     # Select terms from the results
@@ -598,3 +654,38 @@ def get_available_uberonids(query):
                 'error': 'JSONDecodeError'}), 502
 
     return jsonify(result)
+
+@app.route("/simulation", methods=["POST"])
+def simulation():
+    data = request.get_json()
+
+    if data and "model_url" in data and "json_config" in data:
+        return json.dumps(osparc.run_simulation(data["model_url"], data["json_config"]))
+    else:
+        abort(400, description="Missing model URL and/or JSON configuration")
+
+
+@app.route("/pmr_latest_exposure", methods=["POST"])
+def pmr_latest_exposure():
+    data = request.get_json()
+
+    if data and "workspace_url" in data:
+        try:
+            resp = requests.get(data["workspace_url"],
+                                headers={"Accept": "application/vnd.physiome.pmr2.json.1"})
+            if resp.status_code == 200:
+                try:
+                    # Return the latest exposure for the given workspace.
+                    url = resp.json()["collection"]["items"][0]["links"][0]["href"]
+                except:
+                    # There is no latest exposure for the given workspace.
+                    url = ""
+                return jsonify(
+                    url=url
+                )
+            else:
+                return resp.json()
+        except:
+            abort(400, description="Invalid workspace URL")
+    else:
+        abort(400, description="Missing workspace URL")

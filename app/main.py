@@ -228,6 +228,16 @@ def sci_doi(doi1,doi2):
         logging.error(err)
         return json.dumps({'error': err})
 
+# /pubmed/<id> Used as a proxy for making requests to pubmed
+@app.route("/pubmed/<id>")
+@app.route("/pubmed/<id>/")
+def pubmed(id):
+    try:
+        response = requests.get(f'https://pubmed.ncbi.nlm.nih.gov/{id}/')
+        return response.text
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
 
 # /scicrunch-query-string/: Returns results for given organ curie. These can be processed by the sidebar
 @app.route("/scicrunch-query-string/")

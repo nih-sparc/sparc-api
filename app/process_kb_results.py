@@ -9,6 +9,7 @@ attributes = {
     'scaffolds': ['scaffolds'],
     'samples': ['attributes','sample','subject'],
     'name': ['item','name'],
+    'description': ['item','description'],
     'identifier': ['item', 'identifier'],
     'uri': ['distributions', 'current', 'uri'],
     'updated': ['dates', 'updated'],

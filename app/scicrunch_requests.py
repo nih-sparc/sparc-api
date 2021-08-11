@@ -60,6 +60,16 @@ def create_identifier_query(identifier):
     }
 
 
+def create_pennsieve_identifier_query(identifier):
+    return {
+      "query": {
+        "term": {
+          "pennsieve.identifier.aggregate": identifier
+        }
+      }
+    }
+
+
 def create_field_query(field, search_term, size=10, from_=0):
     return {
         "size": size,

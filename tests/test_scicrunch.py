@@ -1,7 +1,7 @@
 import json
 import pytest
 from app import app
-from app.main import create_doi_query, dataset_search
+from app.main import dataset_search
 from app.scicrunch_requests import create_query_string
 
 

@@ -27,6 +27,11 @@ def _prepare_results(results):
         except KeyError:
             attr['readme'] = ''
 
+        try:
+            attr['title'] = hit['_source']['item']['names'][0]['name']
+        except KeyError:
+            attr['title'] = ''
+
         attr.update(sort_files_by_mime_type(attr['files']))
 
         output.append(_manipulate_attr(attr))

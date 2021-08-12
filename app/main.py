@@ -346,6 +346,41 @@ def get_dataset_info_pennsieve_identifier():
     return reform_dataset_results(dataset_search(query, raw=True))
 
 
+@app.route("/segmentation_info/")
+def get_segmentation_info_from_file():
+    file_path = request.args.get('path')
+    # print('Undo his hack!!')
+    # file_path = '43/5/files/derivative/sub-6384/sam-28_sub-6384_islet3/sub-6384_20x_MsGcg_RbCol4_SMACy3_islet3 (1).xml'
+    try:
+        response = s3.get_object(
+            Bucket=Config.S3_BUCKET_NAME,
+            Key=file_path,
+            RequestPayer="requester"
+        )
+    except ClientError as ex:
+        if ex.response['Error']['Code'] == 'NoSuchKey':
+            return abort(404, description=f"Could not find file: '{file_path}'")
+        else:
+            return abort(404, description=f"Unknown error for file: '{file_path}'")
+
+    resource = response["Body"].read().decode('UTF-8')
+    xml = ElementTree.fromstring(resource)
+    subject_element = xml.find('./sparcdata/subject')
+    info = {}
+    if subject_element is not None:
+        info['subject'] = subject_element.attrib
+    else:
+        info['subject'] = {'age': '', 'sex': '', 'species': '', 'subjectid': ''}
+
+    atlas_element = xml.find('./sparcdata/atlas')
+    if atlas_element is not None:
+        info['atlas'] = atlas_element.attrib
+    else:
+        info['atlas'] = {'organ': ''}
+
+    return info
+
+
 @app.route("/current_doi_list")
 def get_all_doi():
     query = create_doi_aggregate()

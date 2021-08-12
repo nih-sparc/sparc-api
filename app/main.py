@@ -213,6 +213,49 @@ def direct_download_url(path):
     resource = response["Body"].read()
     return resource
 
+# /scicrunch/: Returns scicrunch results for a given <search> query
+@app.route("/scicrunch-dataset/<doi1>/<doi2>")
+def sci_doi(doi1,doi2):
+    doi = doi1 + '/' + doi2
+    print(doi)
+    data = create_doi_request(doi)
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+
+# /scicrunch-query-string/: Returns results for given organ curie. These can be processed by the sidebar
+@app.route("/scicrunch-query-string/")
+def sci_organ():
+    fields = request.args.getlist('field')
+    curie = request.args.get('curie')
+    # field example: "*organ.curie"
+    data = {
+        "size": 20,
+        "from": 0,
+        "query": {
+            "query_string": {
+                "fields": fields,
+                "query": curie
+            }
+        }
+    }
+
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        return process_kb_results(response.json())
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+
 
 # /search/: Returns scicrunch results for a given <search> query
 @app.route("/search/", defaults={'query': ''})

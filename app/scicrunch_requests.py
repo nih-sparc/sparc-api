@@ -114,14 +114,9 @@ def create_doi_request(doi):
 
 
 # create_facet_query(type): Generates facet search request data for sci-crunch  given a 'type'; where
-# 'type' is either 'species', 'gender', or 'genotype' at this stage.
+# 'type' is either 'species', 'gender', or 'organ' at this stage.
 #  Returns a tuple of the type-map and request data ( type_map, data )
 def create_facet_query(type_):
-    type_map = {
-        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
-        'gender': ['attributes.subject.sex.value'],
-        'genotype': ['anatomy.organ.name.aggregate']
-    }
 
     data = {
         "from": 0,
@@ -144,7 +139,7 @@ def create_facet_query(type_):
         }
     }
 
-    return type_map, data
+    return get_facet_type_map(), data
 
 
 # create_facet_query(query, terms, facets, size, start): Generates filter search request data for SciCrunch
@@ -160,13 +155,6 @@ def create_filter_request(query, terms, facets, size, start):
     if query == "" and len(terms) == 0 and len(facets) == 0:
         return {"size": size, "from": start}
 
-    # Type map is used to map SciCrunch paths to given facet
-    type_map = {
-        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name'],
-        'gender': ['attributes.subject.sex.value', 'attributes.sample.sex.value'],
-        'genotype': ['anatomy.organ.name.aggregate']
-    }
-
     # Data structure of a sci-crunch search
     data = {
         "size": size,
@@ -178,11 +166,21 @@ def create_filter_request(query, terms, facets, size, start):
         }
     }
 
-    qs = facet_query_string(query, terms, facets, type_map)
+    qs = facet_query_string(query, terms, facets, get_facet_type_map())
     data["query"]["query_string"]["query"] = qs
 
     return data
 
+# Type map is used to map SciCrunch paths to given facet
+# genotype is deprecated.
+def get_facet_type_map():
+    return {
+        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
+        'gender': ['attributes.subject.sex.value'],
+        'genotype': ['anatomy.organ.name.aggregate'],
+        'organ': ['anatomy.organ.name.aggregate']
+    }
+    
 
 def facet_query_string(query, terms, facets, type_map):
     # We will create AND OR structure. OR within facets and AND between them

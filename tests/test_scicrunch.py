@@ -202,3 +202,16 @@ def test_raw_response_structure(client):
     print()
     # for k in data['hits']['hits'][0]:
     #     print(k, data['hits']['hits'][0][k])
+
+def test_scaffold_files(client):
+    r = client.get('/filter-search/?size=30')
+    results = json.loads(r.data)
+    assert results['numberOfHits'] > 0
+    for item in results['results']:
+        if 'abi-scaffold-metadata-file' in item and 's3uri'  in item:
+            uri = item['s3uri']
+            path = item['abi-scaffold-metadata-file'][0]['dataset']['path']
+            key = f"{uri}files/{path}".replace('s3://pennsieve-prod-discover-publish-use1/', '')
+            r = client.get(f"/s3-resource/{key}")
+            assert r.status_code == 200
+

@@ -23,8 +23,9 @@ def _prepare_results(results):
         attr['doi'] = _convert_doi_to_url(attr['doi'])
         attr['took'] = results['took']
         attr.update(sort_files_by_mime_type(attr['files']))
-
-        output.append(_manipulate_attr(attr))
+        #Comment out the extra manipulation as it is not working as intended
+        output.append(attr)
+        #output.append(_manipulate_attr(attr))
 
     return output
 

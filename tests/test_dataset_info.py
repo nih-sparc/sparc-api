@@ -363,6 +363,8 @@ def test_pennsieve_identifier_dataset_search(client):
     assert BIOLUCIDA_3D in result
     assert len(result[BIOLUCIDA_3D])
 
+    assert 'readme' in result
+
     first_result = result[BIOLUCIDA_3D][0]
     print(len(result[BIOLUCIDA_3D]))
     print(first_result)

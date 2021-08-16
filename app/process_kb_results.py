@@ -13,6 +13,7 @@ attributes = {
     'uri': ['distributions', 'current', 'uri'],
     'updated': ['dates', 'updated'],
     'organs': ['anatomy', 'organ'],
+    'organisms': ['organisms', 'subject'],
     'contributors': ['contributors'],
     'doi': ['item', 'curie'],
     'csvFiles': ['objects'],

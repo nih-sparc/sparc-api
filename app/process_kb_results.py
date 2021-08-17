@@ -13,6 +13,7 @@ attributes = {
     'uri': ['distributions', 'current', 'uri'],
     'updated': ['dates', 'updated'],
     'organs': ['anatomy', 'organ'],
+    'organisms': ['organisms', 'subject'],
     'contributors': ['contributors'],
     'doi': ['item', 'curie'],
     'csvFiles': ['objects'],
@@ -122,7 +123,7 @@ def facet_query_string(query, terms, facets, type_map):
 
     t = {}
     for i, term in enumerate(terms):
-        if (term is None or facets[i] is None or 'All' in facets[i]):  # Ignore 'All species' facets
+        if (term is None or facets[i] is None or 'show' in facets[i].lower() or 'all' in facets[i].lower()):  # Ignore 'Show all' facets
             continue
         else:
             if term not in t.keys():  # If term hasn't been seen, add it to the list of terms

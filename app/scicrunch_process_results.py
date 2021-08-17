@@ -22,6 +22,16 @@ def _prepare_results(results):
         attr = _transform_attributes(attributes_map, hit)
         attr['doi'] = _convert_doi_to_url(attr['doi'])
         attr['took'] = results['took']
+        try:
+            attr['readme'] = hit['_source']['item']['readme']['description']
+        except KeyError:
+            attr['readme'] = ''
+
+        try:
+            attr['title'] = hit['_source']['item']['names'][0]['name']
+        except KeyError:
+            attr['title'] = ''
+
         attr.update(sort_files_by_mime_type(attr['files']))
         #Comment out the extra manipulation as it is not working as intended
         output.append(attr)

@@ -4,7 +4,7 @@ from app import app
 
 from timeit import default_timer as timer
 
-from app.scicrunch_processing_common import SCAFFOLD_FILE, PLOT_FILE, COMMON_IMAGES, SCAFFOLD_THUMBNAIL, NAME
+from app.scicrunch_processing_common import SCAFFOLD_FILE, PLOT_FILE, COMMON_IMAGES, SCAFFOLD_THUMBNAIL, NAME, BIOLUCIDA_3D
 
 
 @pytest.fixture
@@ -319,7 +319,7 @@ def test_title_plot_annotation_dataset_search(client):
     assert plot_description['type'] == 'plot'
 
 
-def test_identifier_dataset_search(client):
+def test_object_identifier_dataset_search(client):
     print()
     identifier = "package:6723ec25-e87f-4506-8893-c924e2b0766a"
     start = timer()
@@ -345,3 +345,26 @@ def test_identifier_dataset_search(client):
     assert 'type' in plot_description
     assert 'attrs' in plot_description
     assert plot_description['type'] == 'plot'
+
+
+def test_pennsieve_identifier_dataset_search(client):
+    print()
+    identifier = "43"
+    start = timer()
+    r = client.get('/dataset_info/using_pennsieve_identifier', query_string={'identifier': identifier})
+    end = timer()
+    print('elapsed: ', end - start)
+    response = json.loads(r.data)
+    assert 'result' in response
+    assert len(response['result']) == 1
+    result = response['result'][0]
+    assert "Human Islet Microvasculature Analysis in Optically Cleared Pancreas using Vesselucida360 Analysis" == result['name']
+
+    assert BIOLUCIDA_3D in result
+    assert len(result[BIOLUCIDA_3D])
+
+    first_result = result[BIOLUCIDA_3D][0]
+    print(len(result[BIOLUCIDA_3D]))
+    print(first_result)
+    for r in result[BIOLUCIDA_3D]:
+        print(r['dataset']['path'])

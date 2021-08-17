@@ -210,7 +210,9 @@ def _mapped_mime_type(mime_type, obj):
         'image/tif': 'tiff-image',
         'image/jpeg': COMMON_IMAGES,
         'image/jpx': BIOLUCIDA_3D,
+        'image/vnd.ome.xml+jpx': BIOLUCIDA_3D,
         'image/jp2': BIOLUCIDA_2D,
+        'image/vnd.ome.xml+jp2': BIOLUCIDA_2D,
         'video/mp4': VIDEO
     }
     skipped_mime_types = [
@@ -237,8 +239,6 @@ def _mapped_mime_type(mime_type, obj):
         'image/vnd.zeiss.czi',
         'image/vnd.nikon.nd2',
         'image/vnd.ome.xml+tiff',
-        'image/vnd.ome.xml+jp2',
-        'image/vnd.ome.xml+jpx',
         'image/x-coreldraw',
         'application/x-matlab',
         'application/x-matlab-data',
@@ -310,18 +310,6 @@ def sort_files_by_mime_type(obj_list):
 
 
 def process_result(result):
-    # print('=====================')
-    # if isinstance(result['files'], list):
-    #     print(len(result['files']))
-    # else:
-    #     print('what is this?', result['files'])
-    # return dict(filter(lambda x: x[0] in PASS_THROUGH_KEYS, result.items()))
-
-    # for f in result['files']:
-    #     if 'additional_mimetype' in f:
-    #         print(f['additional_mimetype'])
-    # print(result)
-
     output = dict(filter(lambda x: x[0] in PASS_THROUGH_KEYS, result.items()))
     if COMMON_IMAGES in result:
         output[COMMON_IMAGES] = []

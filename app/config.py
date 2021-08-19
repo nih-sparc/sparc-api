@@ -4,7 +4,6 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config(object):
-    PORTAL_API_HOST = os.environ.get("PORTAL_API_HOST", "http://localhost:4000")
     PENNSIEVE_API_HOST = os.environ.get("PENNSIEVE_API_HOST")
     PENNSIEVE_API_SECRET = os.environ.get("PENNSIEVE_API_SECRET", "local-secret-key")
     PENNSIEVE_API_TOKEN = os.environ.get("PENNSIEVE_API_TOKEN", "local-api-key")
@@ -45,4 +44,6 @@ class Config(object):
     OSPARC_API_URL=os.environ.get("OSPARC_API_URL", "https://api.osparc.io")
     OSPARC_API_KEY=os.environ.get("OSPARC_API_KEY")
     OSPARC_API_SECRET=os.environ.get("OSPARC_API_SECRET")
-
+    DIRECT_DOWNLOAD_LIMIT = int(os.environ.get("DIRECT_DOWNLOAD_LIMIT", "20971520"))
+    S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"
+    NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")

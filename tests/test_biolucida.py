@@ -1,7 +1,17 @@
+import pytest
 import unittest
 
 from app.main import authenticate_biolucida, thumbnail_by_image_id, image_info_by_image_id
 from app.main import Biolucida
+
+from app import app
+
+
+@pytest.fixture
+def client():
+    # Spin up test flask app
+    app.config['TESTING'] = True
+    return app.test_client()
 
 
 class BiolucidaTestCase(unittest.TestCase):
@@ -31,6 +41,12 @@ class BiolucidaTestCase(unittest.TestCase):
         bl.set_token('bad_token')
         thumbnail = thumbnail_by_image_id(1170)
         self.assertTrue(thumbnail.startswith(b'/9j/4AAQSkZJRgABAQAAAQ'))
+
+
+def test_image_xmp_info(client):
+    r = client.get('/image_xmp_info/2727')
+    assert 'pixel_width' in r.json
+    assert r.json['pixel_width'] == "0.415133"
 
 
 if __name__ == '__main__':

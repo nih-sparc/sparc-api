@@ -156,7 +156,8 @@ ATTRIBUTES_MAP = {
     'contributors': ['contributors'],
     'doi': ['item', 'curie'],
     'files': ['objects'],
-    'version': ['item', 'version', 'keyword']
+    'version': ['item', 'version', 'keyword'],
+    's3uri': ['pennsieve', 'uri']
 }
 
 

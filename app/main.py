@@ -29,6 +29,7 @@ from app.scicrunch_process_results import reform_dataset_results, process_result
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 
+from app.manifest_name_to_discover_name import name_map
 from timeit import default_timer as timer
 
 app = Flask(__name__)
@@ -179,11 +180,7 @@ def contact():
 #     return json.dumps(embargo_list)
 
 
-# Download a file from S3
-@app.route("/download")
-def create_presigned_url(expiration=3600):
-    key = request.args.get("key")
-    content_type = request.args.get("contentType") or "application/octet-stream"
+def create_s3_presigned_url(key, content_type, expiration):
     response = s3.generate_presigned_url(
         "get_object",
         Params={"Bucket": Config.S3_BUCKET_NAME, "Key": key, "RequestPayer": "requester", "ResponseContentType": content_type},
@@ -191,6 +188,15 @@ def create_presigned_url(expiration=3600):
     )
 
     return response
+
+
+# Download a file from S3
+@app.route("/download")
+def create_presigned_url(expiration=3600):
+    key = request.args.get("key")
+    content_type = request.args.get("contentType") or "application/octet-stream"
+
+    return create_s3_presigned_url(key, content_type, expiration)
 
 
 @app.route("/thumbnail/neurolucida")
@@ -270,6 +276,61 @@ def extract_thumbnail_from_xml_file():
     return base64_form
 
 
+@app.route("/exists/<path:path>")
+def url_exists(path):
+    try:
+        head_response = s3.head_object(
+            Bucket=Config.S3_BUCKET_NAME,
+            Key=path,
+            RequestPayer="requester"
+        )
+    except ClientError:
+        return {'exists': 'false'}
+
+    content_length = head_response.get('ContentLength', 0)
+
+    if content_length > 0:
+        return {'exists': 'true'}
+
+    return {'exists': 'false'}
+
+
+def fetch_discover_file_information(uri):
+    # Fudge the URI from Sci-crunch
+    uri = uri.replace('https://api.pennsieve.io/', 'https://api.pennsieve.io/discover/')
+    uri = uri[:uri.rfind('/')]
+
+    r = requests.get(uri)
+    return r.json()
+
+
+@app.route("/s3-resource/discover_path")
+def get_discover_path():
+    uri = request.args.get('uri')
+
+    json_response = fetch_discover_file_information(uri)
+    if 'totalCount' in json_response and json_response['totalCount'] == 1:
+        file_info = json_response['files'][0]
+        return file_info['path']
+
+    return abort(404, description=f'Failed to retrieve uri {uri}')
+
+
+@app.route("/s3-resource/presign_discover_file_uri")
+def presign_resource_url():
+    uri = request.args.get('uri')
+
+    json_response = fetch_discover_file_information(uri)
+    if 'totalCount' in json_response and json_response['totalCount'] == 1:
+        file_info = json_response['files'][0]
+        key = file_info['uri'].replace('s3://' + Config.S3_BUCKET_NAME + '/', '')
+        content_type = request.args.get("contentType") or "application/octet-stream"
+
+        return create_s3_presigned_url(key, content_type, 3600)
+
+    return abort(404, description=f'Failed to retrieve uri {uri}')
+
+
 # Reverse proxy for objects from S3, a simple get object
 # operation. This is used by scaffoldvuer and its
 # important to keep the relative <path> for accessing
@@ -317,9 +378,13 @@ def sci_doi(doi1, doi2):
 @app.route("/dataset_info/using_doi")
 def get_dataset_info_doi():
     doi = request.args.get('doi')
+    raw = request.args.get('raw_response')
     query = create_doi_query(doi)
 
-    return reform_dataset_results(dataset_search(query))
+    if raw is None:
+        return reform_dataset_results(dataset_search(query))
+
+    return dataset_search(query)
 
 
 @app.route("/dataset_info/using_title")
@@ -348,20 +413,18 @@ def get_dataset_info_pennsieve_identifier():
 
 @app.route("/segmentation_info/")
 def get_segmentation_info_from_file():
-    file_path = request.args.get('path')
-    # print('Undo his hack!!')
-    # file_path = '43/5/files/derivative/sub-6384/sam-28_sub-6384_islet3/sub-6384_20x_MsGcg_RbCol4_SMACy3_islet3 (1).xml'
+    dataset_path = request.args.get('dataset_path')
     try:
         response = s3.get_object(
             Bucket=Config.S3_BUCKET_NAME,
-            Key=file_path,
+            Key=dataset_path,
             RequestPayer="requester"
         )
     except ClientError as ex:
         if ex.response['Error']['Code'] == 'NoSuchKey':
-            return abort(404, description=f"Could not find file: '{file_path}'")
+            return abort(404, description=f"Could not find file: '{dataset_path}'")
         else:
-            return abort(404, description=f"Unknown error for file: '{file_path}'")
+            return abort(404, description=f"Unknown error for file: '{dataset_path}'")
 
     resource = response["Body"].read().decode('UTF-8')
     xml = ElementTree.fromstring(resource)

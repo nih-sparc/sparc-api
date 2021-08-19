@@ -375,6 +375,18 @@ def sci_doi(doi1, doi2):
         return json.dumps({'error': err})
 
 
+# /pubmed/<id> Used as a proxy for making requests to pubmed
+@app.route("/pubmed/<id>")
+@app.route("/pubmed/<id>/")
+def pubmed(id):
+    try:
+        response = requests.get(f'https://pubmed.ncbi.nlm.nih.gov/{id}/')
+        return response.text
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+
 @app.route("/dataset_info/using_doi")
 def get_dataset_info_doi():
     doi = request.args.get('doi')

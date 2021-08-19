@@ -62,6 +62,7 @@ def test_get_datasets_by_project(client):
     r = client.get(f"/project/{portal_project_id}")
     assert r.status_code == 200
 
+
 def test_map_get_share_id_and_state(client):
     # mock json for testing
     test_data = { "state" : { "type" : "scaffold", "value": 1234 } }
@@ -85,6 +86,7 @@ def test_map_get_share_id_and_state(client):
 
     r = client.post(f"/map/getstate", json = {})
     assert r.status_code == 400
+
 
 def test_scaffold_get_share_id_and_state(client):
     # mock json for testing

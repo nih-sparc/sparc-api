@@ -207,7 +207,7 @@ def sort_files_by_mime_type(obj_list):
                 dataset_path_prefix = 'files/'
                 dataset_path = dataset_path_prefix + obj['dataset']['path']
                 if dataset_path in name_map:
-                    obj['dataset']['path'] = name_map[dataset_path].replace(dataset_path_prefix, '')
+                    obj['dataset']['path'] = name_map[dataset_path].replace(dataset_path_prefix, '', 1)
 
             if mapped_mime_type in sorted_files:
                 sorted_files[mapped_mime_type].append(obj)

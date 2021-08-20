@@ -181,6 +181,7 @@ def create_filter_request(query, terms, facets, size, start):
 
     return data
 
+
 # Type map is used to map SciCrunch paths to given facet
 # genotype is deprecated.
 def get_facet_type_map():
@@ -190,7 +191,7 @@ def get_facet_type_map():
         'genotype': ['anatomy.organ.name.aggregate'],
         'organ': ['anatomy.organ.name.aggregate']
     }
-    
+
 
 def facet_query_string(query, terms, facets, type_map):
     # We will create AND OR structure. OR within facets and AND between them

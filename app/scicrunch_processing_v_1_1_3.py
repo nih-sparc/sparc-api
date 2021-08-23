@@ -160,7 +160,8 @@ ATTRIBUTES_MAP = {
     'doi': ['item', 'curie'],
     'files': ['objects'],
     'version': ['item', 'version', 'keyword'],
-    's3uri': ['pennsieve', 'uri']
+    's3uri': ['pennsieve', 'uri'],
+    'publishDate': ['pennsieve', 'firstPublishedAt', 'timestamp']
 }
 
 

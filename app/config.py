@@ -4,7 +4,6 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config(object):
-    PORTAL_API_HOST = os.environ.get("PORTAL_API_HOST", "http://localhost:4000")
     PENNSIEVE_API_HOST = os.environ.get("PENNSIEVE_API_HOST")
     PENNSIEVE_API_SECRET = os.environ.get("PENNSIEVE_API_SECRET", "local-secret-key")
     PENNSIEVE_API_TOKEN = os.environ.get("PENNSIEVE_API_TOKEN", "local-api-key")
@@ -31,7 +30,7 @@ class Config(object):
     KNOWLEDGEBASE_KEY = os.environ.get("KNOWLEDGEBASE_KEY", "secret-key")
     DEPLOY_ENV = os.environ.get("DEPLOY_ENV", "development")
     SPARC_APP_HOST = os.environ.get("SPARC_APP_HOST", "https://sparc-app.herokuapp.com")
-    SCI_CRUNCH_HOST = os.environ.get("SCICRUNCH_HOST", "https://scicrunch.org/api/1/elastic/SPARC_Datasets_pr")
+    SCI_CRUNCH_HOST = os.environ.get("SCICRUNCH_HOST", "https://scicrunch.org/api/1/elastic/SPARC_PortalDatasets_pr")
     MAPSTATE_TABLENAME = os.environ.get("MAPSTATE_TABLENAME", "mapstates")
     SCAFFOLDSTATE_TABLENAME = os.environ.get("SCAFFOLDSTATE_TABLENAME", "scaffoldstates")
     WRIKE_TOKEN = os.environ.get("WRIKE_TOKEN")
@@ -42,4 +41,6 @@ class Config(object):
     CCB_HEAD_WRIKE_ID = os.environ.get("CCB_HEAD_WRIKE_ID")
     MODERATOR_WRIKE_ID = os.environ.get("MODERATOR_WRIKE_ID")
     MAILCHIMP_API_KEY = os.environ.get("MAILCHIMP_API_KEY")
-
+    DIRECT_DOWNLOAD_LIMIT = int(os.environ.get("DIRECT_DOWNLOAD_LIMIT", "20971520"))
+    S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"
+    NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")

@@ -368,7 +368,7 @@ def sci_doi(doi1, doi2):
 def sci_organ():
     fields = request.args.getlist('field')
     curie = request.args.get('curie')
-    size = request.args.get('size')git statu
+    size = request.args.get('size')
     from_ = request.args.get('from')
 
     data = create_field_query(fields, curie, size, from_)

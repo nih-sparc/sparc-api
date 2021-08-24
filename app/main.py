@@ -18,7 +18,7 @@ from PIL import Image
 from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
-    create_identifier_query, create_pennsieve_identifier_query
+    create_identifier_query, create_pennsieve_identifier_query, create_field_query
 from scripts.email_sender import EmailSender
 from threading import Lock
 from xml.etree import ElementTree
@@ -30,9 +30,7 @@ from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 
 import app.osparc as osparc
-import requests
 
-# from pymongo import MongoClient
 from app.manifest_name_to_discover_name import name_map
 from timeit import default_timer as timer
 
@@ -44,7 +42,7 @@ CORS(app)
 
 ma = Marshmallow(app)
 email_sender = EmailSender()
-mongo = None
+
 ps = None
 s3 = boto3.client(
     "s3",
@@ -151,12 +149,6 @@ def shutdown_scheduler():
 atexit.register(shutdown_scheduler)
 
 
-# @app.before_first_request
-# def connect_to_mongodb():
-#     global mongo
-#     mongo = MongoClient(Config.MONGODB_URI)
-
-
 @app.route("/health")
 def health():
     return json.dumps({"status": "healthy"})
@@ -174,14 +166,6 @@ def contact():
     email_sender.send_email(name, email, message)
 
     return json.dumps({"status": "sent"})
-
-
-# Returns a list of embargoed (unpublished) datasets
-# @api_blueprint.route('/datasets/embargo')
-# def embargo():
-#     collection = mongo[Config.MONGODB_NAME][Config.MONGODB_COLLECTION]
-#     embargo_list = list(collection.find({}, {'_id':0}))
-#     return json.dumps(embargo_list)
 
 
 def create_s3_presigned_url(key, content_type, expiration):
@@ -384,17 +368,10 @@ def sci_doi(doi1, doi2):
 def sci_organ():
     fields = request.args.getlist('field')
     curie = request.args.get('curie')
-    # field example: "*organ.curie"
-    data = {
-        "size": 20,
-        "from": 0,
-        "query": {
-            "query_string": {
-                "fields": fields,
-                "query": curie
-            }
-        }
-    }
+    size = request.args.get('size')
+    from_ = request.args.get('from')
+
+    data = create_field_query(fields, curie, size, from_)
 
     try:
         response = requests.post(
@@ -564,7 +541,7 @@ def filter_search(query):
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return jsonify({'error': str(err), 'message': 'SciCrunch is not currently reachable, please try again later'}), 502
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError:
         return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                         'error': 'JSONDecodeError'}), 502
     return results
@@ -586,7 +563,7 @@ def get_facets(type_):
         try:
             json_result = response.json()
             results.append(json_result)
-        except BaseException as e:
+        except BaseException:
             return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 

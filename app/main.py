@@ -29,8 +29,6 @@ from app.scicrunch_process_results import reform_dataset_results, process_result
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 
-from app.manifest_name_to_discover_name import name_map
-from timeit import default_timer as timer
 
 app = Flask(__name__)
 # set environment variable

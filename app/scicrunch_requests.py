@@ -186,7 +186,7 @@ def create_filter_request(query, terms, facets, size, start):
 # genotype is deprecated.
 def get_facet_type_map():
     return {
-        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
+        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate', 'organisms.scaffold.species.name.aggregate'],
         'gender': ['attributes.subject.sex.value'],
         'genotype': ['anatomy.organ.name.aggregate'],
         'organ': ['anatomy.organ.name.aggregate']
@@ -233,14 +233,19 @@ def facet_query_string(query, terms, facets, type_map):
             if needParentheses:
                 qt += ")"
         else:
-            qt += type_map[k][0] + ":("  # facet term path and opening bracket
-            for l in t[k]:
-                qt += f"({l})"  # bracket around terms incase there are spaces
-                if l is not t[k][-1]:
-                    qt += " OR "  # 'OR' if more terms in this facet are coming
-                else:
-                    qt += ")"
-
+            qt += "("
+            for m in type_map[k]:
+                qt += m + ":("  # facet term path and opening bracket
+                for l in t[k]:
+                    qt += f"({l})"  # bracket around terms incase there are spaces
+                    if l is not t[k][-1]:
+                        qt += " OR "  # 'OR' if more terms in this facet are coming
+                    else:
+                        qt += ")"
+                if m is not type_map[k][-1]:
+                    qt += " OR "
+            qt += ")"
         if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
             qt += " AND "
+
     return qt

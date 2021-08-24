@@ -563,7 +563,7 @@ def get_facets(type_):
         try:
             json_result = response.json()
             results.append(json_result)
-        except BaseException:
+        except json.JSONDecodeError::
             return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 

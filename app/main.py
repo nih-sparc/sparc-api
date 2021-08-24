@@ -755,6 +755,18 @@ def image_search_by_dataset_id(dataset_id):
     return response.json()
 
 
+@app.route("/image_blv_link/<image_id>", methods=["GET"])
+def image_blv_link(image_id):
+    url = f'{Config.BIOLUCIDA_ENDPOINT}/image/blv_link/{image_id}'
+    result = requests.request("GET", url)
+
+    response = result.json()
+    if response['status'] == 'success':
+        return response['link']
+
+    return ''
+
+
 @app.route("/image_xmp_info/<image_id>", methods=["GET"])
 def image_xmp_info(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/xmpmetadata/{0}".format(image_id)
@@ -762,6 +774,7 @@ def image_xmp_info(image_id):
 
     response = result.json()
     if response['status'] == 'success':
+
         xml = ElementTree.fromstring(response['data'])
         ns = {'xmp': 'http://ns.adobe.com/xap/1.0/', 'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'}
 

@@ -368,7 +368,7 @@ def sci_doi(doi1, doi2):
 def sci_organ():
     fields = request.args.getlist('field')
     curie = request.args.get('curie')
-    size = request.args.get('size')
+    size = request.args.get('size')git statu
     from_ = request.args.get('from')
 
     data = create_field_query(fields, curie, size, from_)
@@ -563,7 +563,7 @@ def get_facets(type_):
         try:
             json_result = response.json()
             results.append(json_result)
-        except json.JSONDecodeError::
+        except json.JSONDecodeError:
             return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 

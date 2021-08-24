@@ -247,5 +247,4 @@ def facet_query_string(query, terms, facets, type_map):
             qt += ")"
         if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
             qt += " AND "
-
     return qt

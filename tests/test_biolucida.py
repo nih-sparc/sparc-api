@@ -1,7 +1,7 @@
 import pytest
 import unittest
 
-from app.main import authenticate_biolucida, thumbnail_by_image_id, image_info_by_image_id
+from app.main import authenticate_biolucida, thumbnail_by_image_id, image_info_by_image_id, image_blv_link
 from app.main import Biolucida
 
 from app import app
@@ -47,6 +47,16 @@ def test_image_xmp_info(client):
     r = client.get('/image_xmp_info/2727')
     assert 'pixel_width' in r.json
     assert r.json['pixel_width'] == "0.415133"
+
+
+def test_image_blv_link_success(client):
+    r = client.get('/image_blv_link/2720')
+    assert 'https://sparc.biolucida.net:443/link?l=zCl4b1' == r.data.decode()
+
+
+def test_image_blv_link_failure(client):
+    r = client.get('/image_blv_link/31')
+    assert r.data.decode() == ''
 
 
 if __name__ == '__main__':

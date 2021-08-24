@@ -29,8 +29,6 @@ from app.scicrunch_process_results import reform_dataset_results, process_result
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 
-from app.manifest_name_to_discover_name import name_map
-from timeit import default_timer as timer
 
 app = Flask(__name__)
 # set environment variable
@@ -206,7 +204,12 @@ def thumbnail_from_neurolucida_file():
         return abort(400, description=f"Query arguments are not valid.")
 
     url = f"{Config.NEUROLUCIDA_HOST}/thumbnail"
-    response = requests.get(url, params=query_args)
+
+    try:
+        response = requests.get(url, params=query_args)
+    except requests.exceptions.SSLError:
+        response = type('ResponseObject', (object,), {'status_code': 400})
+
     if response.status_code == 200:
         if response.headers.get('Content-Type', 'unknown') == 'image/png':
             return base64.b64encode(response.content)
@@ -752,6 +755,18 @@ def image_search_by_dataset_id(dataset_id):
     return response.json()
 
 
+@app.route("/image_blv_link/<image_id>", methods=["GET"])
+def image_blv_link(image_id):
+    url = f'{Config.BIOLUCIDA_ENDPOINT}/image/blv_link/{image_id}'
+    result = requests.request("GET", url)
+
+    response = result.json()
+    if response['status'] == 'success':
+        return response['link']
+
+    return ''
+
+
 @app.route("/image_xmp_info/<image_id>", methods=["GET"])
 def image_xmp_info(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/xmpmetadata/{0}".format(image_id)
@@ -759,6 +774,7 @@ def image_xmp_info(image_id):
 
     response = result.json()
     if response['status'] == 'success':
+
         xml = ElementTree.fromstring(response['data'])
         ns = {'xmp': 'http://ns.adobe.com/xap/1.0/', 'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'}
 

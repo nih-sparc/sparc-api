@@ -5,6 +5,10 @@ import tempfile
 from time import sleep
 
 
+class SimulationException(Exception):
+    pass
+
+
 def run_simulation(model_url, json_config):
     with tempfile.NamedTemporaryFile(mode="w+") as temp_config_file:
         json.dump(json_config, temp_config_file)
@@ -25,7 +29,7 @@ def run_simulation(model_url, json_config):
             try:
                 config_file = files_api.upload_file(temp_config_file.name)
             except:
-                raise Exception(
+                raise SimulationException(
                     "the simulation configuration file could not be uploaded")
 
             # Create the simulation.
@@ -49,7 +53,7 @@ def run_simulation(model_url, json_config):
             status = solvers_api.start_job(solver.id, solver.version, job.id)
 
             if status.state != "PUBLISHED":
-                raise Exception("the simulation job could not be submitted")
+                raise SimulationException("the simulation job could not be submitted")
 
             # Wait for the simulation job to be complete (or to fail).
 
@@ -64,7 +68,7 @@ def run_simulation(model_url, json_config):
             status = solvers_api.inspect_job(solver.id, solver.version, job.id)
 
             if status.state != "SUCCESS":
-                raise Exception("the simulation failed")
+                raise SimulationException("the simulation failed")
 
             # Retrieve the simulation job outputs.
 
@@ -72,7 +76,7 @@ def run_simulation(model_url, json_config):
                 outputs = solvers_api.get_job_outputs(
                     solver.id, solver.version, job.id)
             except:
-                raise Exception(
+                raise SimulationException(
                     "the simulation job outputs could not be retrieved")
 
             # Download the simulation results.
@@ -81,7 +85,7 @@ def run_simulation(model_url, json_config):
                 results_filename = files_api.download_file(
                     outputs.results["output_1"].id)
             except:
-                raise Exception("the simulation results could not be retrieved")
+                raise SimulationException("the simulation results could not be retrieved")
 
             results_file = open(results_filename, "r")
 
@@ -91,7 +95,7 @@ def run_simulation(model_url, json_config):
             }
 
             results_file.close()
-        except Exception as e:
+        except SimulationException as e:
             res = {
                 "status": "nok",
                 "description": e.args[0] if len(e.args) > 0 else "unknown"

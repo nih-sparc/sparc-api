@@ -204,7 +204,12 @@ def thumbnail_from_neurolucida_file():
         return abort(400, description=f"Query arguments are not valid.")
 
     url = f"{Config.NEUROLUCIDA_HOST}/thumbnail"
-    response = requests.get(url, params=query_args)
+
+    try:
+        response = requests.get(url, params=query_args)
+    except requests.exceptions.SSLError:
+        response = type('ResponseObject', (object,), {'status_code': 400})
+
     if response.status_code == 200:
         if response.headers.get('Content-Type', 'unknown') == 'image/png':
             return base64.b64encode(response.content)

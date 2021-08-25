@@ -288,3 +288,4 @@ def create_request_body_for_curies(species):
         body['query'] = query
     
     return body
+    

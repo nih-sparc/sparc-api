@@ -143,3 +143,4 @@ def reform_curies_results(data):
             result['uberon']['array'].append(pair)
         
     return result
+    

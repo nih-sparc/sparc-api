@@ -210,6 +210,16 @@ def test_raw_response_structure(client):
     # for k in data['hits']['hits'][0]:
     #     print(k, data['hits']['hits'][0][k])
 
+def test_getting_curies(client):
+    r = client.get('/get-organ-curies/')
+    uberons_results = json.loads(r.data)
+    total = len( uberons_results['uberon']['array'])
+    assert total > 0
+    r = client.get('/get-organ-curies/?species=human')
+    uberons_results = json.loads(r.data)
+    human = len( uberons_results['uberon']['array'])
+    assert total > human
+
 
 def test_scaffold_files(client):
     r = client.get('/filter-search/?size=30')

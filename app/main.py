@@ -18,14 +18,14 @@ from PIL import Image
 from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
-    create_identifier_query, create_pennsieve_identifier_query, create_field_query
+    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies
 from scripts.email_sender import EmailSender
 from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable
-from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results
+from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 
@@ -362,6 +362,17 @@ def sci_doi(doi1, doi2):
         logging.error(err)
         return json.dumps({'error': err})
 
+# /pubmed/<id> Used as a proxy for making requests to pubmed
+@app.route("/pubmed/<id>")
+@app.route("/pubmed/<id>/")
+def pubmed(id):
+    try:
+        response = requests.get(f'https://pubmed.ncbi.nlm.nih.gov/{id}/')
+        return response.text
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
 
 # /scicrunch-query-string/: Returns results for given organ curie. These can be processed by the sidebar
 @app.route("/scicrunch-query-string/")
@@ -378,18 +389,6 @@ def sci_organ():
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
             json=data)
         return process_results(response.json())
-    except requests.exceptions.HTTPError as err:
-        logging.error(err)
-        return json.dumps({'error': err})
-
-
-# /pubmed/<id> Used as a proxy for making requests to pubmed
-@app.route("/pubmed/<id>")
-@app.route("/pubmed/<id>/")
-def pubmed(id):
-    try:
-        response = requests.get(f'https://pubmed.ncbi.nlm.nih.gov/{id}/')
-        return response.text
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return json.dumps({'error': err})
@@ -940,6 +939,27 @@ def subscribe_to_mailchimp():
     else:
         abort(400, description="Missing email_address, first_name or last_name")
 
+# Get list of available name / curie pair
+@app.route("/get-organ-curies/", defaults={'query': ''})
+@app.route("/get-organ-curies/<query>/")
+def get_available_uberonids(query):
+
+    species = request.args.getlist('species')
+
+    requestBody = create_request_body_for_curies(species)
+
+    result = {}
+
+    response = requests.post(
+        f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+        json=requestBody)
+    try:
+        result = reform_curies_results(response.json())
+    except BaseException:
+        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
+                'error': 'BaseException'}), 502
+
+    return jsonify(result)
 
 @app.route("/simulation", methods=["POST"])
 def simulation():

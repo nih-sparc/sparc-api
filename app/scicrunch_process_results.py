@@ -125,3 +125,21 @@ def _extract_dataset_path_remote_id(data, key, id_):
             break
 
     return extracted_data
+
+#Turn the result into a list in the uberon.array field
+def reform_curies_results(data):
+    result = {
+        'uberon': {
+            'array': []
+        }
+    }
+
+    for item in data['aggregations']['organ']["buckets"]:
+        if item['key']['id'] and item['key']['name']:
+            pair = {
+                'id': item['key']['id'], 
+                'name': item['key']['name']
+            }
+            result['uberon']['array'].append(pair)
+        
+    return result

@@ -18,16 +18,18 @@ from PIL import Image
 from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
-    create_identifier_query, create_pennsieve_identifier_query
+    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies
 from scripts.email_sender import EmailSender
 from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable
-from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results
+from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
+
+import app.osparc as osparc
 
 from app.manifest_name_to_discover_name import name_map
 from timeit import default_timer as timer
@@ -40,7 +42,7 @@ CORS(app)
 
 ma = Marshmallow(app)
 email_sender = EmailSender()
-mongo = None
+
 ps = None
 s3 = boto3.client(
     "s3",
@@ -147,12 +149,6 @@ def shutdown_scheduler():
 atexit.register(shutdown_scheduler)
 
 
-# @app.before_first_request
-# def connect_to_mongodb():
-#     global mongo
-#     mongo = MongoClient(Config.MONGODB_URI)
-
-
 @app.route("/health")
 def health():
     return json.dumps({"status": "healthy"})
@@ -170,14 +166,6 @@ def contact():
     email_sender.send_email(name, email, message)
 
     return json.dumps({"status": "sent"})
-
-
-# Returns a list of embargoed (unpublished) datasets
-# @api_blueprint.route('/datasets/embargo')
-# def embargo():
-#     collection = mongo[Config.MONGODB_NAME][Config.MONGODB_COLLECTION]
-#     embargo_list = list(collection.find({}, {'_id':0}))
-#     return json.dumps(embargo_list)
 
 
 def create_s3_presigned_url(key, content_type, expiration):
@@ -374,7 +362,6 @@ def sci_doi(doi1, doi2):
         logging.error(err)
         return json.dumps({'error': err})
 
-
 # /pubmed/<id> Used as a proxy for making requests to pubmed
 @app.route("/pubmed/<id>")
 @app.route("/pubmed/<id>/")
@@ -382,6 +369,26 @@ def pubmed(id):
     try:
         response = requests.get(f'https://pubmed.ncbi.nlm.nih.gov/{id}/')
         return response.text
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return json.dumps({'error': err})
+
+
+# /scicrunch-query-string/: Returns results for given organ curie. These can be processed by the sidebar
+@app.route("/scicrunch-query-string/")
+def sci_organ():
+    fields = request.args.getlist('field')
+    curie = request.args.get('curie')
+    size = request.args.get('size')
+    from_ = request.args.get('from')
+
+    data = create_field_query(fields, curie, size, from_)
+
+    try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=data)
+        return process_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return json.dumps({'error': err})
@@ -512,26 +519,6 @@ def kb_search(query, limit=10, start=0):
         return json.dumps({'error': err})
 
 
-# /search/: Returns sci-crunch results for a given <search> query
-@app.route("/searcht/", defaults={'query': '', 'limit': 10, 'start': 0})
-@app.route("/searcht/<query>")
-def kb_search_t(query, limit=10, start=0):
-    try:
-        if request.args.get('limit') is not None:
-            limit = request.args.get('limit')
-        if request.args.get('query') is not None:
-            query = request.args.get('query')
-        if request.args.get('start') is not None:
-            start = request.args.get('start')
-
-        # print(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&size={limit}&from={start}&api_key={Config.KNOWLEDGEBASE_KEY}')
-        response = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?q={query}&size={limit}&from={start}&api_key={Config.KNOWLEDGEBASE_KEY}')
-        return response.json()
-    except requests.exceptions.HTTPError as err:
-        logging.error(err)
-        return json.dumps({'error': err})
-
-
 # /filter-search/: Returns sci-crunch results with optional params for facet filtering, sizing, and pagination
 @app.route("/filter-search/", defaults={'query': ''})
 @app.route("/filter-search/<query>/")
@@ -552,9 +539,9 @@ def filter_search(query):
         results = process_results(response.json())
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-        return jsonify({'error': str(err), 'message': 'Sci-crunch is not currently reachable, please try again later'}), 502
+        return jsonify({'error': str(err), 'message': 'SciCrunch is not currently reachable, please try again later'}), 502
     except json.JSONDecodeError:
-        return jsonify({'message': 'Could not parse Sci-crunch output, please try again later',
+        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                         'error': 'JSONDecodeError'}), 502
     return results
 
@@ -576,7 +563,7 @@ def get_facets(type_):
             json_result = response.json()
             results.append(json_result)
         except json.JSONDecodeError:
-            return jsonify({'message': 'Could not parse Sci-crunch output, please try again later',
+            return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
 
     # Select terms from the results
@@ -951,3 +938,60 @@ def subscribe_to_mailchimp():
             return resp.json()
     else:
         abort(400, description="Missing email_address, first_name or last_name")
+
+# Get list of available name / curie pair
+@app.route("/get-organ-curies/", defaults={'query': ''})
+@app.route("/get-organ-curies/<query>/")
+def get_available_uberonids(query):
+
+    species = request.args.getlist('species')
+
+    requestBody = create_request_body_for_curies(species)
+
+    result = {}
+
+    response = requests.post(
+        f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+        json=requestBody)
+    try:
+        result = reform_curies_results(response.json())
+    except BaseException:
+        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
+                'error': 'BaseException'}), 502
+
+    return jsonify(result)
+
+@app.route("/simulation", methods=["POST"])
+def simulation():
+    data = request.get_json()
+
+    if data and "model_url" in data and "json_config" in data:
+        return json.dumps(osparc.run_simulation(data["model_url"], data["json_config"]))
+    else:
+        abort(400, description="Missing model URL and/or JSON configuration")
+
+
+@app.route("/pmr_latest_exposure", methods=["POST"])
+def pmr_latest_exposure():
+    data = request.get_json()
+
+    if data and "workspace_url" in data:
+        try:
+            resp = requests.get(data["workspace_url"],
+                                headers={"Accept": "application/vnd.physiome.pmr2.json.1"})
+            if resp.status_code == 200:
+                try:
+                    # Return the latest exposure for the given workspace.
+                    url = resp.json()["collection"]["items"][0]["links"][0]["href"]
+                except:
+                    # There is no latest exposure for the given workspace.
+                    url = ""
+                return jsonify(
+                    url=url
+                )
+            else:
+                return resp.json()
+        except:
+            abort(400, description="Invalid workspace URL")
+    else:
+        abort(400, description="Missing workspace URL")

@@ -78,11 +78,11 @@ def _transform_attributes(attributes_, dataset):
     for k, attr in attributes_.items():
         subset = dataset['_source']  # set our subset to the full dataset result
         key_attr = False
-        for key in attr:
+        for n, key in enumerate(attr):
             if isinstance(subset, dict):
-                if key in subset.keys():
+                if key in subset.keys(): # continue if keys are found
                     subset = subset[key]
-                    if attr[-1] == key:
+                    if n+1 is len(attr): # if we made it to the end, save this subset
                         key_attr = subset
         found_attr[k] = key_attr
     return found_attr
@@ -125,3 +125,22 @@ def _extract_dataset_path_remote_id(data, key, id_):
             break
 
     return extracted_data
+
+#Turn the result into a list in the uberon.array field
+def reform_curies_results(data):
+    result = {
+        'uberon': {
+            'array': []
+        }
+    }
+
+    for item in data['aggregations']['organ']["buckets"]:
+        if item['key']['id'] and item['key']['name']:
+            pair = {
+                'id': item['key']['id'], 
+                'name': item['key']['name']
+            }
+            result['uberon']['array'].append(pair)
+        
+    return result
+    

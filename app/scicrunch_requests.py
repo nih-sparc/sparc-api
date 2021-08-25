@@ -162,7 +162,7 @@ def create_filter_request(query, terms, facets, size, start):
     if start is None:
         start = 0
 
-    if query == "" and len(terms) == 0 and len(facets) == 0:
+    if not query and not terms and not facets:
         return {"size": size, "from": start}
 
     # Data structure of a sci-crunch search
@@ -186,7 +186,7 @@ def create_filter_request(query, terms, facets, size, start):
 # genotype is deprecated.
 def get_facet_type_map():
     return {
-        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate'],
+        'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate', 'organisms.scaffold.species.name.aggregate'],
         'gender': ['attributes.subject.sex.value'],
         'genotype': ['anatomy.organ.name.aggregate'],
         'organ': ['anatomy.organ.name.aggregate']
@@ -201,7 +201,7 @@ def facet_query_string(query, terms, facets, type_map):
 
     t = {}
     for i, term in enumerate(terms):
-        if term is None or facets[i] is None or 'All' in facets[i]:  # Ignore 'All species' facets
+        if (term is None or facets[i] is None or 'show' in facets[i].lower() or 'all' in facets[i].lower()): # Ignore 'Show all' facets
             continue
         else:
             if term not in t.keys():  # If term hasn't been seen, add it to the list of terms
@@ -219,14 +219,73 @@ def facet_query_string(query, terms, facets, type_map):
 
     # Add the brackets and OR and AND parameters
     for k in t:
-        qt += type_map[k][0] + ":("  # facet term path and opening bracket
-        for ll in t[k]:
-            qt += f"({ll})"  # bracket around terms in case there are spaces
-            if ll is not t[k][-1]:
-                qt += " OR "  # 'OR' if more terms in this facet are coming
-            else:
-                qt += ") "
-
+        if k == "datasets":
+            needParentheses = (qt or len(t) > 1) and (len(t[k]) > 1)
+            if needParentheses:
+                qt += "("
+            for l in t[k]:
+                if l == "scaffolds":
+                    qt += "objects.additional_mimetype.name:((inode%2fvnd.abi.scaffold) AND (file))"
+                elif l == "simulations":
+                    qt += "xrefs.additionalLinks.description:((CellML) OR (SED-ML))"
+                if l is not t[k][-1]:
+                    qt += " OR "  # 'OR' if more terms in this facet are coming
+            if needParentheses:
+                qt += ")"
+        else:
+            qt += "("
+            for m in type_map[k]:
+                qt += m + ":("  # facet term path and opening bracket
+                for l in t[k]:
+                    qt += f"({l})"  # bracket around terms incase there are spaces
+                    if l is not t[k][-1]:
+                        qt += " OR "  # 'OR' if more terms in this facet are coming
+                    else:
+                        qt += ")"
+                if m is not type_map[k][-1]:
+                    qt += " OR "
+            qt += ")"
         if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
             qt += " AND "
     return qt
+
+# create the request body for requesting list of uberon ids
+def create_request_body_for_curies(species):
+
+    body = {
+        "from": 0,
+        "size": 0,
+        "aggregations": {
+            "organ": {
+                "composite": {
+                    "sources": [
+                        {"id": {"terms": {"field": "anatomy.organ.curie.aggregate"}}},
+                        {"name": {"terms": {"field": "anatomy.organ.name.aggregate"}}} 
+                    ],
+                    "size": 200
+                }
+            }
+        }
+    }
+
+    # Construct the query if there is a list of species 
+    if len(species) > 0:
+        query = {
+            "query_string": {
+                "fields": [
+                    "*species.name"
+                ],
+            }
+        }
+
+        query_string = ''
+        
+        for item in species:
+            if item != species[0]:
+                query_string += ' OR '
+            query_string += f"({item})"
+        query["query_string"]["query"]  = query_string
+        body['query'] = query
+    
+    return body
+    

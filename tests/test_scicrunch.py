@@ -35,9 +35,16 @@ def test_scicrunch_all_data(client):
 
 
 def test_scicrunch_filter(client):
-    r = client.get('/filter-search/', query_string={'term': 'genotype', 'facet': 'heart'})
+    r = client.get('/filter-search/', query_string={'term': 'organ', 'facet': 'heart'})
     assert json.loads(r.data)['numberOfHits'] > 4
 
+def test_scicrunch_filter_scaffolds(client):
+    r = client.get('/filter-search/?facet=scaffolds&term=datasets')
+    assert json.loads(r.data)['numberOfHits'] > 10
+
+def test_scicrunch_filter_simulations(client):
+    r = client.get('/filter-search/?facet=simulations&term=datasets')
+    assert json.loads(r.data)['numberOfHits'] > 0
 
 def test_scicrunch_basic_search(client):
     r = client.get('/filter-search/Heart/?facet=All+Species&term=species')
@@ -55,7 +62,7 @@ def test_scicrunch_combined_facet_text(client):
 
 
 def test_getting_facets(client):
-    r = client.get('/get-facets/genotype')
+    r = client.get('/get-facets/organ')
     facet_results = json.loads(r.data)
     facets = [facet_result['key'] for facet_result in facet_results]
     assert 'heart' in facets
@@ -203,6 +210,17 @@ def test_raw_response_structure(client):
     # for k in data['hits']['hits'][0]:
     #     print(k, data['hits']['hits'][0][k])
 
+def test_getting_curies(client):
+    r = client.get('/get-organ-curies/')
+    uberons_results = json.loads(r.data)
+    total = len( uberons_results['uberon']['array'])
+    assert total > 0
+    r = client.get('/get-organ-curies/?species=human')
+    uberons_results = json.loads(r.data)
+    human = len( uberons_results['uberon']['array'])
+    assert total > human
+
+
 def test_scaffold_files(client):
     r = client.get('/filter-search/?size=30')
     results = json.loads(r.data)
@@ -214,4 +232,3 @@ def test_scaffold_files(client):
             key = f"{uri}files/{path}".replace('s3://pennsieve-prod-discover-publish-use1/', '')
             r = client.get(f"/s3-resource/{key}")
             assert r.status_code == 200
-

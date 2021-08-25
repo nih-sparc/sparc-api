@@ -16,6 +16,7 @@ from pennsieve import Pennsieve
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
 from requests.auth import HTTPBasicAuth
+from urllib.parse import quote_plus
 
 from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies
@@ -958,6 +959,7 @@ def get_available_uberonids(query):
 
     return jsonify(result)
 
+
 @app.route("/simulation", methods=["POST"])
 def simulation():
     data = request.get_json()
@@ -992,3 +994,25 @@ def pmr_latest_exposure():
             abort(400, description="Invalid workspace URL")
     else:
         abort(400, description="Missing workspace URL")
+
+
+@app.route("/ols_lookup")
+def find_by_ols_term():
+    term = quote_plus(quote_plus(request.args.get('term')))
+
+    headers = {
+        'Accept': 'application/json',
+    }
+
+    response = requests.get(f'{Config.EMBL_EBI_ONTOLOGY_LOOKUP}/terms/findByIdAndIsDefiningOntology/{term}', headers=headers)
+
+    try:
+        full_json_data = response.json()
+        if full_json_data['page']['totalElements'] == 1:
+            json_data = full_json_data['_embedded']['terms'][0]
+        else:
+            json_data = {'label': 'not found'}
+    except json.JSONDecodeError:
+        json_data = {'label': 'not found'}
+
+    return json_data

@@ -41,9 +41,10 @@ class Config(object):
     CCB_HEAD_WRIKE_ID = os.environ.get("CCB_HEAD_WRIKE_ID")
     MODERATOR_WRIKE_ID = os.environ.get("MODERATOR_WRIKE_ID")
     MAILCHIMP_API_KEY = os.environ.get("MAILCHIMP_API_KEY")
-    OSPARC_API_URL=os.environ.get("OSPARC_API_URL", "https://api.osparc.io")
-    OSPARC_API_KEY=os.environ.get("OSPARC_API_KEY")
-    OSPARC_API_SECRET=os.environ.get("OSPARC_API_SECRET")
+    OSPARC_API_URL = os.environ.get("OSPARC_API_URL", "https://api.osparc.io")
+    OSPARC_API_KEY = os.environ.get("OSPARC_API_KEY")
+    OSPARC_API_SECRET = os.environ.get("OSPARC_API_SECRET")
     DIRECT_DOWNLOAD_LIMIT = int(os.environ.get("DIRECT_DOWNLOAD_LIMIT", "20971520"))
     S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"
     NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")
+    EMBL_EBI_ONTOLOGY_LOOKUP = 'http://www.ebi.ac.uk/ols/api'

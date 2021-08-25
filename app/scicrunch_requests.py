@@ -248,3 +248,43 @@ def facet_query_string(query, terms, facets, type_map):
         if k is not list(t.keys())[-1]:  # Add 'AND' if we are not at the last item
             qt += " AND "
     return qt
+
+# create the request body for requesting list of uberon ids
+def create_request_body_for_curies(species):
+
+    body = {
+        "from": 0,
+        "size": 0,
+        "aggregations": {
+            "organ": {
+                "composite": {
+                    "sources": [
+                        {"id": {"terms": {"field": "anatomy.organ.curie.aggregate"}}},
+                        {"name": {"terms": {"field": "anatomy.organ.name.aggregate"}}} 
+                    ],
+                    "size": 200
+                }
+            }
+        }
+    }
+
+    # Construct the query if there is a list of species 
+    if len(species) > 0:
+        query = {
+            "query_string": {
+                "fields": [
+                    "*species.name"
+                ],
+            }
+        }
+
+        query_string = ''
+        
+        for item in species:
+            if item != species[0]:
+                query_string += ' OR '
+            query_string += f"({item})"
+        query["query_string"]["query"]  = query_string
+        body['query'] = query
+    
+    return body

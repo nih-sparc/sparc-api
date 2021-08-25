@@ -10,7 +10,6 @@ Make sure you have python 3 installed `python3 --version`
 python3 -m venv ./venv
 . ./venv/bin/activate
 pip install -r requirements.txt
-pip install -r requirements-dev.txt
 gunicorn main:app
 ```
 
@@ -24,6 +23,7 @@ If you do not have the NIH SPARC portal user environment variables setup already
 After the previous steps or if you already have those environment variables setup, run:
 
 ```
+export PYTHONPATH=`pwd`
 pip install -r requirements-dev.txt
 pytest
 ```

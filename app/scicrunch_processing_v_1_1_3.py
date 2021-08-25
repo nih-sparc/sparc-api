@@ -146,18 +146,22 @@ from app.manifest_name_to_discover_name import name_map
 #  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
 #  attributes > sample > subject
 ATTRIBUTES_MAP = {
+    'additionalLinks': ['xrefs', 'additionalLinks'],
     'scaffolds': ['scaffolds'],
     'samples': ['attributes', 'sample', 'subject'],
     'name': ['item', 'name'],
+    'description': ['item','description'],
     'identifier': ['item', 'identifier'],
     'uri': ['distributions', 'current', 'uri'],
     'updated': ['dates', 'updated'],
     'organs': ['anatomy', 'organ'],
+    'organisms': ['organisms', 'subject'],
     'contributors': ['contributors'],
     'doi': ['item', 'curie'],
     'files': ['objects'],
     'version': ['item', 'version', 'keyword'],
-    's3uri': ['pennsieve', 'uri']
+    's3uri': ['pennsieve', 'uri'],
+    'publishDate': ['pennsieve', 'firstPublishedAt', 'timestamp']
 }
 
 

@@ -62,11 +62,11 @@ def create_identifier_query(identifier):
 
 def create_pennsieve_identifier_query(identifier):
     return {
-      "query": {
-        "term": {
-          "pennsieve.identifier.aggregate": identifier
+        "query": {
+            "term": {
+                "pennsieve.identifier.aggregate": identifier
+            }
         }
-      }
     }
 
 
@@ -80,6 +80,24 @@ def create_field_query(field, search_term, size=10, from_=0):
                     field
                 ],
                 "query": search_term
+            }
+        }
+    }
+
+
+def create_onto_term_query(term, existing_id_type='iri'):
+    return {
+        "size": 10,
+        "from": 0,
+        "query": {
+            "bool": {
+                "must": [{
+                    "match_phrase": {
+                        f"existing_ids.{existing_id_type}": {
+                            "query": term
+                        }
+                    }
+                }]
             }
         }
     }
@@ -127,7 +145,6 @@ def create_doi_request(doi):
 # 'type' is either 'species', 'gender', or 'organ' at this stage.
 #  Returns a tuple of the type-map and request data ( type_map, data )
 def create_facet_query(type_):
-
     data = {
         "from": 0,
         "size": 0,
@@ -201,7 +218,7 @@ def facet_query_string(query, terms, facets, type_map):
 
     t = {}
     for i, term in enumerate(terms):
-        if (term is None or facets[i] is None or 'show' in facets[i].lower() or 'all' in facets[i].lower()): # Ignore 'Show all' facets
+        if (term is None or facets[i] is None or 'show' in facets[i].lower() or 'all' in facets[i].lower()):  # Ignore 'Show all' facets
             continue
         else:
             if term not in t.keys():  # If term hasn't been seen, add it to the list of terms
@@ -249,9 +266,9 @@ def facet_query_string(query, terms, facets, type_map):
             qt += " AND "
     return qt
 
+
 # create the request body for requesting list of uberon ids
 def create_request_body_for_curies(species):
-
     body = {
         "from": 0,
         "size": 0,
@@ -260,7 +277,7 @@ def create_request_body_for_curies(species):
                 "composite": {
                     "sources": [
                         {"id": {"terms": {"field": "anatomy.organ.curie.aggregate"}}},
-                        {"name": {"terms": {"field": "anatomy.organ.name.aggregate"}}} 
+                        {"name": {"terms": {"field": "anatomy.organ.name.aggregate"}}}
                     ],
                     "size": 200
                 }
@@ -279,13 +296,12 @@ def create_request_body_for_curies(species):
         }
 
         query_string = ''
-        
+
         for item in species:
             if item != species[0]:
                 query_string += ' OR '
             query_string += f"({item})"
-        query["query_string"]["query"]  = query_string
+        query["query_string"]["query"] = query_string
         body['query'] = query
-    
+
     return body
-    

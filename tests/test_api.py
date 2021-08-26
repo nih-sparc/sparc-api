@@ -170,8 +170,8 @@ def test_sim_dataset(client):
     assert r.status_code == 404
 
 
-def test_ols_lookup(client):
-    r = client.get('/ols_lookup', query_string={'term': 'http://purl.obolibrary.org/obo/NCBITaxon_9606'})
+def test_onto_term_lookup(client):
+    r = client.get('/onto_term_lookup', query_string={'term': 'http://purl.obolibrary.org/obo/NCBITaxon_9606'})
     assert r.status_code == 200
     json_data = r.get_json()
-    assert json_data['label'] == 'Homo sapiens'
+    assert json_data['label'] == 'Human'

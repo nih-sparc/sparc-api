@@ -18,7 +18,7 @@ from PIL import Image
 from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
-    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies
+    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query
 from scripts.email_sender import EmailSender
 from threading import Lock
 from xml.etree import ElementTree
@@ -28,11 +28,8 @@ from app.dbtable import MapTable, ScaffoldTable
 from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
+from app.osparc import run_simulation
 
-import app.osparc as osparc
-
-from app.manifest_name_to_discover_name import name_map
-from timeit import default_timer as timer
 
 app = Flask(__name__)
 # set environment variable
@@ -961,12 +958,13 @@ def get_available_uberonids(query):
 
     return jsonify(result)
 
+
 @app.route("/simulation", methods=["POST"])
 def simulation():
     data = request.get_json()
 
     if data and "model_url" in data and "json_config" in data:
-        return json.dumps(osparc.run_simulation(data["model_url"], data["json_config"]))
+        return json.dumps(run_simulation(data["model_url"], data["json_config"]))
     else:
         abort(400, description="Missing model URL and/or JSON configuration")
 
@@ -995,3 +993,31 @@ def pmr_latest_exposure():
             abort(400, description="Invalid workspace URL")
     else:
         abort(400, description="Missing workspace URL")
+
+
+@app.route("/onto_term_lookup")
+def find_by_onto_term():
+    term = request.args.get('term')
+
+    headers = {
+        'Accept': 'application/json',
+    }
+
+    params = {
+        "api_key": Config.KNOWLEDGEBASE_KEY
+    }
+
+    query = create_onto_term_query(term)
+
+    response = requests.get(f'{Config.SCI_CRUNCH_INTERLEX_HOST}/_search', headers=headers, params=params, json=query)
+
+    results = response.json()
+    hits = results['hits']['hits']
+    total = results['hits']['total']
+    if total == 1:
+        result = hits[0]
+        json_data = result['_source']
+    else:
+        json_data = {'label': 'not found'}
+
+    return json_data

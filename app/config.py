@@ -47,4 +47,4 @@ class Config(object):
     DIRECT_DOWNLOAD_LIMIT = int(os.environ.get("DIRECT_DOWNLOAD_LIMIT", "20971520"))
     S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"
     NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")
-    EMBL_EBI_ONTOLOGY_LOOKUP = 'http://www.ebi.ac.uk/ols/api'
+    SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://scicrunch.org/api/1/elastic/Interlex_pr")

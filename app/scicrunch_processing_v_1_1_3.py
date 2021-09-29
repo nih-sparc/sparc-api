@@ -203,7 +203,7 @@ def sort_files_by_mime_type(obj_list):
 
         mapped_mime_type = _mapped_mime_type(mime_type, obj)
         if mapped_mime_type == NOT_SPECIFIED:
-            logging.warning('Unhandled mime type:', mime_type)
+            logging.warning(f'Unhandled mime type: {mime_type}')
         elif mapped_mime_type == SKIP:
             pass
         else:

@@ -273,12 +273,12 @@ def create_request_body_for_curies(species):
         "from": 0,
         "size": 0,
         "aggregations": {
-            "organ": {
-                "composite": {
-                    "sources": [
-                        {"id": {"terms": {"field": "anatomy.organ.curie.aggregate"}}},
-                        {"name": {"terms": {"field": "anatomy.organ.name.aggregate"}}}
-                    ],
+            "names_and_curies": {
+                "terms": {
+                    "script": {
+                        "lang": "painless",
+                        "source": "params['_source']['anatomy']['organ']"
+                    },
                     "size": 200
                 }
             }

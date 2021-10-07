@@ -4,6 +4,7 @@ from app import app
 from app.main import dataset_search
 from app.scicrunch_requests import create_query_string
 
+from known_uberons import uberons_dict
 
 @pytest.fixture
 def client():
@@ -211,6 +212,7 @@ def test_raw_response_structure(client):
     #     print(k, data['hits']['hits'][0][k])
 
 def test_getting_curies(client):
+    #Test if we get a shorter list of uberons with species specified
     r = client.get('/get-organ-curies/')
     uberons_results = json.loads(r.data)
     total = len( uberons_results['uberon']['array'])
@@ -219,6 +221,9 @@ def test_getting_curies(client):
     uberons_results = json.loads(r.data)
     human = len( uberons_results['uberon']['array'])
     assert total > human
+    #Test if the uberon - name match the one from the hardcoded list
+    for item in uberons_results['uberon']['array']:
+        assert uberons_dict[item['id']] == item['name']
 
 
 def test_scaffold_files(client):

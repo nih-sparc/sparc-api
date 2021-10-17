@@ -17,7 +17,7 @@ from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
 from requests.auth import HTTPBasicAuth
 
-from app.scicrunch_requests import create_doi_query, create_doi_request, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
+from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query
 from scripts.email_sender import EmailSender
 from threading import Lock
@@ -29,7 +29,6 @@ from app.scicrunch_process_results import reform_dataset_results, process_result
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc import run_simulation
-
 
 app = Flask(__name__)
 # set environment variable
@@ -47,7 +46,6 @@ s3 = boto3.client(
     aws_secret_access_key=Config.SPARC_PORTAL_AWS_SECRET,
     region_name="us-east-1",
 )
-
 
 biolucida_lock = Lock()
 
@@ -348,8 +346,9 @@ def direct_download_url(path):
 
 @app.route("/scicrunch-dataset/<doi1>/<doi2>")
 def sci_doi(doi1, doi2):
-    doi = doi1 + '/' + doi2
-    data = create_doi_request(doi)
+    doi = doi1.replace('DOI:', '') + '/' + doi2
+    data = create_doi_query(doi)
+
     try:
         response = requests.post(
             f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
@@ -359,12 +358,13 @@ def sci_doi(doi1, doi2):
         logging.error(err)
         return json.dumps({'error': err})
 
+
 # /pubmed/<id> Used as a proxy for making requests to pubmed
-@app.route("/pubmed/<id>")
-@app.route("/pubmed/<id>/")
-def pubmed(id):
+@app.route("/pubmed/<id_>")
+@app.route("/pubmed/<id_>/")
+def pubmed(id_):
     try:
-        response = requests.get(f'https://pubmed.ncbi.nlm.nih.gov/{id}/')
+        response = requests.get(f'https://pubmed.ncbi.nlm.nih.gov/{id_}/')
         return response.text
     except requests.exceptions.HTTPError as err:
         logging.error(err)
@@ -408,7 +408,7 @@ def get_dataset_info_title():
     title = request.args.get('title')
     query = create_title_query(title)
 
-    return reform_dataset_results(dataset_search(query, raw=True))
+    return reform_dataset_results(dataset_search(query))
 
 
 @app.route("/dataset_info/using_object_identifier")
@@ -416,7 +416,7 @@ def get_dataset_info_object_identifier():
     identifier = request.args.get('identifier')
     query = create_identifier_query(identifier)
 
-    return reform_dataset_results(dataset_search(query, raw=True))
+    return reform_dataset_results(dataset_search(query))
 
 
 @app.route("/dataset_info/using_pennsieve_identifier")
@@ -424,7 +424,7 @@ def get_dataset_info_pennsieve_identifier():
     identifier = request.args.get('identifier')
     query = create_pennsieve_identifier_query(identifier)
 
-    return reform_dataset_results(dataset_search(query, raw=True))
+    return reform_dataset_results(dataset_search(query))
 
 
 @app.route("/segmentation_info/")
@@ -463,7 +463,7 @@ def get_segmentation_info_from_file():
 @app.route("/current_doi_list")
 def get_all_doi():
     query = create_doi_aggregate()
-    results = reform_aggregation_results(dataset_search(query, raw=True))
+    results = reform_aggregation_results(dataset_search(query))
     doi_results = []
     for result in results['doi']['buckets']:
         doi_results.append(result['key']['curie'])
@@ -471,14 +471,9 @@ def get_all_doi():
     return {'results': doi_results}
 
 
-def dataset_search(query, raw=False):
+def dataset_search(query):
     try:
-        if raw:
-            payload = query
-        else:
-            payload = {
-                "query": query
-            }
+        payload = query
 
         params = {
             "api_key": Config.KNOWLEDGEBASE_KEY
@@ -936,11 +931,11 @@ def subscribe_to_mailchimp():
     else:
         abort(400, description="Missing email_address, first_name or last_name")
 
+
 # Get list of available name / curie pair
 @app.route("/get-organ-curies/", defaults={'query': ''})
 @app.route("/get-organ-curies/<query>/")
 def get_available_uberonids(query):
-
     species = request.args.getlist('species')
 
     requestBody = create_request_body_for_curies(species)
@@ -954,7 +949,7 @@ def get_available_uberonids(query):
         result = reform_curies_results(response.json())
     except BaseException:
         return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
-                'error': 'BaseException'}), 502
+                        'error': 'BaseException'}), 502
 
     return jsonify(result)
 

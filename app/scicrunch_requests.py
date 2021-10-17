@@ -12,10 +12,9 @@ def create_query_string(query_string):
 
 def create_doi_query(doi):
     return {
-        "match": {
-            "item.curie": {
-                "query": f"doi:{doi}",
-                "operator": "and"
+        "query": {
+            "term": {
+                "item.curie": doi
             }
         }
     }
@@ -130,8 +129,8 @@ def create_doi_request(doi):
                 "must": [{"match_all": {}}],
                 "should": [],
                 "filter": {
-                    "term": {
-                        "_id": doi
+                    "item": {
+                        "curie": doi
                     }
                 }
             }

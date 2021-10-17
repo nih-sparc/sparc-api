@@ -3,3 +3,4 @@ pennsieve==6.1.1
 black
 isort
 nose
+packaging

@@ -1,10 +1,14 @@
 import json
 import pytest
+from packaging import version
+
 from app import app
 from app.main import dataset_search
 from app.scicrunch_requests import create_query_string
 
-from known_uberons import uberons_dict
+from known_uberons import UBERONS_DICT
+from known_dois import has_doi_changed, warn_doi_changes
+
 
 @pytest.fixture
 def client():
@@ -19,9 +23,34 @@ def test_scicrunch_keys(client):
     assert 'numberOfHits' in json.loads(r.data).keys()
 
 
+def check_doi_status(client, dataset_id, doi):
+    r = client.get('/dataset_info/using_pennsieve_identifier', query_string={'identifier': dataset_id})
+    response = json.loads(r.data)
+    result = response['result'][0]
+    status = True
+    if version.parse(result['version']) >= version.parse("1.1.4"):
+        if has_doi_changed(result['doi'].replace('https://doi.org/', ''), doi):
+            warn_doi_changes()
+            status = False
+
+    return status
+
+
 def test_scicrunch_dataset_doi(client):
-    r = client.get('/scicrunch-dataset/DOI%3A10.26275%2Fpzek-91wx')
-    assert json.loads(r.data)['hits']['hits'][0]['_id'] == "DOI:10.26275/pzek-91wx"
+    # Testing with dataset 55
+    identifier = "55"
+    run_doi_test = check_doi_status(client, identifier, '10.26275/pzek-91wx')
+
+    if run_doi_test:
+        r = client.get('/scicrunch-dataset/DOI%3A10.26275%2Fpzek-91wx')
+        dataset_version = json.loads(r.data)['hits']['hits'][0]['_source']['item']['version']['keyword']
+        if version.parse(dataset_version) >= version.parse("1.1.4"):
+            assert json.loads(r.data)['hits']['hits'][0]['_id'] == "55"
+            assert json.loads(r.data)['hits']['hits'][0]['_source']['item']['curie'] == "DOI:10.26275/pzek-91wx"
+        else:
+            assert json.loads(r.data)['hits']['hits'][0]['_id'] == "DOI:10.26275/pzek-91wx"
+    else:
+        pytest.skip('DOI used in test is out of date.')
 
 
 def test_scicrunch_search(client):
@@ -39,13 +68,16 @@ def test_scicrunch_filter(client):
     r = client.get('/filter-search/', query_string={'term': 'organ', 'facet': 'heart'})
     assert json.loads(r.data)['numberOfHits'] > 4
 
+
 def test_scicrunch_filter_scaffolds(client):
     r = client.get('/filter-search/?facet=scaffolds&term=datasets')
     assert json.loads(r.data)['numberOfHits'] > 10
 
+
 def test_scicrunch_filter_simulations(client):
     r = client.get('/filter-search/?facet=simulations&term=datasets')
     assert json.loads(r.data)['numberOfHits'] > 0
+
 
 def test_scicrunch_basic_search(client):
     r = client.get('/filter-search/Heart/?facet=All+Species&term=species')
@@ -70,12 +102,18 @@ def test_getting_facets(client):
 
 
 def test_response_version(client):
+    # Testing with dataset 44
+    identifier = "44"
     doi = "10.26275/duz8-mq3n"
-    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
-    data = r.data.decode('utf-8')
-    json_data = json.loads(data)
-    assert len(json_data['result']) == 1
-    assert 'version' in json_data['result'][0]
+    run_doi_test = check_doi_status(client, identifier, doi)
+    if run_doi_test:
+        r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
+        data = r.data.decode('utf-8')
+        json_data = json.loads(data)
+        assert len(json_data['result']) == 1
+        assert 'version' in json_data['result'][0]
+    else:
+        pytest.skip('DOI used in test is out of date.')
 
 
 source_structure = {
@@ -84,7 +122,8 @@ source_structure = {
                  {'item':
                      {
                          'type': dict,
-                         'required': [{'version': {'type': dict, 'required': ['keyword'], 'optional': []}}, 'types', 'contentTypes', 'names', 'statistics', 'keywords', 'published', 'description',
+                         'required': [{'version': {'type': dict, 'required': ['keyword'], 'optional': []}}, 'types', 'contentTypes', 'names', 'statistics', 'keywords', 'published',
+                                      'description',
                                       'name', 'readme', 'identifier', 'docid', 'curie'],
                          'optional': ['techniques', 'modalities']
                      }}, 'organization', 'provenance', 'supportingAwards'],
@@ -184,7 +223,7 @@ def test_raw_response_structure(client):
     # 10.26275/zdxd-84xz
     # 10.26275/duz8-mq3n
     query = create_query_string("computational")
-    data = dataset_search(query, raw=True)
+    data = dataset_search(query)
     # print(data['hits']['hits'][0]['_source']['objects'])
     # print(data['hits']['hits'][0]['_source']['item'])
     assert _test_structure(data, raw_structure_base)
@@ -211,19 +250,20 @@ def test_raw_response_structure(client):
     # for k in data['hits']['hits'][0]:
     #     print(k, data['hits']['hits'][0][k])
 
+
 def test_getting_curies(client):
-    #Test if we get a shorter list of uberons with species specified
+    # Test if we get a shorter list of uberons with species specified
     r = client.get('/get-organ-curies/')
     uberons_results = json.loads(r.data)
-    total = len( uberons_results['uberon']['array'])
+    total = len(uberons_results['uberon']['array'])
     assert total > 0
     r = client.get('/get-organ-curies/?species=human')
     uberons_results = json.loads(r.data)
-    human = len( uberons_results['uberon']['array'])
+    human = len(uberons_results['uberon']['array'])
     assert total > human
-    #Test if the uberon - name match the one from the hardcoded list
+    # Test if the uberon - name match the one from the hardcoded list
     for item in uberons_results['uberon']['array']:
-        assert uberons_dict[item['id']] == item['name']
+        assert UBERONS_DICT[item['id']] == item['name'].lower()
 
 
 def test_scaffold_files(client):
@@ -231,7 +271,7 @@ def test_scaffold_files(client):
     results = json.loads(r.data)
     assert results['numberOfHits'] > 0
     for item in results['results']:
-        if 'abi-scaffold-metadata-file' in item and 's3uri'  in item:
+        if 'abi-scaffold-metadata-file' in item and 's3uri' in item:
             uri = item['s3uri']
             path = item['abi-scaffold-metadata-file'][0]['dataset']['path']
             key = f"{uri}files/{path}".replace('s3://pennsieve-prod-discover-publish-use1/', '')

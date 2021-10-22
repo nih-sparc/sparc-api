@@ -263,7 +263,7 @@ def test_pennsieve_identifier_dataset_search(client):
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    assert "Human islet microvasculature analysis" == result['name']
+    assert "human islet microvasculature analysis" == result['name'].lower()
 
     assert BIOLUCIDA_3D in result
     assert len(result[BIOLUCIDA_3D])

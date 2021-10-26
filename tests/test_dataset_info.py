@@ -144,8 +144,8 @@ def test_generic_mouse_colon_dataset_search(client):
 
 
 def test_complex_title_dataset_search(client):
-    title = "Spatial distribution and morphometric characterization of vagal afferents (specifically: intraganglionic laminar endings (IGLEs)) associated with the myenteric " \
-            "plexus of the rat stomach "
+    title = "Spatial distribution and morphometric characterization of vagal efferents associated with the myenteric plexus of the rat stomach"
+
     start = timer()
     r = client.get('/dataset_info/using_title', query_string={'title': title})
     end = timer()
@@ -154,7 +154,7 @@ def test_complex_title_dataset_search(client):
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    assert result['name'].startswith("Spatial distribution and morphometric characterization of vagal afferents (specifically: ")
+    assert result['name'].startswith("Spatial distribution and morphometric characterization of vagal efferents ")
 
     assert COMMON_IMAGES in result.keys()
 
@@ -178,7 +178,8 @@ def test_doi_plot_annotation_dataset_search_version_1(client):
 def test_doi_plot_annotation_dataset_search_version_2(client):
     # Test case for physiological data visualisation
     # This test is bound to fail at time due to the changing DOI.
-    doi = "10.26275/4i5w-w7ai"
+    # This DOI belongs to dataset 141
+    doi = "10.26275/9qws-u3px"
     start = timer()
     r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
     end = timer()
@@ -223,8 +224,9 @@ def test_title_plot_annotation_dataset_search(client):
 
 
 def test_object_identifier_dataset_search(client):
+    #Dataset 141
     print()
-    identifier = "package:6723ec25-e87f-4506-8893-c924e2b0766a"
+    identifier = "package:cc63e3f6-c2d6-4355-9c46-604660377bcb"
     start = timer()
     r = client.get('/dataset_info/using_object_identifier', query_string={'identifier': identifier})
     end = timer()
@@ -261,7 +263,7 @@ def test_pennsieve_identifier_dataset_search(client):
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    assert "Human Islet Microvasculature Analysis in Optically Cleared Pancreas using Vesselucida360 Analysis" == result['name']
+    assert "Human Islet Microvasculature Analysis" == result['name']
 
     assert BIOLUCIDA_3D in result
     assert len(result[BIOLUCIDA_3D])
@@ -286,7 +288,7 @@ def test_api_uri_s3_resource_fetch(client):
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    assert "Sympathetic innervation circuit of the interscapular brown adipose tissue using pseudorabies viral tracing in the mouse" == result['name']
+    assert "iBAT (interscapular brown adipose tissue) sympathetic innervation circuit pseudorabies viral tracing in reporter mice" == result['name']
 
     assert VIDEO in result
     assert len(result[VIDEO])
@@ -309,7 +311,7 @@ def test_discover_path(client):
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    assert "Human Islet Microvasculature Analysis in Optically Cleared Pancreas using Vesselucida360 Analysis" == result['name']
+    assert "Human Islet Microvasculature Analysis" == result['name']
 
     assert SEGMENTATION_FILES in result
     assert len(result[SEGMENTATION_FILES])

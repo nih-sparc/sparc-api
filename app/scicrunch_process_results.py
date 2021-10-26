@@ -1,5 +1,6 @@
 import json
 import importlib
+import re
 
 # from app.utilities import print_hit_structure
 
@@ -133,14 +134,27 @@ def reform_curies_results(data):
             'array': []
         }
     }
+    id_name_map = {}
+    #Iterate through to get an uberon - name map
+    for item in data['aggregations']['names_and_curies']["buckets"]:
+        try:
+            #The key object is returned as a string - use re.search to extract
+            # Example string: 
+            #"{curie=UBERON:0002298, name=brainstem, matchingStatus=Exact Match}"
+            pattern = "curie=(.*?),"
+            curie = re.search(pattern, item['key']).group(1)
+            pattern = "name=(.*?),"
+            name = re.search(pattern, item['key']).group(1)
+            id_name_map[curie] = name
+        except KeyError:
+            continue
+    #Turn the map into an the output array
+    for key in id_name_map:
+        pair = {
+            'id': key,
+            'name': id_name_map[key]
+        }
+        result['uberon']['array'].append(pair)
 
-    for item in data['aggregations']['organ']["buckets"]:
-        if item['key']['id'] and item['key']['name']:
-            pair = {
-                'id': item['key']['id'], 
-                'name': item['key']['name']
-            }
-            result['uberon']['array'].append(pair)
-        
     return result
     

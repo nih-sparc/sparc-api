@@ -1,8 +1,6 @@
-import json
 import importlib
+import json
 import re
-
-# from app.utilities import print_hit_structure
 
 
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
@@ -34,9 +32,7 @@ def _prepare_results(results):
             attr['title'] = ''
 
         attr.update(sort_files_by_mime_type(attr['files']))
-        #Comment out the extra manipulation as it is not working as intended
         output.append(attr)
-        #output.append(_manipulate_attr(attr))
 
     return output
 
@@ -81,9 +77,9 @@ def _transform_attributes(attributes_, dataset):
         key_attr = False
         for n, key in enumerate(attr):
             if isinstance(subset, dict):
-                if key in subset.keys(): # continue if keys are found
+                if key in subset.keys():  # continue if keys are found
                     subset = subset[key]
-                    if n+1 is len(attr): # if we made it to the end, save this subset
+                    if n + 1 is len(attr):  # if we made it to the end, save this subset
                         key_attr = subset
         found_attr[k] = key_attr
     return found_attr
@@ -127,7 +123,8 @@ def _extract_dataset_path_remote_id(data, key, id_):
 
     return extracted_data
 
-#Turn the result into a list in the uberon.array field
+
+# Turn the result into a list in the uberon.array field
 def reform_curies_results(data):
     result = {
         'uberon': {
@@ -135,12 +132,12 @@ def reform_curies_results(data):
         }
     }
     id_name_map = {}
-    #Iterate through to get an uberon - name map
+    # Iterate through to get an uberon - name map
     for item in data['aggregations']['names_and_curies']["buckets"]:
         try:
-            #The key object is returned as a string - use re.search to extract
+            # The key object is returned as a string - use re.search to extract
             # Example string: 
-            #"{curie=UBERON:0002298, name=brainstem, matchingStatus=Exact Match}"
+            # "{curie=UBERON:0002298, name=brainstem, matchingStatus=Exact Match}"
             pattern = "curie=(.*?),"
             curie = re.search(pattern, item['key']).group(1)
             pattern = "name=(.*?),"
@@ -148,7 +145,7 @@ def reform_curies_results(data):
             id_name_map[curie] = name
         except KeyError:
             continue
-    #Turn the map into an the output array
+    # Turn the map into an the output array
     for key in id_name_map:
         pair = {
             'id': key,
@@ -157,4 +154,3 @@ def reform_curies_results(data):
         result['uberon']['array'].append(pair)
 
     return result
-    

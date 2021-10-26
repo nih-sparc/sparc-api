@@ -1,9 +1,9 @@
-uberons_dict = {
+UBERONS_DICT = {
     'UBERON:0000948': 'heart',
     'UBERON:0001155': 'colon',
     'UBERON:0001759': 'vagus nerve',
     'UBERON:0000945': 'stomach',
-    'UBERON:0001255':'urinary bladder',
+    'UBERON:0001255': 'urinary bladder',
     'UBERON:0001013': 'adipose tissue',
     'UBERON:0001348': 'brown adipose tissue',
     'UBERON:0002008': 'cardiac nerve plexus',
@@ -23,5 +23,5 @@ uberons_dict = {
     'UBERON:0002439': 'myenteric nerve plexus',
     'UBERON:0010380': 'enteric nerve',
     'UBERON:0013702': 'body proper',
-    'UBERON:0002005': 'Enteric Nervous System'
+    'UBERON:0002005': 'enteric nervous system'
 }

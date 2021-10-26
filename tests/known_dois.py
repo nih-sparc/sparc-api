@@ -126,3 +126,17 @@ current_list = [
 ]
 
 
+def warn_doi_changes():
+    print("***")
+    print("***")
+    print("*** Warning: DOI(s) used in test have changed, update the test")
+    print("***")
+    print("***")
+
+
+def has_doi_changed(expected_doi, received_doi):
+    change_detected = False
+    if expected_doi.lower() != received_doi.lower():
+        change_detected = True
+
+    return change_detected

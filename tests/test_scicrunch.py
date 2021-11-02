@@ -115,6 +115,34 @@ def test_response_version(client):
     else:
         pytest.skip('DOI used in test is out of date.')
 
+def test_response_abi_plot(client):
+    # Testing abi-plot with dataset 141
+    identifier = "141"
+    doi = "10.26275/9qws-u3px"
+    run_doi_test = check_doi_status(client, identifier, doi)
+    if run_doi_test:
+        r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
+        data = r.data.decode('utf-8')
+        json_data = json.loads(data)
+        assert len(json_data['result']) == 1
+        if json_data['result'][0]['version'] == '1.1.4':
+            assert len(json_data['result'][0]['abi-plot']) == 5
+            identifier = json_data['result'][0]["dataset_identifier"]
+            version = json_data['result'][0]["dataset_version"]
+            assert identifier == "141"
+            assert version == "3"
+            #Construct the file path prefix, it should be /s3-resource/141/3/files
+            path_prefix = '/'.join(('', 's3-resource', identifier, version, 'files'))
+            for plot in json_data['result'][0]['abi-plot']:
+                if plot['datacite']['isDescribedBy']['path'] != 'derivative//':
+                    path = '/'.join((path_prefix, plot['datacite']['isDescribedBy']['path']))
+                    #Check if the file can be downloaded using the /s3-resource/{path} route
+                    r2 = client.get(path)
+                    assert r2.status_code == 200
+        else:
+            pytest.skip('Only test abi-plot against version 1.1.4.')
+    else:
+        pytest.skip('DOI used in test is out of date.')
 
 source_structure = {
     'type': dict,

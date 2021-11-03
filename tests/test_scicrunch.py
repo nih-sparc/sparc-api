@@ -131,14 +131,16 @@ def test_response_abi_plot(client):
             version = json_data['result'][0]["dataset_version"]
             assert identifier == "141"
             assert version == "3"
-            #Construct the file path prefix, it should be /s3-resource/141/3/files
-            path_prefix = '/'.join(('', 's3-resource', identifier, version, 'files'))
+            #Construct the file path prefix, it should be /exists/141/3/files
+            path_prefix = '/'.join(('', 'exists', identifier, version, 'files'))
             for plot in json_data['result'][0]['abi-plot']:
                 if plot['datacite']['isDescribedBy']['path'] != 'derivative//':
                     path = '/'.join((path_prefix, plot['datacite']['isDescribedBy']['path']))
-                    #Check if the file can be downloaded using the /s3-resource/{path} route
+                    #Check if the file exists using the /exists/{path} route
                     r2 = client.get(path)
-                    assert r2.status_code == 200
+                    data2 = r2.data.decode('utf-8')
+                    json_data2 = json.loads(data2)
+                    assert json_data2['exists'] == 'true'
         else:
             pytest.skip('Only test abi-plot against version 1.1.4.')
     else:

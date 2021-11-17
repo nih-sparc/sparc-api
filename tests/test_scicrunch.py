@@ -146,6 +146,16 @@ def test_response_abi_plot(client):
     else:
         pytest.skip('DOI used in test is out of date.')
 
+def test_response_sample_subject_size(client):
+    #Only filter search returns the sample and subjectSuze
+    r = client.get(('/filter-search/?facet=pig&term=species&facet=urinary+bladder&term=organ'))
+    data = r.data.decode('utf-8')
+    json_data = json.loads(data)
+    print(json_data)
+    assert len(json_data['results']) == 1
+    assert json_data['results'][0]['sampleSize'] == '509'
+    assert json_data['results'][0]['subjectSize'] == '8'
+
 source_structure = {
     'type': dict,
     'required': ['contributors', 'dataItem', 'dates', 'distributions',

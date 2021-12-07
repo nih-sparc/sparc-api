@@ -19,6 +19,20 @@ def create_doi_query(doi):
         }
     }
 
+def create_multiple_doi_query(dois):
+    return {
+        "query": {
+            "terms_set": {
+                "item.curie": {
+                    "terms": dois,
+                    "minimum_should_match_script": {
+                        "source": "1"
+                    }
+                }
+            }
+        }
+    }
+
 
 def create_title_query(title):
     parts = title.split(' ')

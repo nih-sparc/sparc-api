@@ -18,7 +18,8 @@ from PIL import Image
 from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
-    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query
+    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
+    create_multiple_doi_query
 from scripts.email_sender import EmailSender
 from threading import Lock
 from xml.etree import ElementTree
@@ -396,6 +397,17 @@ def get_dataset_info_doi():
     doi = request.args.get('doi')
     raw = request.args.get('raw_response')
     query = create_doi_query(doi)
+
+    if raw is None:
+        return reform_dataset_results(dataset_search(query))
+
+    return dataset_search(query)
+
+@app.route("/dataset_info/using_multile_dois")
+def get_dataset_info_dois():
+    dois = request.args.getlist('dois')
+    raw = request.args.get('raw_response')
+    query = create_multiple_doi_query(dois)
 
     if raw is None:
         return reform_dataset_results(dataset_search(query))

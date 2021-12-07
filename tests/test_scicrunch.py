@@ -52,6 +52,23 @@ def test_scicrunch_dataset_doi(client):
     else:
         pytest.skip('DOI used in test is out of date.')
 
+def test_scicrunch_multiple_dataset_doi(client):
+    # Testing with dataset 55
+    identifier = "55"
+    run_doi_test_1 = check_doi_status(client, identifier, '10.26275/pzek-91wx')
+    run_doi_test_2 = check_doi_status(client, "139", '10.26275/pzek-91wx')
+
+    if run_doi_test_1 and run_doi_test_2:
+        r = client.get('/dataset_info/using_multile_dois/?dois=10.26275%2Fngey-3iz7&dois=10.26275%2F63lh-hdz5')
+        dataset_version = json.loads(r.data)['hits']['hits'][0]['_source']['item']['version']['keyword']
+        if version.parse(dataset_version) >= version.parse("1.1.4"):
+            discover_id_1 = json.loads(r.data)['hits']['hits'][0]['_id']
+            discover_id_2 = json.loads(r.data)['hits']['hits'][1]['_id']
+            assert discover_id_1 == "55" or discover_id_1 == "139"
+            assert discover_id_2 == "55" or discover_id_2 == "139"
+    else:
+        pytest.skip('DOI used in test is out of date.')
+
 
 def test_scicrunch_search(client):
     r = client.get('/search/heart')

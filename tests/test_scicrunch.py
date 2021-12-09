@@ -59,7 +59,7 @@ def test_scicrunch_multiple_dataset_doi(client):
     run_doi_test_2 = check_doi_status(client, "139", '10.26275/pzek-91wx')
 
     if run_doi_test_1 and run_doi_test_2:
-        r = client.get('/dataset_info/using_multile_dois/?dois=10.26275%2Fngey-3iz7&dois=10.26275%2F63lh-hdz5')
+        r = client.get('/dataset_info/using_multiple_dois/?dois=10.26275%2Fngey-3iz7&dois=10.26275%2F63lh-hdz5')
         dataset_version = json.loads(r.data)['hits']['hits'][0]['_source']['item']['version']['keyword']
         if version.parse(dataset_version) >= version.parse("1.1.4"):
             discover_id_1 = json.loads(r.data)['hits']['hits'][0]['_id']

@@ -403,16 +403,13 @@ def get_dataset_info_doi():
 
     return dataset_search(query)
 
-@app.route("/dataset_info/using_multile_dois")
+@app.route("/dataset_info/using_multiple_dois")
+@app.route("/dataset_info/using_multiple_dois/")
 def get_dataset_info_dois():
     dois = request.args.getlist('dois')
-    raw = request.args.get('raw_response')
     query = create_multiple_doi_query(dois)
 
-    if raw is None:
-        return reform_dataset_results(dataset_search(query))
-
-    return dataset_search(query)
+    return process_results(dataset_search(query))
 
 
 @app.route("/dataset_info/using_title")

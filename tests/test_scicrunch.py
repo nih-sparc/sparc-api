@@ -115,6 +115,46 @@ def test_response_version(client):
     else:
         pytest.skip('DOI used in test is out of date.')
 
+def test_response_abi_plot(client):
+    # Testing abi-plot with dataset 141
+    identifier = "141"
+    doi = "10.26275/9qws-u3px"
+    run_doi_test = check_doi_status(client, identifier, doi)
+    if run_doi_test:
+        r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
+        data = r.data.decode('utf-8')
+        json_data = json.loads(data)
+        assert len(json_data['result']) == 1
+        if json_data['result'][0]['version'] == '1.1.4':
+            assert len(json_data['result'][0]['abi-plot']) == 5
+            identifier = json_data['result'][0]["dataset_identifier"]
+            version = json_data['result'][0]["dataset_version"]
+            assert identifier == "141"
+            assert version == "3"
+            #Construct the file path prefix, it should be /exists/141/3/files
+            path_prefix = '/'.join(('', 'exists', identifier, version, 'files'))
+            for plot in json_data['result'][0]['abi-plot']:
+                if plot['datacite']['isDescribedBy']['path'] != 'derivative//':
+                    path = '/'.join((path_prefix, plot['datacite']['isDescribedBy']['path']))
+                    #Check if the file exists using the /exists/{path} route
+                    r2 = client.get(path)
+                    data2 = r2.data.decode('utf-8')
+                    json_data2 = json.loads(data2)
+                    assert json_data2['exists'] == 'true'
+        else:
+            pytest.skip('Only test abi-plot against version 1.1.4.')
+    else:
+        pytest.skip('DOI used in test is out of date.')
+
+def test_response_sample_subject_size(client):
+    #Only filter search returns the sample and subjectSuze
+    r = client.get(('/filter-search/?facet=pig&term=species&facet=urinary+bladder&term=organ'))
+    data = r.data.decode('utf-8')
+    json_data = json.loads(data)
+    print(json_data)
+    assert len(json_data['results']) == 1
+    assert json_data['results'][0]['sampleSize'] == '509'
+    assert json_data['results'][0]['subjectSize'] == '8'
 
 source_structure = {
     'type': dict,

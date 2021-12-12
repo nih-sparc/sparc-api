@@ -143,12 +143,13 @@ from app.manifest_name_to_discover_name import name_map
 
 # attributes is used to map desired parameters onto the path of keys needed in the sci-crunch response.
 #  For example:
-#  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
-#  attributes > sample > subject
+#  sample-size: ['item', 'statistics', 'sample', 'count'] will find and enter dict keys in the following order:
+#  item > statistics > samples > count
 ATTRIBUTES_MAP = {
     'additionalLinks': ['xrefs', 'additionalLinks'],
     'scaffolds': ['scaffolds'],
-    'samples': ['attributes', 'sample', 'subject'],
+    'sampleSize': ['item', 'statistics', 'samples', 'count'],
+    'subjectSize': ['item', 'statistics', 'subjects', 'count'],
     'name': ['item', 'name'],
     'description': ['item','description'],
     'identifier': ['item', 'identifier'],

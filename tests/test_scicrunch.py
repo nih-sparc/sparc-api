@@ -149,7 +149,7 @@ def test_response_abi_plot(client):
         pytest.skip('DOI used in test is out of date.')
 
 def test_response_abi_scaffold(client):
-    # Testing abi-plot with dataset 76
+    # Testing abi-scaffold with dataset 76
     identifier = "76"
     doi = "10.26275/jarb-s8jw"
     run_doi_test = check_doi_status(client, identifier, doi)
@@ -163,7 +163,7 @@ def test_response_abi_scaffold(client):
             version = json_data['result'][0]["dataset_version"]
             assert identifier == "76"
             assert version == "4"
-            #Construct the file path prefix, it should be /exists/141/3/files
+            #Construct the file path prefix, it should be /exists/76/4/files
             path_prefix = '/'.join(('', 'exists', identifier, version, 'files'))
             assert len(json_data['result'][0]['abi-scaffold-metadata-file']) == 1
             for plot in json_data['result'][0]['abi-scaffold-metadata-file']:

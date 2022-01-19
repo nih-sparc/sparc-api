@@ -35,18 +35,11 @@ def create_multiple_doi_query(dois, size=10, from_=0):
         }
     }
 
-def create_multiple_discoverId_query(ids, size=10, from_=0):
+def create_multiple_discoverId_query(ids):
     return {
-        "size": size,
-        "from": from_,
         "query": {
-            "terms_set": {
-                "pennsieve.identifier": {
-                    "terms": ids,
-                    "minimum_should_match_script": {
-                        "source": "1"
-                    }
-                }
+            "terms": {
+                "pennsieve.identifier": ids
             }
         }
     }

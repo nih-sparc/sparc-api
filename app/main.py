@@ -416,10 +416,8 @@ def get_dataset_info_dois():
 @app.route("/dataset_info/using_multiple_discoverIds")
 @app.route("/dataset_info/using_multiple_discoverIds/")
 def get_dataset_info_discoverIds():
-    _size = request.args.get('size')
-    _from = request.args.get('from')
     discoverIds = request.args.getlist('discoverIds')
-    query = create_multiple_discoverId_query(discoverIds, _size, _from)
+    query = create_multiple_discoverId_query(discoverIds)
 
     return process_results(dataset_search(query))
 

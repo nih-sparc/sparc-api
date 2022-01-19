@@ -310,7 +310,7 @@ def create_request_body_for_curies(species):
                 "terms": {
                     "script": {
                         "lang": "painless",
-                        "source": "params['_source']['anatomy']['organ']"
+                        "inline": "def a=null;if(params['_source']['anatomy'] != null ) { if(params['_source']['anatomy']['organ'] != null ) { a = params['_source']['anatomy']['organ'];}} return a;"
                     },
                     "size": 200
                 }

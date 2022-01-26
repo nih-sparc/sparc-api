@@ -37,6 +37,7 @@ def create_multiple_doi_query(dois, size=10, from_=0):
 
 def create_multiple_discoverId_query(ids):
     return {
+        "size": 999,
         "query": {
             "terms": {
                 "pennsieve.identifier": ids

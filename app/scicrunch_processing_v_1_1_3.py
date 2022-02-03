@@ -199,7 +199,8 @@ def sort_files_by_mime_type(obj_list):
         mime_type = obj.get('additional_mimetype', NOT_SPECIFIED)
         if mime_type != NOT_SPECIFIED:
             mime_type = mime_type.get('name')
-        else:
+
+        if not mime_type:
             mime_type = obj['mimetype'].get('name', NOT_SPECIFIED)
 
         mapped_mime_type = _mapped_mime_type(mime_type, obj)

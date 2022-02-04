@@ -21,16 +21,10 @@ def create_doi_query(doi):
 
 def create_multiple_doi_query(dois, size=10, from_=0):
     return {
-        "size": size,
-        "from": from_,
+        "size": 999,
         "query": {
-            "terms_set": {
-                "item.curie": {
-                    "terms": dois,
-                    "minimum_should_match_script": {
-                        "source": "1"
-                    }
-                }
+            "terms": {
+                "item.curie": dois
             }
         }
     }

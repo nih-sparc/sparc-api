@@ -406,10 +406,8 @@ def get_dataset_info_doi():
 @app.route("/dataset_info/using_multiple_dois")
 @app.route("/dataset_info/using_multiple_dois/")
 def get_dataset_info_dois():
-    _size = request.args.get('size')
-    _from = request.args.get('from')
     dois = request.args.getlist('dois')
-    query = create_multiple_doi_query(dois, _size, _from)
+    query = create_multiple_doi_query(dois)
 
     return process_results(dataset_search(query))
 

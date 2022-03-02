@@ -26,6 +26,7 @@ PASS_THROUGH_KEYS = [BIOLUCIDA_2D, BIOLUCIDA_3D, COMMON_IMAGES, CSV, NAME, ORGAN
 
 MAPPED_MIME_TYPES = {
     'text/csv': CSV,
+    'application/x.vnd.abi.simulation+json': SIMULATION_FILE,
     'application/vnd.mbfbioscience.metadata+xml': SEGMENTATION_FILES,
     'application/vnd.mbfbioscience.neurolucida+xml': SEGMENTATION_FILES,
     'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
@@ -33,7 +34,6 @@ MAPPED_MIME_TYPES = {
     'inode/vnd.abi.scaffold+thumbnail': SCAFFOLD_THUMBNAIL,
     'inode/vnd.abi.scaffold.thumbnail+file': SCAFFOLD_THUMBNAIL,
     'inode/vnd.abi.scaffold.view+file': SCAFFOLD_VIEW_FILE,
-    'inode/vnd.abi.simulation+file': SIMULATION_FILE,
     'text/vnd.abi.plot+Tab-separated-values': PLOT_FILE,
     'text/vnd.abi.plot+csv': PLOT_FILE,
     'image/png': COMMON_IMAGES,

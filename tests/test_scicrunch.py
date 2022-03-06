@@ -101,6 +101,23 @@ def test_getting_facets(client):
     assert 'heart' in facets
 
 
+def test_create_identifier_query(client):
+    r = client.get('/dataset_info/using_object_identifier?identifier=package:e6435710-dd9c-46b7-9dfd-932103469733')
+
+    json_data = json.loads(r.data)
+    assert 'result' in json_data
+
+    results = json_data['result']
+    assert len(results) == 1
+
+    result = results[0]
+    assert 'version' in result
+    assert result['version'] == '1.1.3'
+
+    assert 'title' in result
+    assert result['title'] == 'Morphometric analysis of the abdominal vagus nerve in rats'
+
+
 def test_response_version(client):
     # Testing with dataset 44
     identifier = "44"
@@ -114,6 +131,7 @@ def test_response_version(client):
         assert 'version' in json_data['result'][0]
     else:
         pytest.skip('DOI used in test is out of date.')
+
 
 def test_response_abi_plot(client):
     # Testing abi-plot with dataset 141
@@ -146,6 +164,7 @@ def test_response_abi_plot(client):
     else:
         pytest.skip('DOI used in test is out of date.')
 
+
 def test_response_sample_subject_size(client):
     #Only filter search returns the sample and subjectSuze
     r = client.get(('/filter-search/?facet=pig&term=species&facet=urinary+bladder&term=organ'))
@@ -155,6 +174,7 @@ def test_response_sample_subject_size(client):
     assert len(json_data['results']) == 1
     assert json_data['results'][0]['sampleSize'] == '509'
     assert json_data['results'][0]['subjectSize'] == '8'
+
 
 source_structure = {
     'type': dict,

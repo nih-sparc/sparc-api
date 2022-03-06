@@ -3,7 +3,6 @@ import base64
 import boto3
 import json
 import logging
-import re
 import requests
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -29,6 +28,7 @@ from app.scicrunch_process_results import reform_dataset_results, process_result
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc import run_simulation
+from app.biolucida_process_results import process_results as process_biolucida_results
 
 app = Flask(__name__)
 # set environment variable
@@ -478,11 +478,8 @@ def dataset_search(query):
         params = {
             "api_key": Config.KNOWLEDGEBASE_KEY
         }
-        # start = timer()
         response = requests.post(f'{Config.SCI_CRUNCH_HOST}/_search',
                                  json=payload, params=params)
-        # end = timer()
-        # print("elapsed request time:", end - start)
 
         return response.json()
     except requests.exceptions.HTTPError as err:
@@ -738,52 +735,7 @@ def image_xmp_info(image_id):
 
     response = result.json()
     if response['status'] == 'success':
-        xml = ElementTree.fromstring(response['data'])
-        ns = {'xmp': 'http://ns.adobe.com/xap/1.0/', 'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'}
-
-        xmp_info = {}
-        pixel_width_element = xml.find('.//rdf:li[@xmp:PixelWidth]', ns)
-        if pixel_width_element is not None:
-            xmp_info['pixel_width'] = pixel_width_element.attrib[f'{{{ns["xmp"]}}}PixelWidth']
-        pixel_height_element = xml.find('.//rdf:li[@xmp:PixelHeight]', ns)
-        if pixel_height_element is not None:
-            xmp_info['pixel_height'] = pixel_height_element.attrib[f'{{{ns["xmp"]}}}PixelHeight']
-        z_spacing_element = xml.find('.//rdf:li[@xmp:SpacingZ]', ns)
-        if z_spacing_element is not None:
-            xmp_info['z_spacing'] = z_spacing_element.attrib[f'{{{ns["xmp"]}}}SpacingZ']
-
-        element = xml.find('.//rdf:li[@xmp:Description]', ns)
-        if element is not None:
-            image_description = element.attrib[f'{{{ns["xmp"]}}}Description']
-            image_description_mbf_map = image_description[image_description.find('<mbf_map>') + len('<mbf_map>'):]
-            mbf_map = image_description_mbf_map[:image_description_mbf_map.find('</mbf_map>')]
-
-            # Get the modality, expect it to be the same for all channels.
-            matched = re.findall(r'Channel:0:[0-9]+:AcquisitionMode\?([^?]+)\?', mbf_map)
-            matched = list(set(matched))
-            if len(matched) == 1:
-                xmp_info['modality'] = matched[0]
-            else:
-                xmp_info['modality'] = 'RGB'
-
-            # Get the channel colours and names.
-            matched_colour = re.findall(r'Channel:0:([0-9]+):Color\?([^?]+)\?', mbf_map)
-            matched_name = re.findall(r'Channel:0:([0-9]+):Name\?([^?]+)\?', mbf_map)
-            if len(matched_colour) == len(matched_name):
-                xmp_info['channel_colours'] = [{}] * len(matched_colour)
-                for name in matched_name:
-                    index = int(name[0])
-                    colour_list = [colour[1] for colour in matched_colour if colour[0] == name[0]]
-                    colour = int(colour_list[0])
-                    name = name[1]
-                    xmp_info['channel_colours'][index] = {'colour': '#{0:06X}'.format((colour >> 8) & 0xffffff), 'label': name}
-
-            # Determine if image is 3D or 2D.
-            matched = re.findall(r'SizeZ\?([^?]+)\?', mbf_map)
-            if len(matched) == 1:
-                xmp_info['three_d'] = int(matched[0]) > 1
-
-        return xmp_info
+        return process_biolucida_results(response['data'])
 
     return abort(400, description=f"XMP info not found for {image_id}")
 

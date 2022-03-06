@@ -27,7 +27,7 @@ def _prepare_results(results):
             attr['readme'] = ''
 
         try:
-            attr['title'] = hit['_source']['item']['names'][0]['name']
+            attr['title'] = hit['_source']['item']['name']
         except KeyError:
             attr['title'] = ''
 

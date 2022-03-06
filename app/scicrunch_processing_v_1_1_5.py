@@ -1,149 +1,16 @@
 import logging
 
 from app import Config
-from app.scicrunch_processing_common import COMMON_IMAGES, NOT_SPECIFIED, SKIP, PASS_THROUGH_KEYS, SKIPPED_MIME_TYPES, MAPPED_MIME_TYPES
+from app.scicrunch_processing_common import COMMON_IMAGES, NOT_SPECIFIED, SKIP, SKIPPED_MIME_TYPES, MAPPED_MIME_TYPES
+from app.scicrunch_processing_common import PASS_THROUGH_KEYS as BASE_PASS_THROUGH_KEYS
 from app.manifest_name_to_discover_name import name_map
 
-# Hit layout:
-# _source
-#   item
-#     version
-#       keyword
-#     types
-#     [
-#       curie
-#       name
-#       type
-#     ]
-#     contentTypes
-#     [
-#       curie
-#       name
-#     ]
-#     names
-#     [
-#       nameType
-#       name
-#     ]
-#     statistics
-#       files
-#         count
-#       directory
-#         count
-#       bytes
-#         count
-#     keywords
-#     [
-#       keyword
-#     ]
-#     published
-#       status
-#       boolean
-#     description
-#     name
-#     techniques
-#     [
-#       keyword
-#     ]
-#     readme
-#       description
-#     identifier
-#     docid
-#     curie
-#     modalities
-#     [
-#       keyword
-#     ]
-#   supportingAwards
-#   [
-#     identifier
-#     agency
-#       name
-#   ]
-#   objects
-#   [
-#     identifier
-#     bytes
-#       count
-#     name
-#     mimetype
-#       name
-#     updated
-#       timestamp
-#     dataset
-#       identifier
-#       path
-#     distributions
-#       current
-#       [
-#         uri
-#       ]
-#       api
-#       [
-#         uri
-#       ]
-#   ]
-#   contributors
-#   [
-#     name
-#   ]
-#   dates
-#     created
-#       timestamp
-#     updated
-#     [
-#       timestamp
-#     ]
-#   protocols
-#     primary
-#     [
-#       curie
-#       name
-#       uri
-#     ]
-#   anatomy
-#     organ
-#     [
-#       curie
-#       name
-#       matchingStatus
-#     ]
-#   distributions
-#     current
-#     [
-#       uri
-#     ]
-#     api
-#     [
-#       uri
-#     ]
-#   publication
-#     originating
-#     [
-#       curie
-#       uri
-#     ]
-#   dataItem
-#     dataTypes
-#     [
-#     ]
-#   provenance
-#     ingestMethod
-#     ingestTarget
-#     filePattern
-#     ingestTime
-#     creationDate
-#     [
-#     ]
-#     docId
-#     primaryKey
-#   organization
-#     hierarchy
+PASS_THROUGH_KEYS = ["doi", "dataset_identifier", "dataset_version", "dataset_revision", *BASE_PASS_THROUGH_KEYS]
 
 
 # attributes is used to map desired parameters onto the path of keys needed in the sci-crunch response.
 #  For example:
-#  sample-size: ['item', 'statistics', 'sample', 'count'] will find and enter dict keys in the following order:
+#  sampleSiz: ['item', 'statistics', 'sample', 'count'] will find and enter dict keys in the following order:
 #  item > statistics > samples > count
 ATTRIBUTES_MAP = {
     'additionalLinks': ['xrefs', 'additionalLinks'],
@@ -151,7 +18,7 @@ ATTRIBUTES_MAP = {
     'sampleSize': ['item', 'statistics', 'samples', 'count'],
     'subjectSize': ['item', 'statistics', 'subjects', 'count'],
     'name': ['item', 'name'],
-    'description': ['item','description'],
+    'description': ['item', 'description'],
     'identifier': ['item', 'identifier'],
     'uri': ['distributions', 'current', 'uri'],
     'updated': ['dates', 'updated'],
@@ -162,12 +29,14 @@ ATTRIBUTES_MAP = {
     'files': ['objects'],
     'version': ['item', 'version', 'keyword'],
     's3uri': ['pennsieve', 'uri'],
-    'publishDate': ['pennsieve', 'firstPublishedAt', 'timestamp']
+    'publishDate': ['pennsieve', 'firstPublishedAt', 'timestamp'],
+    'dataset_identifier': ['pennsieve', 'identifier'],
+    'dataset_version': ['pennsieve', 'version', 'identifier'],
+    'dataset_revision': ['pennsieve', 'revision', 'identifier'],
 }
 
 
 def _mapped_mime_type(mime_type, obj):
-
     if mime_type == '':
         return SKIP
 

@@ -19,6 +19,26 @@ def create_doi_query(doi):
         }
     }
 
+def create_multiple_doi_query(dois, size=10, from_=0):
+    return {
+        "size": 999,
+        "query": {
+            "terms": {
+                "item.curie": dois
+            }
+        }
+    }
+
+def create_multiple_discoverId_query(ids):
+    return {
+        "size": 999,
+        "query": {
+            "terms": {
+                "pennsieve.identifier": ids
+            }
+        }
+    }
+
 
 def create_title_query(title):
     parts = title.split(' ')
@@ -203,9 +223,18 @@ def create_filter_request(query, terms, facets, size, start):
 def get_facet_type_map():
     return {
         'species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate', 'organisms.scaffold.species.name.aggregate'],
+        'Species': ['organisms.primary.species.name.aggregate', 'organisms.sample.species.name.aggregate',
+                    'organisms.scaffold.species.name.aggregate'],
         'gender': ['attributes.subject.sex.value'],
+        'Gender': ['attributes.subject.sex.value'],
+        'sex': ['attributes.subject.sex.value'],
+        'Sex': ['attributes.subject.sex.value'],
         'genotype': ['anatomy.organ.name.aggregate'],
-        'organ': ['anatomy.organ.name.aggregate']
+        'Anatomical structure': ['anatomy.organ.name.aggregate'],
+        'organ': ['anatomy.organ.name.aggregate'],
+        'Organ': ['anatomy.organ.name.aggregate'],
+        'Experimental approach': ['item.modalities.keyword'],
+        'Age categories': ['attributes.subject.ageCategory.value']
     }
 
 
@@ -276,7 +305,7 @@ def create_request_body_for_curies(species):
                 "terms": {
                     "script": {
                         "lang": "painless",
-                        "source": "params['_source']['anatomy']['organ']"
+                        "inline": "def a=null;if(params['_source']['anatomy'] != null ) { if(params['_source']['anatomy']['organ'] != null ) { a = params['_source']['anatomy']['organ'];}} return a;"
                     },
                     "size": 200
                 }

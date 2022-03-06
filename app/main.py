@@ -17,7 +17,8 @@ from PIL import Image
 from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
-    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query
+    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
+    create_multiple_doi_query, create_multiple_discoverId_query
 from scripts.email_sender import EmailSender
 from threading import Lock
 from xml.etree import ElementTree
@@ -401,6 +402,22 @@ def get_dataset_info_doi():
         return reform_dataset_results(dataset_search(query))
 
     return dataset_search(query)
+
+@app.route("/dataset_info/using_multiple_dois")
+@app.route("/dataset_info/using_multiple_dois/")
+def get_dataset_info_dois():
+    dois = request.args.getlist('dois')
+    query = create_multiple_doi_query(dois)
+
+    return process_results(dataset_search(query))
+
+@app.route("/dataset_info/using_multiple_discoverIds")
+@app.route("/dataset_info/using_multiple_discoverIds/")
+def get_dataset_info_discoverIds():
+    discoverIds = request.args.getlist('discoverIds')
+    query = create_multiple_discoverId_query(discoverIds)
+
+    return process_results(dataset_search(query))
 
 
 @app.route("/dataset_info/using_title")

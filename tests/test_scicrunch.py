@@ -52,6 +52,33 @@ def test_scicrunch_dataset_doi(client):
     else:
         pytest.skip('DOI used in test is out of date.')
 
+def test_scicrunch_multiple_dataset_doi(client):
+    # Testing with dataset 55 and 68
+    run_doi_test_1 = check_doi_status(client, "55", '10.26275/pzek-91wx')
+    run_doi_test_2 = check_doi_status(client, "68", '10.26275/4qvr-kwzq')
+
+    if run_doi_test_1 and run_doi_test_2:
+        r = client.get('/dataset_info/using_multiple_dois/?dois=10.26275%2Fpzek-91wx&dois=10.26275%2F4qvr-kwzq')
+        results = json.loads(r.data)['results']
+        dataset_version = results[0]['version']
+        if version.parse(dataset_version) >= version.parse("1.1.4"):
+            discover_id_1 = results[0]['dataset_identifier']
+            discover_id_2 = results[1]['dataset_identifier']
+            assert discover_id_1 == "55" or discover_id_1 == "68"
+            assert discover_id_2 == "55" or discover_id_2 == "68"
+    else:
+        pytest.skip('DOI used in test is out of date.')
+
+def test_scicrunch_multiple_dataset_ids(client):
+    # Testing with dataset 55 and 68
+    r = client.get('/dataset_info/using_multiple_discoverIds/?discoverIds=55&discoverIds=68')
+    results = json.loads(r.data)['results']
+    dataset_version = results[0]['version']
+    if version.parse(dataset_version) >= version.parse("1.1.4"):
+        discover_id_1 = results[0]['dataset_identifier']
+        discover_id_2 = results[1]['dataset_identifier']
+        assert discover_id_1 == "55" or discover_id_1 == "68"
+        assert discover_id_2 == "55" or discover_id_2 == "68"
 
 def test_scicrunch_search(client):
     r = client.get('/search/heart')
@@ -143,31 +170,91 @@ def test_response_abi_plot(client):
         data = r.data.decode('utf-8')
         json_data = json.loads(data)
         assert len(json_data['result']) == 1
-        if json_data['result'][0]['version'] == '1.1.4':
+        if json_data['result'][0]['version'] == '1.1.5':
             assert len(json_data['result'][0]['abi-plot']) == 5
             identifier = json_data['result'][0]["dataset_identifier"]
             version = json_data['result'][0]["dataset_version"]
             assert identifier == "141"
             assert version == "3"
-            #Construct the file path prefix, it should be /exists/141/3/files
+            # Construct the file path prefix, it should be /exists/141/3/files
             path_prefix = '/'.join(('', 'exists', identifier, version, 'files'))
             for plot in json_data['result'][0]['abi-plot']:
-                if plot['datacite']['isDescribedBy']['path'] != 'derivative//':
-                    path = '/'.join((path_prefix, plot['datacite']['isDescribedBy']['path']))
-                    #Check if the file exists using the /exists/{path} route
-                    r2 = client.get(path)
-                    data2 = r2.data.decode('utf-8')
-                    json_data2 = json.loads(data2)
-                    assert json_data2['exists'] == 'true'
+                for path in  plot['datacite']['isDescribedBy']['path']:
+                    if path:
+                        path = '/'.join((path_prefix, path))
+                        # Check if the file exists using the /exists/{path} route
+                        r2 = client.get(path)
+                        data2 = r2.data.decode('utf-8')
+                        json_data2 = json.loads(data2)
+                        print(path)
+                        assert json_data2['exists'] == 'true'
         else:
-            pytest.skip('Only test abi-plot against version 1.1.4.')
+            pytest.skip('Only test abi-plot against version 1.1.5.')
     else:
         pytest.skip('DOI used in test is out of date.')
 
 
+def test_response_abi_scaffold(client):
+    # Testing abi-scaffold with dataset 76
+    identifier = "76"
+    doi = "10.26275/jarb-s8jw"
+    run_doi_test = check_doi_status(client, identifier, doi)
+    if run_doi_test:
+        r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
+        data = r.data.decode('utf-8')
+        json_data = json.loads(data)
+        if len(json_data['result']) == 1:
+            if json_data['result'][0]['version'] == '1.1.5':
+                identifier = json_data['result'][0]["dataset_identifier"]
+                dataset_version = json_data['result'][0]["dataset_version"]
+                assert identifier == "76"
+                assert dataset_version == "4"
+                # Construct the file path prefix, it should be /exists/76/4/files
+                path_prefix = '/'.join(('', 'exists', identifier, dataset_version, 'files'))
+                assert len(json_data['result'][0]['abi-scaffold-metadata-file']) == 1
+                for plot in json_data['result'][0]['abi-scaffold-metadata-file']:
+                    for path in plot['datacite']['isSourceOf']['path']:
+                        if path:
+                            path = '/'.join((path_prefix, path))
+                            # Check if the file exists using the /exists/{path} route
+                            r2 = client.get(path)
+                            data2 = r2.data.decode('utf-8')
+                            json_data2 = json.loads(data2)
+                            print(path)
+                            assert json_data2['exists'] == 'true'
+
+                assert len(json_data['result'][0]['abi-scaffold-view-file']) == 4
+                for plot in json_data['result'][0]['abi-scaffold-view-file']:
+                    for path in plot['datacite']['isSourceOf']['path']:
+                        if path:
+                            path = '/'.join((path_prefix, path))
+                            # Check if the file exists using the /exists/{path} route
+                            r2 = client.get(path)
+                            data2 = r2.data.decode('utf-8')
+                            json_data2 = json.loads(data2)
+                            print(path)
+                            assert json_data2['exists'] == 'true'
+
+                assert len(json_data['result'][0]['abi-scaffold-thumbnail']) == 4         
+                for plot in json_data['result'][0]['abi-scaffold-thumbnail']:
+                    for path in plot['datacite']['isDerivedFrom']['path']:
+                        if path:
+                            path = '/'.join((path_prefix, path))
+                            # Check if the file exists using the /exists/{path} route
+                            r2 = client.get(path)
+                            data2 = r2.data.decode('utf-8')
+                            json_data2 = json.loads(data2)
+                            print(path)
+                            assert json_data2['exists'] == 'true'
+            else:
+                pytest.skip('Only test abi-plot against version 1.1.5.')
+        else:
+            pytest.skip('DOI used in test is out of date.')
+
+
 def test_response_sample_subject_size(client):
-    #Only filter search returns the sample and subjectSuze
-    r = client.get(('/filter-search/?facet=pig&term=species&facet=urinary+bladder&term=organ'))
+    # Only filter search returns the sample and subjectSuze
+    r = client.get('/filter-search/?facet=pig&term=species&facet=urinary+bladder&term=organ')
     data = r.data.decode('utf-8')
     json_data = json.loads(data)
     print(json_data)

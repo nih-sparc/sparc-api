@@ -128,6 +128,23 @@ def test_getting_facets(client):
     assert 'heart' in facets
 
 
+def test_create_identifier_query(client):
+    r = client.get('/dataset_info/using_object_identifier?identifier=package:e6435710-dd9c-46b7-9dfd-932103469733')
+
+    json_data = json.loads(r.data)
+    assert 'result' in json_data
+
+    results = json_data['result']
+    assert len(results) == 1
+
+    result = results[0]
+    assert 'version' in result
+    assert result['version'] == '1.1.3'
+
+    assert 'title' in result
+    assert result['title'] == 'Morphometric analysis of the abdominal vagus nerve in rats'
+
+
 def test_response_version(client):
     # Testing with dataset 44
     identifier = "44"
@@ -141,6 +158,7 @@ def test_response_version(client):
         assert 'version' in json_data['result'][0]
     else:
         pytest.skip('DOI used in test is out of date.')
+
 
 def test_response_abi_plot(client):
     # Testing abi-plot with dataset 141
@@ -158,13 +176,13 @@ def test_response_abi_plot(client):
             version = json_data['result'][0]["dataset_version"]
             assert identifier == "141"
             assert version == "3"
-            #Construct the file path prefix, it should be /exists/141/3/files
+            # Construct the file path prefix, it should be /exists/141/3/files
             path_prefix = '/'.join(('', 'exists', identifier, version, 'files'))
             for plot in json_data['result'][0]['abi-plot']:
                 for path in  plot['datacite']['isDescribedBy']['path']:
                     if path:
                         path = '/'.join((path_prefix, path))
-                        #Check if the file exists using the /exists/{path} route
+                        # Check if the file exists using the /exists/{path} route
                         r2 = client.get(path)
                         data2 = r2.data.decode('utf-8')
                         json_data2 = json.loads(data2)
@@ -174,6 +192,7 @@ def test_response_abi_plot(client):
             pytest.skip('Only test abi-plot against version 1.1.5.')
     else:
         pytest.skip('DOI used in test is out of date.')
+
 
 def test_response_abi_scaffold(client):
     # Testing abi-scaffold with dataset 76
@@ -187,17 +206,17 @@ def test_response_abi_scaffold(client):
         if len(json_data['result']) == 1:
             if json_data['result'][0]['version'] == '1.1.5':
                 identifier = json_data['result'][0]["dataset_identifier"]
-                version = json_data['result'][0]["dataset_version"]
+                dataset_version = json_data['result'][0]["dataset_version"]
                 assert identifier == "76"
-                assert version == "4"
-                #Construct the file path prefix, it should be /exists/76/4/files
-                path_prefix = '/'.join(('', 'exists', identifier, version, 'files'))
+                assert dataset_version == "4"
+                # Construct the file path prefix, it should be /exists/76/4/files
+                path_prefix = '/'.join(('', 'exists', identifier, dataset_version, 'files'))
                 assert len(json_data['result'][0]['abi-scaffold-metadata-file']) == 1
                 for plot in json_data['result'][0]['abi-scaffold-metadata-file']:
-                    for path in  plot['datacite']['isSourceOf']['path']:
+                    for path in plot['datacite']['isSourceOf']['path']:
                         if path:
                             path = '/'.join((path_prefix, path))
-                            #Check if the file exists using the /exists/{path} route
+                            # Check if the file exists using the /exists/{path} route
                             r2 = client.get(path)
                             data2 = r2.data.decode('utf-8')
                             json_data2 = json.loads(data2)
@@ -206,10 +225,10 @@ def test_response_abi_scaffold(client):
 
                 assert len(json_data['result'][0]['abi-scaffold-view-file']) == 4
                 for plot in json_data['result'][0]['abi-scaffold-view-file']:
-                    for path in  plot['datacite']['isSourceOf']['path']:
+                    for path in plot['datacite']['isSourceOf']['path']:
                         if path:
                             path = '/'.join((path_prefix, path))
-                            #Check if the file exists using the /exists/{path} route
+                            # Check if the file exists using the /exists/{path} route
                             r2 = client.get(path)
                             data2 = r2.data.decode('utf-8')
                             json_data2 = json.loads(data2)
@@ -218,10 +237,10 @@ def test_response_abi_scaffold(client):
 
                 assert len(json_data['result'][0]['abi-scaffold-thumbnail']) == 4         
                 for plot in json_data['result'][0]['abi-scaffold-thumbnail']:
-                    for path in  plot['datacite']['isDerivedFrom']['path']:
+                    for path in plot['datacite']['isDerivedFrom']['path']:
                         if path:
                             path = '/'.join((path_prefix, path))
-                            #Check if the file exists using the /exists/{path} route
+                            # Check if the file exists using the /exists/{path} route
                             r2 = client.get(path)
                             data2 = r2.data.decode('utf-8')
                             json_data2 = json.loads(data2)
@@ -232,15 +251,17 @@ def test_response_abi_scaffold(client):
         else:
             pytest.skip('DOI used in test is out of date.')
 
+
 def test_response_sample_subject_size(client):
-    #Only filter search returns the sample and subjectSuze
-    r = client.get(('/filter-search/?facet=pig&term=species&facet=urinary+bladder&term=organ'))
+    # Only filter search returns the sample and subjectSuze
+    r = client.get('/filter-search/?facet=pig&term=species&facet=urinary+bladder&term=organ')
     data = r.data.decode('utf-8')
     json_data = json.loads(data)
     print(json_data)
     assert len(json_data['results']) == 1
     assert json_data['results'][0]['sampleSize'] == '509'
     assert json_data['results'][0]['subjectSize'] == '8'
+
 
 source_structure = {
     'type': dict,

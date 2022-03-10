@@ -43,10 +43,23 @@ class BiolucidaTestCase(unittest.TestCase):
         self.assertTrue(thumbnail.startswith(b'/9j/4AAQSkZJRgABAQAAAQ'))
 
 
-def test_image_xmp_info(client):
+def test_image_xmp_info_2727(client):
     r = client.get('/image_xmp_info/2727')
+
     assert 'pixel_width' in r.json
+    assert 'channel_colours' in r.json
     assert r.json['pixel_width'] == "0.415133"
+    assert r.json['pixel_height'] == "0.415133"
+    assert r.json['z_spacing'] == "1.000000"
+
+
+def test_image_xmp_info_1197(client):
+    r = client.get('/image_xmp_info/1197')
+
+    assert 'pixel_width' in r.json
+    assert r.json['pixel_width'] == "0.008184"
+    assert r.json['pixel_height'] == "0.008184"
+    assert r.json['z_spacing'] == "-1.000000"
 
 
 if __name__ == '__main__':

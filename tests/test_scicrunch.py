@@ -424,3 +424,11 @@ def test_scaffold_files(client):
             key = f"{uri}files/{path}".replace('s3://pennsieve-prod-discover-publish-use1/', '')
             r = client.get(f"/s3-resource/{key}")
             assert r.status_code == 200
+
+def test_contextual_information(client):
+    r = client.get('/dataset_info/using_multiple_discoverIds/?discoverIds=76')
+    results = json.loads(r.data)
+    assert results['numberOfHits'] > 0
+    for item in results['results']:
+        if 'abi-contextual-information' in item:
+            assert r.status_code == 200

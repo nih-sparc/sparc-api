@@ -1,7 +1,7 @@
 import importlib
 import json
 import re
-
+from flask import jsonify
 
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
 def _prepare_results(results):
@@ -21,6 +21,12 @@ def _prepare_results(results):
         attr = _transform_attributes(attributes_map, hit)
         attr['doi'] = _convert_doi_to_url(attr['doi'])
         attr['took'] = results['took']
+        # find context files by looking through object mimetypes
+        attr['abi-contextual-information'] = [
+            file['dataset']['path']
+            for file in hit['_source']['objects']
+            if file['additional_mimetype']['name'].find('context') is not -1
+        ]
         try:
             attr['readme'] = hit['_source']['item']['readme']['description']
         except KeyError:
@@ -38,7 +44,7 @@ def _prepare_results(results):
 
 
 def process_results(results):
-    return json.dumps({'numberOfHits': results['hits']['total'], 'results': _prepare_results(results)})
+    return jsonify({'numberOfHits': results['hits']['total'], 'results': _prepare_results(results)})
 
 
 def reform_dataset_results(results):

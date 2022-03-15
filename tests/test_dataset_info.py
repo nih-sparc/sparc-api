@@ -4,7 +4,7 @@ from app import app
 
 from timeit import default_timer as timer
 
-from app.scicrunch_processing_common import SCAFFOLD_FILE, PLOT_FILE, COMMON_IMAGES, SCAFFOLD_THUMBNAIL, NAME, BIOLUCIDA_3D, VIDEO, SEGMENTATION_FILES, BIOLUCIDA_2D
+from app.scicrunch_processing_common import SCAFFOLD_FILE, PLOT_FILE, COMMON_IMAGES, THUMBNAIL_IMAGE, NAME, BIOLUCIDA_3D, VIDEO, SEGMENTATION_FILES, BIOLUCIDA_2D
 from known_dois import current_list, warn_doi_changes
 
 
@@ -68,9 +68,9 @@ def print_search_result(result):
     if PLOT_FILE in keys:
         found = True
         messages.append(f" - Found plot: {len(result[PLOT_FILE])}")
-    if SCAFFOLD_THUMBNAIL in keys:
+    if THUMBNAIL_IMAGE in keys:
         found = True
-        messages.append(f" - Found scaffold thumbnail: {len(result[SCAFFOLD_THUMBNAIL])}")
+        messages.append(f" - Found scaffold thumbnail: {len(result[THUMBNAIL_IMAGE])}")
     if VIDEO in keys:
         found = True
         messages.append(f" - Found video: {len(result[VIDEO])}")
@@ -140,7 +140,7 @@ def test_generic_mouse_colon_dataset_search(client):
     print_search_result(result)
 
     assert SCAFFOLD_FILE in result.keys()
-    assert SCAFFOLD_THUMBNAIL in result.keys()
+    assert THUMBNAIL_IMAGE in result.keys()
 
 
 def test_complex_title_dataset_search(client):

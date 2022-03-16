@@ -1,6 +1,10 @@
-import boto3
+import logging
+from string import Template
 
+import boto3
+import sendgrid
 from app.config import Config
+from sendgrid.helpers.mail import Content, Email, Mail, To
 
 subject = "Message from SPARC Portal"
 
@@ -10,6 +14,16 @@ ses_client = boto3.client(
     aws_secret_access_key=Config.SPARC_PORTAL_AWS_SECRET,
     region_name=Config.AWS_REGION,
 )
+
+sg_client = sendgrid.SendGridAPIClient(api_key=Config.SENDGRID_API_KEY)
+
+feedback_email = Template('''\
+<b>Thank you for your feedback</b><br>
+<br>
+Your message:<br>
+<br>
+$message
+''')
 
 
 class EmailSender(object):
@@ -30,3 +44,14 @@ class EmailSender(object):
             },
             SourceArn=self.ses_arn,
         )
+
+    def sendgrid_email(self, fromm, to, subject, body):
+        mail = Mail(
+            Email(fromm),
+            To(to),
+            subject,
+            Content("text/html", body)
+        )
+        response = sg_client.send(mail)
+        logging.info(f"Sending a '{subject}' mail using SendGrid")
+        logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")

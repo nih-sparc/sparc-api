@@ -25,7 +25,7 @@ def _prepare_results(results):
         attr['abi-contextual-information'] = [
             file['dataset']['path']
             for file in hit['_source']['objects']
-            if file['additional_mimetype']['name'].find('context') is not -1
+            if file['additional_mimetype']['name'].find('abi.context-information') is not -1
         ]
         try:
             attr['readme'] = hit['_source']['item']['readme']['description']

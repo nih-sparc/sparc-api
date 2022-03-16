@@ -19,7 +19,7 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender
+from scripts.email_sender import EmailSender, feedback_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -160,6 +160,7 @@ def contact():
     message = contact_request["message"]
 
     email_sender.send_email(name, email, message)
+    email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({ 'message': message }))
 
     return json.dumps({"status": "sent"})
 

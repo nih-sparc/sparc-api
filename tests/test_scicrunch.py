@@ -273,7 +273,7 @@ source_structure = {
                                       'description',
                                       'name', 'readme', 'identifier', 'docid', 'curie'],
                          'optional': ['techniques', 'modalities']
-                     }}, 'organization', 'provenance', 'supportingAwards'],
+                     }}, 'pennsieve', 'provenance', 'supportingAwards'],
     'optional': ['anatomy', 'attributes', 'diseases',
                  {'objects':
                      {

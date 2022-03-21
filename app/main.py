@@ -923,6 +923,22 @@ def get_available_uberonids(query):
     return jsonify(result)
 
 
+@app.route("/simulation_ui_file/<identifier>")
+def simulation_ui_file(identifier):
+    results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
+    results_json = json.loads(results)
+
+    try:
+        item = results_json["results"][0]
+        uri = item["s3uri"]
+        path = item["abi-simulation-file"][0]["dataset"]["path"]
+        key = f"{uri}files/{path}".replace(f"s3://{Config.S3_BUCKET_NAME}/", "")
+
+        return json.loads(direct_download_url(key))
+    except Exception:
+        abort(404, description="no simulation UI file could be found")
+
+
 @app.route("/simulation", methods=["POST"])
 def simulation():
     data = request.get_json()

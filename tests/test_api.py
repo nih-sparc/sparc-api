@@ -1,6 +1,7 @@
 import pytest
 from app import app
 from app.config import Config
+import json
 import requests
 import random
 import string
@@ -175,3 +176,14 @@ def test_onto_term_lookup(client):
     assert r.status_code == 200
     json_data = r.get_json()
     assert json_data['label'] == 'Human'
+
+
+def test_non_existing_simualtion_ui_file(client):
+    r = client.get('/simulation_ui_file/137')
+    assert r.status_code == 404
+
+
+def test_simualtion_ui_file(client):
+    r = client.get('/simulation_ui_file/135')
+    assert r.status_code == 200
+    assert r.get_json()['input'][1]['enabled'] == '(sm == 1) || (sm == 2)'

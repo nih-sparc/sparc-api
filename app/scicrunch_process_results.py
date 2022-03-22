@@ -27,6 +27,10 @@ def _prepare_results(results):
             for file in hit['_source']['objects']
             if file['additional_mimetype']['name'].find('abi.context-information') is not -1
         ]
+        print([
+            file['additional_mimetype']['name']
+            for file in hit['_source']['objects']
+        ])
         try:
             attr['readme'] = hit['_source']['item']['readme']['description']
         except KeyError:

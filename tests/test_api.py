@@ -22,6 +22,14 @@ def test_direct_download_url_small_file(client):
     assert r.status_code == 200
     assert b"proximal colon" in r.data
 
+def test_pennsieve_file_path_download(client):
+    colon_dataset_id = 76
+    colon_file_path = 'derivative%2Fscaffold_context_info.json'
+    r = client.get(f"/urlFromPennsieveDatasetIdAndFilePath/{colon_dataset_id}?filePath={colon_file_path}")
+    assert r.status_code == 200
+    assert 'url' in r.json
+
+
 
 def test_direct_download_url_thumbnail(client):
     small_s3_file = '95/1/files/derivative%2FScaffold%2Fthumbnail.png'

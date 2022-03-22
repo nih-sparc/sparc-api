@@ -1,3 +1,4 @@
+import json
 def create_query_string(query_string):
     return {
         "from": 0,
@@ -20,6 +21,14 @@ def create_doi_query(doi):
     }
 
 def create_multiple_doi_query(dois, size=10, from_=0):
+    print(json.dumps({
+        "size": 999,
+        "query": {
+            "terms": {
+                "item.curie": dois
+            }
+        }
+    }))
     return {
         "size": 999,
         "query": {

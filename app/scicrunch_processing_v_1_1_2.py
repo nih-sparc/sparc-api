@@ -1,7 +1,7 @@
 import logging
 
 from app import Config
-from app.scicrunch_processing_common import SEGMENTATION_FILES, COMMON_IMAGES, NOT_SPECIFIED, SKIP, PASS_THROUGH_KEYS, PLOT_FILE, SCAFFOLD_THUMBNAIL, SCAFFOLD_FILE, SCAFFOLD_DIR, \
+from app.scicrunch_processing_common import SEGMENTATION_FILES, COMMON_IMAGES, NOT_SPECIFIED, SKIP, PASS_THROUGH_KEYS, PLOT_FILE, THUMBNAIL_IMAGE, SCAFFOLD_FILE, SCAFFOLD_DIR, \
     VIDEO, BIOLUCIDA_2D, BIOLUCIDA_3D, CSV
 
 # Hit layout:
@@ -201,7 +201,7 @@ def _mapped_mime_type(mime_type, obj):
         'application/vnd.mbfbioscience.neurolucida+xml': SEGMENTATION_FILES,
         'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
         'inode/vnd.abi.scaffold+file': SCAFFOLD_FILE,
-        'inode/vnd.abi.scaffold+thumbnail': SCAFFOLD_THUMBNAIL,
+        'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,
         'text/vnd.abi.plot+Tab-separated-values': PLOT_FILE,
         'text/vnd.abi.plot+csv': PLOT_FILE,
         'image/png': COMMON_IMAGES,

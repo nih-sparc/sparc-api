@@ -1,7 +1,6 @@
 import pytest
 from app import app
 from app.config import Config
-import json
 import requests
 import random
 import string

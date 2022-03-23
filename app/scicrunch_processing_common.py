@@ -13,6 +13,7 @@ SCAFFOLD_DIR = 'abi-scaffold-dir'
 SCAFFOLD_FILE = 'abi-scaffold-metadata-file'
 THUMBNAIL_IMAGE = 'abi-thumbnail'
 SCAFFOLD_VIEW_FILE = 'abi-scaffold-view-file'
+SIMULATION_FILE = 'abi-simulation-file'
 VIDEO = 'video'
 VERSION = 'version'
 README = 'readme'
@@ -21,10 +22,11 @@ TITLE = 'title'
 
 PASS_THROUGH_KEYS = [BIOLUCIDA_2D, BIOLUCIDA_3D, COMMON_IMAGES, CSV, NAME, ORGANS, PLOT_FILE, README,
                      SEGMENTATION_FILES, SCAFFOLD_FILE, THUMBNAIL_IMAGE, SCAFFOLD_VIEW_FILE,
-                     TITLE, VERSION, VIDEO]
+                     SIMULATION_FILE, TITLE, VERSION, VIDEO]
 
 MAPPED_MIME_TYPES = {
     'text/csv': CSV,
+    'application/x.vnd.abi.simulation+json': SIMULATION_FILE,
     'application/vnd.mbfbioscience.metadata+xml': SEGMENTATION_FILES,
     'application/vnd.mbfbioscience.neurolucida+xml': SEGMENTATION_FILES,
     'application/x.vnd.abi.scaffold.meta+json': SCAFFOLD_FILE,

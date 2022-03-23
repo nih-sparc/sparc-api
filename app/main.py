@@ -935,7 +935,7 @@ def simulation_ui_file(identifier):
         path = item["abi-simulation-file"][0]["dataset"]["path"]
         key = f"{uri}files/{path}".replace(f"s3://{Config.S3_BUCKET_NAME}/", "")
 
-        return json.loads(direct_download_url(key))
+        return jsonify(json.loads(direct_download_url(key)))
     except Exception:
         abort(404, description="no simulation UI file could be found")
 

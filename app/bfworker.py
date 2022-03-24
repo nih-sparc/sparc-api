@@ -58,7 +58,7 @@ class BFWorker(object):
               if fileName == item.name:
                   if type(item) is pennsieve.Collection:
                       items = item.items
-                      count = 0
+                      count = -1
                       continue
                   else:
                       try:

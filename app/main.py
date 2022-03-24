@@ -927,7 +927,7 @@ def get_available_uberonids(query):
 @app.route("/simulation_ui_file/<identifier>")
 def simulation_ui_file(identifier):
     results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
-    results_json = json.loads(results)
+    results_json = json.loads(results.data)
 
     try:
         item = results_json["results"][0]

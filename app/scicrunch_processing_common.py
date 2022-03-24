@@ -13,6 +13,7 @@ SCAFFOLD_DIR = 'abi-scaffold-dir'
 SCAFFOLD_FILE = 'abi-scaffold-metadata-file'
 THUMBNAIL_IMAGE = 'abi-thumbnail'
 SCAFFOLD_VIEW_FILE = 'abi-scaffold-view-file'
+CONTEXT_FILE = 'abi-context-file'
 VIDEO = 'video'
 VERSION = 'version'
 README = 'readme'
@@ -35,6 +36,7 @@ MAPPED_MIME_TYPES = {
     'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,
     'inode/vnd.abi.scaffold.thumbnail+file': THUMBNAIL_IMAGE,
     'inode/vnd.abi.scaffold.view+file': SCAFFOLD_VIEW_FILE,
+    'application/x.vnd.abi.context-information+json': CONTEXT_FILE,
     'text/vnd.abi.plot+Tab-separated-values': PLOT_FILE,
     'text/vnd.abi.plot+csv': PLOT_FILE,
     'image/png': COMMON_IMAGES,

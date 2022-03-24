@@ -424,3 +424,10 @@ def test_scaffold_files(client):
             key = f"{uri}files/{path}".replace('s3://pennsieve-prod-discover-publish-use1/', '')
             r = client.get(f"/s3-resource/{key}")
             assert r.status_code == 200
+
+def test_finding_contextual_information(client):
+    r = client.get('/dataset_info/using_multiple_discoverIds/?discoverIds=76')
+    results = json.loads(r.data)
+    assert results['numberOfHits'] > 0  # Test we could find the generic colon scaffold dataset
+    for item in results['results']:
+        assert len(item['abi-contextual-information']) > 0  # Check it has contextual information

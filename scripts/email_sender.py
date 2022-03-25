@@ -24,6 +24,13 @@ Your message:<br>
 <br>
 $message
 ''')
+issue_reporting_email = Template('''\
+<b>You reported an issue on the SPARC Portal</b><br>
+<br>
+Provided data:<br>
+<br>
+$message
+''')
 
 
 class EmailSender(object):
@@ -55,3 +62,4 @@ class EmailSender(object):
         response = sg_client.send(mail)
         logging.info(f"Sending a '{subject}' mail using SendGrid")
         logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")
+        return response

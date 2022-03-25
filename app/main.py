@@ -377,7 +377,8 @@ def direct_download_url(path):
             resp2 = requests.get(url)
             return resp2.json()
         else:
-            return url
+            resp2 = requests.get(url)
+            return resp2.content
     return jsonify({'error': 'error with the provided ID '}, status=502)
 
 

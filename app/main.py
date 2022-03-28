@@ -858,7 +858,7 @@ def create_wrike_task():
         if resp.status_code == 200:
 
             if json_data['userEmail']:
-                email_sender.sendgrid_email(Config.SES_SENDER, json_data['userEmail'], 'Issue reporing', issue_reporting_email.substitute({ 'message': json_data['description'] }))
+                email_sender.sendgrid_email(Config.SES_SENDER, json_data['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': json_data['description'] }))
 
             return jsonify(
                 title=title,

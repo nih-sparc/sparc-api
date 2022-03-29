@@ -19,7 +19,7 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender, feedback_email
+from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -856,6 +856,10 @@ def create_wrike_task():
         )
 
         if resp.status_code == 200:
+
+            if json_data['userEmail']:
+                email_sender.sendgrid_email(Config.SES_SENDER, json_data['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': json_data['description'] }))
+
             return jsonify(
                 title=title,
                 description=description,

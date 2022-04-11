@@ -96,3 +96,12 @@ SKIPPED_MIME_TYPES = [
     'application/x-gz-compressed-fastq',
     'application/fastq',
 ]
+
+SKIPPED_OBJ_ATTRIBUTES = [
+    'bytes',
+    'checksums',
+    'distributions',
+    'identifier',
+    'issupplementalto',
+    'updated'
+]

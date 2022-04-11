@@ -14,7 +14,6 @@ PASS_THROUGH_KEYS = ["doi", "dataset_identifier", "dataset_version", "dataset_re
 #  item > statistics > samples > count
 ATTRIBUTES_MAP = {
     'additionalLinks': ['xrefs', 'additionalLinks'],
-    'scaffolds': ['scaffolds'],
     'sampleSize': ['item', 'statistics', 'samples', 'count'],
     'subjectSize': ['item', 'statistics', 'subjects', 'count'],
     'name': ['item', 'name'],

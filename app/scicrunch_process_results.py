@@ -3,6 +3,9 @@ import json
 import re
 from flask import jsonify
 
+from app.scicrunch_processing_common import NOT_SPECIFIED, SKIPPED_OBJ_ATTRIBUTES
+
+
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
 def _prepare_results(results):
     output = []
@@ -37,10 +40,35 @@ def _prepare_results(results):
         except KeyError:
             attr['title'] = ''
 
+        _remove_unused_files_information(attr['files'])
         attr.update(sort_files_by_mime_type(attr['files']))
+        #All files are sorted, files are not required anymore
+        del attr['files']
         output.append(attr)
 
     return output
+
+#Remove empty datacite entry
+def _remove_empty_datacite(obj):
+    datacite = obj.get('datacite', NOT_SPECIFIED)
+    if datacite != NOT_SPECIFIED:
+        #Safely remove key with empty path
+        for key in list(datacite.keys()):
+            if "path" in datacite[key] and datacite[key]["path"] != "":
+                continue
+            else:
+                del datacite[key]
+
+#Remove unused attributes in the obj list, this does not need to be version dependent at this meoment
+def _remove_unused_files_information(obj_list):
+    if not obj_list:
+        return None
+
+    for obj in obj_list:
+        _remove_empty_datacite(obj)
+        for key in SKIPPED_OBJ_ATTRIBUTES:
+            if key in obj:
+                del obj[key]
 
 
 def process_results(results):
@@ -110,7 +138,6 @@ def _manipulate_attr(output):
                 scaffold['thumbnail'] = scaffold_thumbnail
 
     return output
-
 
 def _extract_dataset_path_remote_id(data, key, id_):
     extracted_data = None

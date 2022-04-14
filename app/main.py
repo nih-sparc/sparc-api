@@ -8,7 +8,7 @@ import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
-from flask import Flask, abort, jsonify, request
+from flask import Flask, abort, jsonify, request, redirect
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
@@ -176,13 +176,21 @@ def create_s3_presigned_url(key, content_type, expiration):
 
 
 # Download a file from S3
-@app.route("/download")
+@app.route("/download-link")
 def create_presigned_url(expiration=3600):
     key = request.args.get("key")
     content_type = request.args.get("contentType") or "application/octet-stream"
 
     return create_s3_presigned_url(key, content_type, expiration)
 
+
+@app.route("/download")
+def download_file(expiration=3600):
+    key = request.args.get("key")
+    content_type = request.args.get("contentType") or "application/octet-stream"
+
+    presigned_url = create_s3_presigned_url(key, content_type, expiration)
+    return redirect(presigned_url)
 
 @app.route("/thumbnail/neurolucida")
 def thumbnail_from_neurolucida_file():

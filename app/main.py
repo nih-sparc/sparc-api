@@ -175,7 +175,6 @@ def create_s3_presigned_url(key, content_type, expiration):
     return response
 
 
-# Download a file from S3
 @app.route("/download-link")
 def create_presigned_url(expiration=3600):
     key = request.args.get("key")
@@ -184,6 +183,7 @@ def create_presigned_url(expiration=3600):
     return create_s3_presigned_url(key, content_type, expiration)
 
 
+# Download a file from S3
 @app.route("/download")
 def download_file(expiration=3600):
     key = request.args.get("key")
@@ -191,6 +191,7 @@ def download_file(expiration=3600):
 
     presigned_url = create_s3_presigned_url(key, content_type, expiration)
     return redirect(presigned_url)
+
 
 @app.route("/thumbnail/neurolucida")
 def thumbnail_from_neurolucida_file():

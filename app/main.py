@@ -1006,3 +1006,13 @@ def find_by_onto_term():
         json_data = {'label': 'not found'}
 
     return json_data
+
+@app.route("/search-readme/<query>", methods=["GET"])
+def search_readme(query):
+    url = 'https://dash.readme.com/api/v1/docs/search?search={query}'
+    headers = { 'Authorization': 'Basic ' + Config.README_API_KEY }
+    response = requests.post(
+        url = url,
+        headers = headers
+    )
+    return response.json()['results']

@@ -101,7 +101,6 @@ SKIPPED_OBJ_ATTRIBUTES = [
     'bytes',
     'checksums',
     'distributions',
-    'identifier',
     'issupplementalto',
     'updated'
 ]

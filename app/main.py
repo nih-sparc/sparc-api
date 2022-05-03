@@ -758,6 +758,18 @@ def image_xmp_info(image_id):
     return abort(400, description=f"XMP info not found for {image_id}")
 
 
+@app.route("/image_blv_link/<image_id>", methods=["GET"])
+def image_blv_link(image_id):
+    url = Config.BIOLUCIDA_ENDPOINT + "/image/blv_link/{0}".format(image_id)
+    result = requests.request("GET", url)
+
+    response = result.json()
+    if response['status'] == 'success':
+        return jsonify({'link': response['link']})
+
+    return abort(400, description=f"BLV link not found for {image_id}")
+
+
 def authenticate_biolucida():
     bl = Biolucida()
     url = Config.BIOLUCIDA_ENDPOINT + "/authenticate"

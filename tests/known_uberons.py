@@ -23,5 +23,6 @@ UBERONS_DICT = {
     'UBERON:0002439': 'myenteric nerve plexus',
     'UBERON:0010380': 'enteric nerve',
     'UBERON:0013702': 'body proper',
-    'UBERON:0002005': 'enteric nervous system'
+    'UBERON:0002005': 'enteric nervous system',
+    'UBERON:0018675': 'pelvic splanchnic nerve'
 }

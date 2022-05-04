@@ -62,5 +62,23 @@ def test_image_xmp_info_1197(client):
     assert r.json['z_spacing'] == "-1.000000"
 
 
+def test_image_xmp_info_850(client):
+    r = client.get('/image_xmp_info/850')
+
+    assert r.status_code == 200
+    assert 'pixel_width' in r.json
+    assert r.json['pixel_width'] == "0.830266"
+    assert r.json['pixel_height'] == "0.830266"
+    assert r.json['z_spacing'] == "1.000000"
+
+
+def test_image_blv_link_849(client):
+    r = client.get('/image_blv_link/849')
+
+    assert r.status_code == 200
+    assert 'link' in r.json
+    assert r.json['link'] == "https://sparc.biolucida.net:443/link?l=jpmqiX"
+
+
 if __name__ == '__main__':
     unittest.main()

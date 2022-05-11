@@ -25,7 +25,8 @@ from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable
-from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results
+from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results, \
+    reform_related_terms
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc import run_simulation
@@ -907,9 +908,8 @@ def subscribe_to_mailchimp():
 
 
 # Get list of available name / curie pair
-@app.route("/get-organ-curies/", defaults={'query': ''})
-@app.route("/get-organ-curies/<query>/")
-def get_available_uberonids(query):
+@app.route("/get-organ-curies/")
+def get_available_uberonids():
     species = request.args.getlist('species')
 
     requestBody = create_request_body_for_curies(species)
@@ -927,6 +927,30 @@ def get_available_uberonids(query):
 
     return jsonify(result)
 
+
+# Get list of terms a level up/down from 
+@app.route("/get-related-terms/<query>")
+def get_related_terms(query):
+    
+    payload = {
+        'direction': request.args.get('direction', default='OUTGOING'),
+        'relationshipType': request.args.get('relationshipType', default='BFO:0000050'),
+        'entail':  request.args.get('entail', default='true'),
+        'api_key': Config.KNOWLEDGEBASE_KEY
+    }
+
+    result = {}
+
+    response = requests.get(
+        f'{Config.SCI_CRUNCH_SCIGRAPH_HOST}/graph/neighbors/{query}',
+        params=payload)
+    try:
+        result = reform_related_terms(response.json())
+    except BaseException:
+        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
+                        'error': 'BaseException'}), 502
+
+    return jsonify(result)
 
 @app.route("/simulation_ui_file/<identifier>")
 def simulation_ui_file(identifier):

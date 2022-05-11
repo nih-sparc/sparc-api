@@ -48,5 +48,6 @@ class Config(object):
     S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"
     NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")
     SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://scicrunch.org/api/1/elastic/Interlex_pr")
+    SCI_CRUNCH_SCIGRAPH_HOST = os.environ.get("SCI_CRUNCH_SCIGRAPH_HOST", "https://scicrunch.org/api/1/sparc-scigraph")
     SENDGRID_API_KEY =  os.environ.get("SENDGRID_API_KEY")
     README_API_KEY =  os.environ.get("README_API_KEY")

@@ -414,6 +414,17 @@ def test_getting_curies(client):
         assert UBERONS_DICT[item['id']] == item['name'].lower()
 
 
+def test_get_related_terms(client):
+    # Test if we get a shorter list of uberons with species specified
+    r = client.get('/get-related-terms/UBERON:0002084')
+    uberons_results = json.loads(r.data)
+    print(uberons_results)
+    total = len(uberons_results['uberon']['array'])
+    assert total > 0
+    assert uberons_results['uberon']['array'][0]['id'] == 'UBERON:0000948'
+    assert uberons_results['uberon']['array'][0]['name'] == 'heart'
+
+
 def test_scaffold_files(client):
     r = client.get('/filter-search/?size=30')
     results = json.loads(r.data)

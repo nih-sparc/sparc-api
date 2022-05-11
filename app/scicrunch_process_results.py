@@ -202,3 +202,31 @@ def reform_curies_results(data):
         result['uberon']['array'].append(pair)
 
     return result
+
+# Turn the result into a list in the uberon.array field
+def reform_related_terms(data):
+    result = {
+        'uberon': {
+            'array': []
+        }
+    }
+    id_name_map = {}
+
+    # Iterate through to get an uberon - name map
+    if 'nodes' in data:
+        for item in data['nodes']:
+            id_name_map[item['id']] = item['lbl']
+    else:
+        raise BaseException
+
+    if 'edges' in data:
+        for item in data['edges']:
+            pair = {
+                'id': item['obj'],
+                'name': id_name_map[item['obj']]
+            }
+            result['uberon']['array'].append(pair)
+    else:
+        raise BaseException
+
+    return result

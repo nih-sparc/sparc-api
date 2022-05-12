@@ -857,7 +857,7 @@ def create_wrike_task():
 
         if resp.status_code == 200:
 
-            if json_data['userEmail']:
+            if 'userEmail' in json_data:
                 email_sender.sendgrid_email(Config.SES_SENDER, json_data['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': json_data['description'] }))
 
             return jsonify(
@@ -1006,3 +1006,18 @@ def find_by_onto_term():
         json_data = {'label': 'not found'}
 
     return json_data
+
+@app.route("/search-readme/<query>", methods=["GET"])
+def search_readme(query):
+    url = 'https://dash.readme.com/api/v1/docs/search?search=' + query
+    headers = { 'Authorization': 'Basic ' + Config.README_API_KEY }
+
+    try:
+        response = requests.post(
+          url = url,
+          headers = headers
+        )
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return jsonify({'error': str(err), 'message': 'Readme is not currently reachable, please try again later'}), 502

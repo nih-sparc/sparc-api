@@ -23,12 +23,12 @@ def _prepare_results(results):
         attr['took'] = results['took']
 
         # Hot fix for some datasets having no objects:
-        if ('objects' in hit['_source'].keys()):
-            # find context files by looking through object mimetypes
+        if 'objects' in hit['_source'].keys():
+            # Find context files by looking through object mimetypes.
             attr['abi-contextual-information'] = [
                 file['dataset']['path']
                 for file in hit['_source']['objects']
-                if file['additional_mimetype']['name'].find('abi.context-information') is not -1
+                if file['additional_mimetype']['name'].find('abi.context-information') != -1
             ]
         else:
             attr['abi-contextual-information'] = []
@@ -151,10 +151,19 @@ def reform_curies_results(data):
             # Example string: 
             # "{curie=UBERON:0002298, name=brainstem, matchingStatus=Exact Match}"
             pattern = "curie=(.*?),"
-            curie = re.search(pattern, item['key']).group(1)
+            curie = ''
+            match = re.search(pattern, item['key'])
+            if match:
+                curie = match.group(1)
+
             pattern = "name=(.*?),"
-            name = re.search(pattern, item['key']).group(1)
-            id_name_map[curie] = name
+            name = ''
+            match = re.search(pattern, item['key'])
+            if match:
+                name = match.group(1)
+                
+            if curie and name:
+                id_name_map[curie] = name
         except KeyError:
             continue
     # Turn the map into an the output array

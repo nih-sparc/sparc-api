@@ -139,7 +139,7 @@ def test_create_identifier_query(client):
 
     result = results[0]
     assert 'version' in result
-    assert result['version'] == '1.1.3'
+    assert result['version'] == '1.1.5'
 
     assert 'title' in result
     assert result['title'] == 'Morphometric analysis of the abdominal vagus nerve in rats'
@@ -265,16 +265,17 @@ def test_response_sample_subject_size(client):
 
 source_structure = {
     'type': dict,
-    'required': ['contributors', 'dataItem', 'dates', 'distributions',
+    'required': ['contributors', 'dataItem',
                  {'item':
                      {
                          'type': dict,
-                         'required': [{'version': {'type': dict, 'required': ['keyword'], 'optional': []}}, 'types', 'contentTypes', 'names', 'statistics', 'keywords', 'published',
+                         'required': ['types', 'contentTypes', 'statistics', 'keywords', 'published',
                                       'description',
-                                      'name', 'readme', 'identifier', 'docid', 'curie'],
-                         'optional': ['techniques', 'modalities']
+                                      'name', 'identifier', 'docid', 'curie'],
+                         'optional': [{'version': {'type': dict, 'required': ['keyword'], 'optional': []}},
+                                       'techniques', 'readme', 'modalities', 'names']
                      }}, 'pennsieve', 'provenance', 'supportingAwards'],
-    'optional': ['anatomy', 'attributes', 'diseases',
+    'optional': ['anatomy', 'attributes', 'dates', 'diseases', 'distributions',
                  {'objects':
                      {
                          'type': list,

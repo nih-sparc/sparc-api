@@ -72,6 +72,12 @@ def test_image_xmp_info_850(client):
     assert r.json['z_spacing'] == "1.000000"
 
 
+def test_image_xmp_info_invalid_image_id(client):
+    r = client.get('/image_xmp_info/XYZ')
+
+    assert r.status_code == 400
+
+
 def test_image_blv_link_849(client):
     r = client.get('/image_blv_link/849')
 

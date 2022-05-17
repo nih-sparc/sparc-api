@@ -19,6 +19,10 @@ def _process_5_5_0(xml):
     if z_spacing_element is not None:
         xmp_info['z_spacing'] = z_spacing_element.attrib[f'{{{XMP_NS["xmp"]}}}SizeZ']
 
+    if not xmp_info:
+        # As a backup, try processing the xml as version 5.6.0.
+        xmp_info = _process_5_6_0(xml)
+
     return xmp_info
 
 

@@ -749,7 +749,10 @@ def image_search_by_dataset_id(dataset_id):
 @app.route("/image_xmp_info/<image_id>", methods=["GET"])
 def image_xmp_info(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/xmpmetadata/{0}".format(image_id)
-    result = requests.request("GET", url)
+    try:
+        result = requests.request("GET", url)
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to Biolucida.")
 
     response = result.json()
     if response['status'] == 'success':

@@ -76,5 +76,11 @@ def test_image_blv_link_849(client):
     assert r.json['link'] == "https://sparc.biolucida.net:443/link?l=jpmqiX"
 
 
+def test_image_blv_link_invalid_image_id(client):
+    r = client.get('/image_blv_link/XYZ')
+
+    assert r.status_code == 400
+
+
 if __name__ == '__main__':
     unittest.main()

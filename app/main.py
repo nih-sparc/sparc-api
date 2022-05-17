@@ -761,7 +761,10 @@ def image_xmp_info(image_id):
 @app.route("/image_blv_link/<image_id>", methods=["GET"])
 def image_blv_link(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/blv_link/{0}".format(image_id)
-    result = requests.request("GET", url)
+    try:
+        result = requests.request("GET", url)
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to Biolucida.")
 
     response = result.json()
     if response['status'] == 'success':

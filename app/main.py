@@ -750,13 +750,31 @@ def image_search_by_dataset_id(dataset_id):
 @app.route("/image_xmp_info/<image_id>", methods=["GET"])
 def image_xmp_info(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/xmpmetadata/{0}".format(image_id)
-    result = requests.request("GET", url)
+    try:
+        result = requests.request("GET", url)
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to Biolucida.")
 
     response = result.json()
     if response['status'] == 'success':
         return process_biolucida_results(response['data'])
 
     return abort(400, description=f"XMP info not found for {image_id}")
+
+
+@app.route("/image_blv_link/<image_id>", methods=["GET"])
+def image_blv_link(image_id):
+    url = Config.BIOLUCIDA_ENDPOINT + "/image/blv_link/{0}".format(image_id)
+    try:
+        result = requests.request("GET", url)
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to Biolucida.")
+
+    response = result.json()
+    if response['status'] == 'success':
+        return jsonify({'link': response['link']})
+
+    return abort(400, description=f"BLV link not found for {image_id}")
 
 
 def authenticate_biolucida():

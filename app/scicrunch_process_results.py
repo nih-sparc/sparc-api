@@ -54,24 +54,12 @@ def _prepare_results(results):
 
     return output
 
-#Remove empty datacite entry
-def _remove_empty_datacite(obj):
-    datacite = obj.get('datacite', NOT_SPECIFIED)
-    if datacite != NOT_SPECIFIED:
-        #Safely remove key with empty path
-        for key in list(datacite.keys()):
-            if "path" in datacite[key] and datacite[key]["path"] != "":
-                continue
-            else:
-                del datacite[key]
-
 #Remove unused attributes in the obj list, this does not need to be version dependent at this moment
 def _remove_unused_files_information(obj_list):
     if not obj_list:
         return None
 
     for obj in obj_list:
-        #_remove_empty_datacite(obj)
         for key in SKIPPED_OBJ_ATTRIBUTES:
             if key in obj:
                 del obj[key]

@@ -3,7 +3,7 @@ import json
 import re
 from flask import jsonify
 
-from app.scicrunch_processing_common import NOT_SPECIFIED, SKIPPED_OBJ_ATTRIBUTES
+from app.scicrunch_processing_common import SKIPPED_OBJ_ATTRIBUTES
 
 
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files

@@ -410,7 +410,8 @@ def test_getting_curies(client):
 
 
 def test_get_related_terms(client):
-    # Test if we get a shorter list of uberons with species specified
+    # Test if we can get the uberon term of heart using the uberon term
+    # of left ventricle
     r = client.get('/get-related-terms/UBERON:0002084')
     uberons_results = json.loads(r.data)
     print(uberons_results)

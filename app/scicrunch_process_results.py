@@ -3,6 +3,9 @@ import json
 import re
 from flask import jsonify
 
+from app.scicrunch_processing_common import SKIPPED_OBJ_ATTRIBUTES
+
+
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
 def _prepare_results(results):
     output = []
@@ -43,10 +46,23 @@ def _prepare_results(results):
         except KeyError:
             attr['title'] = ''
 
+        _remove_unused_files_information(attr['files'])
         attr.update(sort_files_by_mime_type(attr['files']))
+        #All files are sorted, files are not required anymore
+        del attr['files']
         output.append(attr)
 
     return output
+
+#Remove unused attributes in the obj list, this does not need to be version dependent at this moment
+def _remove_unused_files_information(obj_list):
+    if not obj_list:
+        return None
+
+    for obj in obj_list:
+        for key in SKIPPED_OBJ_ATTRIBUTES:
+            if key in obj:
+                del obj[key]
 
 
 def process_results(results):
@@ -117,7 +133,6 @@ def _manipulate_attr(output):
 
     return output
 
-
 def _extract_dataset_path_remote_id(data, key, id_):
     extracted_data = None
     for dataset_path_remote_id in data[key]:
@@ -173,5 +188,33 @@ def reform_curies_results(data):
             'name': id_name_map[key]
         }
         result['uberon']['array'].append(pair)
+
+    return result
+
+# Turn the result into a list in the uberon.array field
+def reform_related_terms(data):
+    result = {
+        'uberon': {
+            'array': []
+        }
+    }
+    id_name_map = {}
+
+    # Iterate through to get an uberon - name map
+    if 'nodes' in data:
+        for item in data['nodes']:
+            id_name_map[item['id']] = item['lbl']
+    else:
+        raise BaseException
+
+    if 'edges' in data:
+        for item in data['edges']:
+            pair = {
+                'id': item['obj'],
+                'name': id_name_map[item['obj']]
+            }
+            result['uberon']['array'].append(pair)
+    else:
+        raise BaseException
 
     return result

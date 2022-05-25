@@ -19,7 +19,7 @@ def create_doi_query(doi):
         }
     }
 
-def create_multiple_doi_query(dois, size=10, from_=0):
+def create_multiple_doi_query(dois):
     return {
         "size": 999,
         "query": {

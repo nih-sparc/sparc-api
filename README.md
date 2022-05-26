@@ -38,7 +38,7 @@ pytest
 
 #### Pennsieve Discover API
 **Source:** https://developer.pennsieve.io/api/index.html
-**Summary:** Python client for the pennsieve data management platform
+**Summary:** API endpoint for the Pennsieve Discovaer data management platform
 **Used on sparc-api for:** 
  - Retrieving dataset awards
  - Retrieving dataset metadata and sending it for the simcore endpoint

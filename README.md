@@ -44,25 +44,25 @@ pytest
  - Retrieving dataset metadata and sending it for the simcore endpoint
 **Critical:** no
 
-### Amazon Simple Email Service
+#### Amazon Simple Email Service
 **Source:** https://docs.aws.amazon.com/ses/index.html
 **Summary:** Sends emails 
 **Used on sparc-api for:** Sending emails
 **Critical:** no
 
-### SPARC Portal amazon s3
+#### SPARC Portal amazon s3
 **Source:** https://aws.amazon.com/s3/
 **Summary:** Cloud file storage
 **Used on sparc-api for:** accessing pennsieve files for the portal (ie. displaying a scaffold)
 **Critical:** yes
 
-### Biolucida 
+#### Biolucida 
 **Source:** https://www.mbfbioscience.com/biolucida
 **Summary:** Image viewer and image repository
 **Used on sparc-api for:** Retrieving images and image metadata. (These are displayed on sparc-app)
 **Critical:** Critical for image display
 
-### Scicrunch 
+#### Scicrunch 
 **Source:** https://scicrunch.org/
 **Summary:** Processes SPARC datasets, pulling out metadata from them to make them searchable
 **Used on sparc-api for:** 
@@ -71,37 +71,37 @@ pytest
  - Providing the contents of a dataset (ie. does it have a scaffold? Where is the scaffold file located?)
 **Critical:** Critical for much of the /maps page and some functionality of the /data page
 
-### Wrike
+#### Wrike
 **Source:** https://www.wrike.com/
 **Summary:** Project management software
 **Used on sparc-api for:** Creates tickets from user feedback to be managed
 **Critical:** no
 
-### Mail Chimp
+#### Mail Chimp
 **Source:** https://mailchimp.com/
 **Summary:**  Email service
 **Used on sparc-api for:** Email subscriptions from sparc-app
 **Critical:** no
 
-### oSparc
+#### oSparc
 **Source:** https://osparc.io/
 **Summary:**  Biomedeical Modelling and simulation software
 **Used on sparc-api for:** Running simulations from sparc-app
 **Critical:** critical for running simulations from sparc-app
 
-### Nuerolucidia 
+#### Nuerolucidia 
 **Source:** https://www.mbfbioscience.com/neurolucida
 **Summary:** 3d Imaging software
 **Used on sparc-api for:** Providing 3d images and metadata?
 **Critical:** critical for the 3d images?
 
-### SCI_CRUNCH_INTERLEX
+#### SCI_CRUNCH_INTERLEX
 **Source:** unknown
 **Summary:** Provides translation of medical terms
 **Used on sparc-api for:** Converting terms between forms and finding similar terms
 **Critical:** not sure
 
-### SendGrid
+#### SendGrid
 **Source:** https://sendgrid.com/
 **Summary:** Sends emails
 **Used on sparc-api for:** Sending an email to a user after they give feedback

@@ -301,22 +301,6 @@ def get_discover_path():
 
     return abort(404, description=f'Failed to retrieve uri {uri}')
 
-
-@app.route("/s3-resource/presign_discover_file_uri")
-def presign_resource_url():
-    uri = request.args.get('uri')
-
-    json_response = fetch_discover_file_information(uri)
-    if 'totalCount' in json_response and json_response['totalCount'] == 1:
-        file_info = json_response['files'][0]
-        key = file_info['uri'].replace('s3://' + Config.S3_BUCKET_NAME + '/', '')
-        content_type = request.args.get("contentType") or "application/octet-stream"
-
-        return create_s3_presigned_url(key, content_type, 3600)
-
-    return abort(404, description=f'Failed to retrieve uri {uri}')
-
-
 # Reverse proxy for objects from S3, a simple get object
 # operation. This is used by scaffoldvuer and its
 # important to keep the relative <path> for accessing

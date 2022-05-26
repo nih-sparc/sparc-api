@@ -214,7 +214,6 @@ def create_filter_request(query, terms, facets, size, start):
 
     qs = facet_query_string(query, terms, facets, get_facet_type_map())
     data["query"]["query_string"]["query"] = qs
-
     return data
 
 
@@ -270,7 +269,7 @@ def facet_query_string(query, terms, facets, type_map):
                 qt += "("
             for l in t[k]:
                 if l == "scaffolds":
-                    qt += "objects.additional_mimetype.name:((inode%2fvnd.abi.scaffold) AND (file))"
+                    qt += "objects.additional_mimetype.name:(application%2fx.vnd.abi.scaffold.meta%2Bjson)"
                 if l is not t[k][-1]:
                     qt += " OR "  # 'OR' if more terms in this facet are coming
             if needParentheses:

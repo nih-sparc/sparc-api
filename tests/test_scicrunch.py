@@ -276,8 +276,8 @@ source_structure = {
                          'type': list,
                          'item': {
                              'type': dict,
-                             'required': ['bytes', 'dataset', 'distributions', 'identifier', 'mimetype', 'name', 'updated'],
-                             'optional': []}
+                             'required': ['bytes', 'dataset', 'identifier', 'mimetype', 'name', 'updated'],
+                             'optional': [ 'distributions' ]}
                      }
                  }, 'organisms', 'protocols', 'publication', 'xrefs']
 }

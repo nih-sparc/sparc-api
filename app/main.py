@@ -373,12 +373,8 @@ def direct_download_url(path):
     pennsieveId = resp['hits']['hits'][0]['_source']['item']['identifier']
     url = bfWorker.getURLFromDatasetIdAndFilePath(pennsieveId, filePath)
     if url != None:
-        if '.json' in path:
-            resp2 = requests.get(url)
-            return resp2.json()
-        else:
-            resp2 = requests.get(url)
-            return resp2.content
+        resp2 = requests.get(url)
+        return resp2.content
     return jsonify({'error': 'error with the provided ID '}, status=502)
 
 

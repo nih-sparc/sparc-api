@@ -30,6 +30,7 @@ MAPPED_MIME_TYPES = {
     'application/vnd.mbfbioscience.neurolucida+xml': SEGMENTATION_FILES,
     'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
     'inode/vnd.abi.scaffold+file': SCAFFOLD_FILE,
+    'application/x.vnd.abi.scaffold.meta+json': SCAFFOLD_FILE,
     'inode/vnd.abi.scaffold+thumbnail': SCAFFOLD_THUMBNAIL,
     'inode/vnd.abi.scaffold.thumbnail+file': SCAFFOLD_THUMBNAIL,
     'inode/vnd.abi.scaffold.view+file': SCAFFOLD_VIEW_FILE,

@@ -874,7 +874,7 @@ def create_wrike_task():
         abort(400, description="Missing title or description")
 
 
-@app.route("/mailchimp", methods=["POST"])
+@app.route("/mailchimp_subscribe", methods=["POST"])
 def subscribe_to_mailchimp():
     json_data = request.get_json()
     if json_data and 'email_address' in json_data and 'first_name' in json_data and 'last_name' in json_data:
@@ -907,6 +907,50 @@ def subscribe_to_mailchimp():
             return resp.json()
     else:
         abort(400, description="Missing email_address, first_name or last_name")
+
+@app.route("/mailchimp_unsubscribe", methods=["POST"])
+def unsubscribe_to_mailchimp():
+  json_data = request.get_json()
+  if json_data and 'email_address' in json_data:
+      email_address = json_data["email_address"]
+      auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+      url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
+
+      data = {
+        "status": "unsubscribed",
+      }
+      resp = requests.post(
+          url=url,
+          json=data,
+          auth=auth
+      )
+
+      if resp.status_code == 200:
+        return resp.json()
+      else:
+        return "Failed to unsubscribe user"
+  else:
+      abort(400, description="Missing email_address")
+
+@app.route("/mailchimp_member_info", methods=["GET"])
+def get_mailchimp_member_info():
+    json_data = request.get_json()
+    if json_data and 'email_address' in json_data:
+        email_address = json_data["email_address"]
+        auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
+
+        resp = requests.get(
+            url=url,
+            auth=auth
+        )
+
+        if resp.status_code == 200:
+          return resp.json()
+        else:
+          return "Failed to get member info"
+    else:
+        abort(400, description="Missing email_address")
 
 
 # Get list of available name / curie pair

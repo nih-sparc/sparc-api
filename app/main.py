@@ -932,11 +932,9 @@ def unsubscribe_to_mailchimp():
   else:
       abort(400, description="Missing email_address")
 
-@app.route("/mailchimp_member_info", methods=["GET"])
-def get_mailchimp_member_info():
-    json_data = request.get_json()
-    if json_data and 'email_address' in json_data:
-        email_address = json_data["email_address"]
+@app.route("/mailchimp_member_info/<email_address>", methods=["GET"])
+def get_mailchimp_member_info(email_address):
+    if email_address:
         auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
         url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
 

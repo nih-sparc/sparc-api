@@ -882,7 +882,7 @@ def subscribe_to_mailchimp():
         first_name = json_data['first_name']
         last_name = json_data['last_name']
         auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members'
+        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members' + email_address
 
         data = {
             "email_address": email_address,
@@ -899,12 +899,9 @@ def subscribe_to_mailchimp():
         )
 
         if resp.status_code == 200:
-            return jsonify(
-                email_address=email_address,
-                id=resp.json()["id"]
-            )
+          return resp.json()
         else:
-            return resp.json()
+          return "Failed to subscribe user with response: " + resp.json()
     else:
         abort(400, description="Missing email_address, first_name or last_name")
 
@@ -928,7 +925,7 @@ def unsubscribe_to_mailchimp():
       if resp.status_code == 200:
         return resp.json()
       else:
-        return "Failed to unsubscribe user"
+        return "Failed to unsubscribe user with response: " + resp.json()
   else:
       abort(400, description="Missing email_address")
 
@@ -946,7 +943,7 @@ def get_mailchimp_member_info(email_address):
         if resp.status_code == 200:
           return resp.json()
         else:
-          return "Failed to get member info"
+          return "Failed to get member info with response: " + resp.json()
     else:
         abort(400, description="Missing email_address")
 

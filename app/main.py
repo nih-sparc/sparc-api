@@ -892,7 +892,7 @@ def subscribe_to_mailchimp():
                 "LNAME": last_name
             }
         }
-        resp = requests.post(
+        resp = requests.put(
             url=url,
             json=data,
             auth=auth
@@ -919,7 +919,7 @@ def unsubscribe_to_mailchimp():
       data = {
         "status": "unsubscribed",
       }
-      resp = requests.post(
+      resp = requests.put(
           url=url,
           json=data,
           auth=auth

@@ -882,7 +882,7 @@ def subscribe_to_mailchimp():
         first_name = json_data['first_name']
         last_name = json_data['last_name']
         auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members' + email_address
+        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
 
         data = {
             "email_address": email_address,

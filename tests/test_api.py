@@ -177,12 +177,12 @@ def test_onto_term_lookup(client):
     assert json_data['label'] == 'Human'
 
 
-def test_non_existing_simualtion_ui_file(client):
+def test_non_existing_simulation_ui_file(client):
     r = client.get('/simulation_ui_file/137')
     assert r.status_code == 404
 
 
-def test_simualtion_ui_file(client):
+def test_simulation_ui_file(client):
     r = client.get('/simulation_ui_file/135')
     assert r.status_code == 200
     assert r.get_json()['input'][1]['enabled'] == '(sm == 1) || (sm == 2)'

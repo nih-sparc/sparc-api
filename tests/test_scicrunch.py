@@ -406,7 +406,8 @@ def test_getting_curies(client):
     assert total > human
     # Test if the uberon - name match the one from the hardcoded list
     for item in uberons_results['uberon']['array']:
-        assert UBERONS_DICT[item['id']] == item['name'].lower()
+        if item['id'] in UBERONS_DICT:
+            assert UBERONS_DICT[item['id']] == item['name'].lower()
 
 
 def test_get_related_terms(client):

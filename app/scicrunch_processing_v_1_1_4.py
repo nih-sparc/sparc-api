@@ -1,7 +1,7 @@
 import logging
 
 from app import Config
-from app.scicrunch_processing_common import COMMON_IMAGES, NOT_SPECIFIED, SKIP, SKIPPED_MIME_TYPES, MAPPED_MIME_TYPES
+from app.scicrunch_processing_common import map_mime_type, COMMON_IMAGES, NOT_SPECIFIED, SKIP
 from app.scicrunch_processing_common import PASS_THROUGH_KEYS as BASE_PASS_THROUGH_KEYS
 from app.manifest_name_to_discover_name import name_map
 
@@ -34,29 +34,6 @@ ATTRIBUTES_MAP = {
     'dataset_revision': ['pennsieve', 'revision', 'identifier'],
 }
 
-
-def _mapped_mime_type(mime_type, obj):
-    if mime_type == '':
-        return SKIP
-
-    if mime_type == NOT_SPECIFIED:
-        return SKIP
-
-    if mime_type in SKIPPED_MIME_TYPES:
-        return SKIP
-
-    if mime_type in MAPPED_MIME_TYPES:
-        if mime_type in ["image/jpeg", "image/png"]:
-            try:
-                if obj['dataset']['path'].startswith('derivative'):
-                    return SKIP
-            except KeyError:
-                return SKIP
-        return MAPPED_MIME_TYPES[mime_type]
-
-    return NOT_SPECIFIED
-
-
 def sort_files_by_mime_type(obj_list):
     sorted_files = {}
     if not obj_list:
@@ -71,7 +48,7 @@ def sort_files_by_mime_type(obj_list):
         if not mime_type:
             mime_type = obj['mimetype'].get('name', NOT_SPECIFIED)
 
-        mapped_mime_type = _mapped_mime_type(mime_type, obj)
+        mapped_mime_type = map_mime_type(mime_type, obj)
         if mapped_mime_type == NOT_SPECIFIED:
             logging.warning(f'Unhandled mime type: {mime_type}')
         elif mapped_mime_type == SKIP:

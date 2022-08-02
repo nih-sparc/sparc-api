@@ -151,8 +151,9 @@ def test_physiological_data_visualisation_search(client):
     result = response['result'][0]
     # print(result)
     assert "Test case for physiological data visualisation" == result['name']
-
     assert PLOT_FILE in result.keys()
+    #'text/vnd.abi.plot+tab-separated-values' and #'text/vnd.abi.plot+csv'
+    assert len(result[PLOT_FILE]) == 21
 
 def test_complex_title_dataset_search(client):
     title = "Spatial distribution and morphometric characterization of vagal efferents associated with the myenteric plexus of the rat stomach"

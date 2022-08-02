@@ -193,7 +193,7 @@ def _fudge_object(obj):
     return obj
 
 
-def _mapped_mime_type(mime_type, obj):
+def _map_mime_type(mime_type, obj):
     mapped_mime_types = {
         'text/csv': CSV,
         'application/vnd.mbfbioscience.metadata+xml': SEGMENTATION_FILES,
@@ -201,7 +201,7 @@ def _mapped_mime_type(mime_type, obj):
         'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
         'inode/vnd.abi.scaffold+file': SCAFFOLD_FILE,
         'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,
-        'text/vnd.abi.plot+Tab-separated-values': PLOT_FILE,
+        'text/vnd.abi.plot+tab-separated-values': PLOT_FILE,
         'text/vnd.abi.plot+csv': PLOT_FILE,
         'image/png': COMMON_IMAGES,
         'image/tiff': 'tiff-image',
@@ -263,17 +263,19 @@ def _mapped_mime_type(mime_type, obj):
     if mime_type == NOT_SPECIFIED:
         return SKIP
 
-    if mime_type in skipped_mime_types:
+    lower_mime_type = mime_type.lower()
+
+    if lower_mime_type in skipped_mime_types:
         return SKIP
 
-    if mime_type in mapped_mime_types:
-        if mime_type in ["image/jpeg", "image/png"]:
+    if lower_mime_type in mapped_mime_types:
+        if lower_mime_type in ["image/jpeg", "image/png"]:
             try:
                 if obj['dataset']['path'].startswith('derivative'):
                     return SKIP
             except KeyError:
                 return SKIP
-        return mapped_mime_types[mime_type]
+        return mapped_mime_types[lower_mime_type]
 
     return NOT_SPECIFIED
 
@@ -293,7 +295,7 @@ def sort_files_by_mime_type(obj_list):
         else:
             mime_type = obj['mimetype'].get('name', NOT_SPECIFIED)
 
-        mapped_mime_type = _mapped_mime_type(mime_type, obj)
+        mapped_mime_type = _map_mime_type(mime_type, obj)
         if mapped_mime_type == NOT_SPECIFIED:
             logging.warning('Unhandled mime type:', mime_type)
         elif mapped_mime_type == SKIP:

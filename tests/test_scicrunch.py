@@ -166,7 +166,7 @@ def test_response_abi_plot(client):
         json_data = json.loads(data)
         assert len(json_data['result']) == 1
         if json_data['result'][0]['version'] == '1.1.5':
-            assert len(json_data['result'][0]['abi-plot']) == 5
+            assert len(json_data['result'][0]['abi-plot']) == 21
             identifier = json_data['result'][0]["dataset_identifier"]
             version = json_data['result'][0]["dataset_version"]
             assert identifier == "141"

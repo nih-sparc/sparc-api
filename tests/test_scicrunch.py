@@ -418,8 +418,12 @@ def test_get_related_terms(client):
     print(uberons_results)
     total = len(uberons_results['uberon']['array'])
     assert total > 0
-    assert uberons_results['uberon']['array'][0]['id'] == 'UBERON:0000948'
-    assert uberons_results['uberon']['array'][0]['name'] == 'heart'
+    findHeart = False
+    for item in uberons_results['uberon']['array']:
+        if item['id'] == 'UBERON:0000948' and item['name'] == 'heart':
+            findHeart = True
+            break
+    assert findHeart == True
 
 
 def test_scaffold_files(client):

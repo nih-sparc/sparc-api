@@ -4,7 +4,7 @@ from string import Template
 import boto3
 import sendgrid
 from app.config import Config
-from sendgrid.helpers.mail import Content, Email, Mail, To
+from sendgrid.helpers.mail import Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, FileContent
 
 subject = "Message from SPARC Portal"
 
@@ -32,6 +32,66 @@ Provided data:<br>
 $message
 ''')
 
+community_spotlight_submit_form_email = Template('''\
+<b>Request to create a $subject</b>
+<br>
+<b>Requestor's Contact Info</b>
+<br>
+<b>Name:</b>
+<br>
+$name
+<br>
+<b>E-mail:</b>
+<br>
+$email
+<br>
+<b>Community Spotlight Details</b>
+<br>
+<b>Title:</b><br>
+$title
+<br>
+<b>Summary/details:</b><br>
+$summary
+<br>
+<b>Supporting Info Url:</b><br>
+$url
+<br>
+''')
+
+news_and_events_submit_form_email = Template('''\
+<b>Request to create a $subject</b>
+<br>
+<b>Requestor's Contact Info</b>
+<br>
+<b>Name:</b>
+<br>
+$name
+<br>
+<b>E-mail:</b><br>
+$email
+<br>
+<b>News or Event Details</b>
+<br>
+<b>Title:</b><br>
+$title
+<br>
+<b>Summary/details:</b><br>
+$summary
+<br>
+<b>Supporting Info Url:</b><br>
+$url
+<br>
+<b>Event specific details</b>
+<br>
+<b>Location:</b><br>
+$location
+<br>
+<b>Date:</b><br>
+$date
+<br>
+''')
+
+
 
 class EmailSender(object):
     def __init__(self):
@@ -51,6 +111,27 @@ class EmailSender(object):
             },
             SourceArn=self.ses_arn,
         )
+    
+    def sendgrid_email_with_attachment(self, fromm, to, subject, body, encoded_file, file_name, file_type):
+        mail = Mail(
+            Email(fromm),
+            To(to),
+            subject,
+            Content("text/html", body)
+        )
+        attachedFile = Attachment(
+            FileContent(encoded_file),
+            FileName(file_name),
+            FileType(file_type),
+            Disposition('attachment')
+        )
+
+        mail.attachment = attachedFile
+
+        response = sg_client.send(mail)
+        logging.info(f"Sending a '{subject}' mail with attachment using SendGrid")
+        logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")
+        return response
 
     def sendgrid_email(self, fromm, to, subject, body):
         mail = Mail(

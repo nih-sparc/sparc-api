@@ -572,7 +572,7 @@ def inject_markdown(resp):
         resp["markdown"] = mark_req.text
 
 
-def inject_template_data(resp):
+def inject_template_data(resp, debug):
     id_ = resp.get("id")
     version = resp.get("version")
     if id_ is None or version is None:
@@ -586,9 +586,10 @@ def inject_template_data(resp):
         )
     except ClientError:
         # If the file is not under folder 'files', check under folder 'packages'
-        logging.warning(
-            "Required file template.json was not found under /files folder, trying under /packages..."
-        )
+        if debug:
+            logging.warning(
+                "Required file template.json was not found under /files folder, trying under /packages..."
+            )
         try:
             response = s3.get_object(
                 Bucket="pennsieve-prod-discover-publish-use1",
@@ -596,7 +597,8 @@ def inject_template_data(resp):
                 RequestPayer="requester",
             )
         except ClientError as e:
-            logging.error(e)
+            if debug:
+                logging.error(e)
             return
 
     template = response["Body"].read()
@@ -628,13 +630,14 @@ def build_filetypes_table(osparc_viewers):
 
 
 @app.route("/sim/dataset/<id_>")
-def sim_dataset(id_):
+@app.route("/sim/dataset/<id_>/<debug_>")
+def sim_dataset(id_, debug_="debug"):
     if request.method == "GET":
         req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
         if req.ok:
             json_data = req.json()
             inject_markdown(json_data)
-            inject_template_data(json_data)
+            inject_template_data(json_data, debug_ == "debug")
             return jsonify(json_data)
         abort(404, description="Resource not found")
 

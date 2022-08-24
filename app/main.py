@@ -19,7 +19,7 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email
+from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, community_spotlight_submit_form_email, news_and_events_submit_form_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -164,6 +164,53 @@ def contact():
     email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({ 'message': message }))
 
     return json.dumps({"status": "sent"})
+
+@app.route("/email_comms", methods=["POST"])
+def email_comms():
+  json_data = request.get_json()
+  if json_data and 'email' in json_data and 'name' in json_data and 'title' in json_data and 'summary' in json_data and 'form_type' in json_data:
+    email = json_data["email"]
+    name = json_data['name']
+    title = json_data['title']
+    summary = json_data['summary']
+    form_type = json_data['form_type']
+    body = ''
+    subject = ''
+    location = 'N/A'
+    date = 'N/A'
+    url = 'N/A'
+    has_attachment = 'false'
+    
+    if form_type == 'communitySpotlight':
+      subject = 'Community Spotlight Story'
+      body = community_spotlight_submit_form_email.substitute({ 'name': name, 'email': email, 'subject': subject, 'title': title, 'summary': summary, 'url': url })
+    elif form_type == 'newsOrEvent':
+      subject = 'News or Event'
+      body = news_and_events_submit_form_email.substitute({ 'name': name, 'email': email, 'subject': subject, 'title': title, 'url': url, 'location': location, 'date': date, 'summary': summary })
+    else:
+      abort(400, description="Incorrect submission form type!")
+      
+    # Optional Parameters  
+    if 'url' in json_data:
+      url = json_data['url']
+    if 'location' in json_data:
+      location = json_data['location']
+    if 'date' in json_data:
+      date = json_data['date']
+    if 'has_attachment' in json_data:
+      has_attachment = json_data['has_attachment']
+
+    if has_attachment:
+      if 'encoded_file' in json_data and 'file_name' in json_data and 'file_type' in json_data:
+        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, json_data['encoded_file'], json_data['file_name'], json_data['file_type'])
+        return json.dumps({"status": "sent"})
+      else:
+        abort(400, description="Missing file attachment information!")
+
+    email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body)
+    return json.dumps({"status": "sent"})
+  else:
+    abort(400, description="Missing email, name, or submission form type")
 
 
 def create_s3_presigned_url(key, content_type, expiration):

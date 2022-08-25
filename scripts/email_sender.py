@@ -125,11 +125,11 @@ class EmailSender(object):
             FileType(file_type),
             Disposition('attachment')
         )
-        logging.info('AttachedFile = ', attachedFile)
+        print('AttachedFile = ', attachedFile)
 
         mail.attachment = attachedFile
 
-        logging.info('MAIL = ', mail)
+        print('MAIL = ', mail)
 
         response = sg_client.send(mail)
         logging.info(f"Sending a '{subject}' mail with attachment using SendGrid")

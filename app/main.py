@@ -167,21 +167,39 @@ def contact():
 
 @app.route("/email_comms", methods=["POST"])
 def email_comms():
-  json_data = request.get_json()
-  if json_data and 'email' in json_data and 'name' in json_data and 'title' in json_data and 'summary' in json_data and 'form_type' in json_data:
-    email = json_data["email"]
-    name = json_data['name']
-    title = json_data['title']
-    summary = json_data['summary']
-    form_type = json_data['form_type']
+  logging.info('email_comms request files = ', request.files)
+  logging.info('email_comms request form = ', request.form)
+  logging.info('email_comms request form name = ', request.form.get('name', 'Did not work!'))
+  logging.info('email_comms request args = ', request.args)
+  logging.info('email_comms request form attachment_file = ', request.form.get('attachment_file'))
+  logging.info('email_comms request data = ', request.data)
+
+  form = request.form
+  if form and 'email' in form and 'name' in form and 'title' in form and 'summary' in form and 'form_type' in form:
+    email = form["email"]
+    name = form["name"]
+    title = form["title"]
+    summary = form["summary"]
+    form_type = form["form_type"]
+
+    # Optional Parameters 
     body = ''
     subject = ''
     location = 'N/A'
     date = 'N/A'
     url = 'N/A'
     has_attachment = 'false'
-    
+    if 'url' in form:
+      url = form['url']
+    if 'location' in form:
+      location = form['location']
+    if 'date' in form:
+      date = form['date']
+    if 'has_attachment' in form:
+      has_attachment = form['has_attachment']
+
     if form_type == 'communitySpotlight':
+      logging.info('FORM TYPE = community spotlight')
       subject = 'Community Spotlight Story'
       body = community_spotlight_submit_form_email.substitute({ 'name': name, 'email': email, 'subject': subject, 'title': title, 'summary': summary, 'url': url })
     elif form_type == 'newsOrEvent':
@@ -189,20 +207,17 @@ def email_comms():
       body = news_and_events_submit_form_email.substitute({ 'name': name, 'email': email, 'subject': subject, 'title': title, 'url': url, 'location': location, 'date': date, 'summary': summary })
     else:
       abort(400, description="Incorrect submission form type!")
-      
-    # Optional Parameters  
-    if 'url' in json_data:
-      url = json_data['url']
-    if 'location' in json_data:
-      location = json_data['location']
-    if 'date' in json_data:
-      date = json_data['date']
-    if 'has_attachment' in json_data:
-      has_attachment = json_data['has_attachment']
 
     if has_attachment:
-      if 'encoded_file' in json_data and 'file_name' in json_data and 'file_type' in json_data:
-        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, json_data['encoded_file'], json_data['file_name'], json_data['file_type'])
+      logging.info('HAS ATTACHMENT = TRUE')
+      if 'file_name' in form and 'file_type' in form:
+        file_name = form["file_name"]
+        logging.info('FILE NAME = ', file_name)
+        file_type= form["file_type"]
+        attachment_file = request.files[file_name]
+        logging.info('ATTACHMENT FILE = ', attachment_file)
+        
+        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, attachment_file, file_name, file_type)
         return json.dumps({"status": "sent"})
       else:
         abort(400, description="Missing file attachment information!")

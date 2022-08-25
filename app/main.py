@@ -972,10 +972,10 @@ def get_available_uberonids():
     return jsonify(result)
 
 
-# Get list of terms a level up/down from 
+# Get list of terms a level up/down from
 @app.route("/get-related-terms/<query>")
 def get_related_terms(query):
-    
+
     payload = {
         'direction': request.args.get('direction', default='OUTGOING'),
         'relationshipType': request.args.get('relationshipType', default='BFO:0000050'),

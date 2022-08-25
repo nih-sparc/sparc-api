@@ -169,10 +169,6 @@ def contact():
 def email_comms():
   print('email_comms request files = ', request.files)
   print('email_comms request form = ', request.form)
-  print('email_comms request form name = ', request.form.get('name', 'Did not work!'))
-  print('email_comms request args = ', request.args)
-  print('email_comms request form attachment_file = ', request.form.get('attachment_file'))
-  print('email_comms request data = ', request.data)
 
   form = request.form
   if form and 'email' in form and 'name' in form and 'title' in form and 'summary' in form and 'form_type' in form:
@@ -214,10 +210,17 @@ def email_comms():
         file_name = form["file_name"]
         print('FILE NAME = ', file_name)
         file_type= form["file_type"]
-        attachment_file = request.files[file_name]
+        attachment_file = request.files['attachment_file']
         print('ATTACHMENT FILE = ', attachment_file)
+        print('ATTACHMENT FILE NAME = ', attachment_file.filename)
+        print('ATTACHMENT FILE = ', attachment_file.content_type)
+
+        data = attachment_file.read()
+        print('FILE DATA = ', data)
+        encoded_file = base64.b64encode(data).decode()
+        print('ENCODED FILE = ', encoded_file)
         
-        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, attachment_file, file_name, file_type)
+        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, encoded_file, file_name, file_type)
         return json.dumps({"status": "sent"})
       else:
         abort(400, description="Missing file attachment information!")

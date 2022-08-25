@@ -167,12 +167,12 @@ def contact():
 
 @app.route("/email_comms", methods=["POST"])
 def email_comms():
-  logging.info('email_comms request files = ', request.files)
-  logging.info('email_comms request form = ', request.form)
-  logging.info('email_comms request form name = ', request.form.get('name', 'Did not work!'))
-  logging.info('email_comms request args = ', request.args)
-  logging.info('email_comms request form attachment_file = ', request.form.get('attachment_file'))
-  logging.info('email_comms request data = ', request.data)
+  print('email_comms request files = ', request.files)
+  print('email_comms request form = ', request.form)
+  print('email_comms request form name = ', request.form.get('name', 'Did not work!'))
+  print('email_comms request args = ', request.args)
+  print('email_comms request form attachment_file = ', request.form.get('attachment_file'))
+  print('email_comms request data = ', request.data)
 
   form = request.form
   if form and 'email' in form and 'name' in form and 'title' in form and 'summary' in form and 'form_type' in form:
@@ -199,7 +199,7 @@ def email_comms():
       has_attachment = form['has_attachment']
 
     if form_type == 'communitySpotlight':
-      logging.info('FORM TYPE = community spotlight')
+      print('FORM TYPE = community spotlight')
       subject = 'Community Spotlight Story'
       body = community_spotlight_submit_form_email.substitute({ 'name': name, 'email': email, 'subject': subject, 'title': title, 'summary': summary, 'url': url })
     elif form_type == 'newsOrEvent':
@@ -209,13 +209,13 @@ def email_comms():
       abort(400, description="Incorrect submission form type!")
 
     if has_attachment:
-      logging.info('HAS ATTACHMENT = TRUE')
+      print('HAS ATTACHMENT = TRUE')
       if 'file_name' in form and 'file_type' in form:
         file_name = form["file_name"]
-        logging.info('FILE NAME = ', file_name)
+        print('FILE NAME = ', file_name)
         file_type= form["file_type"]
         attachment_file = request.files[file_name]
-        logging.info('ATTACHMENT FILE = ', attachment_file)
+        print('ATTACHMENT FILE = ', attachment_file)
         
         email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, attachment_file, file_name, file_type)
         return json.dumps({"status": "sent"})

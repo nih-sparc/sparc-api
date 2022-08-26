@@ -19,23 +19,19 @@ def test_osparc_empty_post(client):
     assert r.status_code == 400
 
 
-def test_osparc_no_json_config(client):
+def test_osparc_no_opencor_settings(client):
     data = {
-        "model_url": "https://models.physiomeproject.org/e/611/HumanSAN_Fabbri_Fantini_Wilders_Severi_2017.cellml"
+        "solver_name": "simcore/services/comp/opencor",
+        "solver_version": "1.0.3"
     }
     r = client.post("/simulation", json=data)
     assert r.status_code == 400
 
 
-def test_osparc_no_model_url(client):
+def test_osparc_no_osparc_settings(client):
     data = {
-        "json_config": {
-            "simulation": {
-                "Ending point": 0.003,
-                "Point interval": 0.001,
-            },
-            "output": ["Membrane/V"]
-        }
+        "solver_name": "simcore/services/comp/rabbit-ss-0d-cardiac-model",
+        "solver_version": "1.0.1"
     }
     r = client.post("/simulation", json=data)
     assert r.status_code == 400
@@ -43,13 +39,17 @@ def test_osparc_no_model_url(client):
 
 def test_osparc_valid_data(client):
     data = {
-        "model_url": "https://models.physiomeproject.org/e/611/HumanSAN_Fabbri_Fantini_Wilders_Severi_2017.cellml",
-        "json_config": {
-            "simulation": {
-                "Ending point": 0.003,
-                "Point interval": 0.001,
-            },
-            "output": ["Membrane/V"]
+        "solver_name": "simcore/services/comp/opencor",
+        "solver_version": "1.0.3",
+        "opencor": {
+            "model_url": "https://models.physiomeproject.org/e/611/HumanSAN_Fabbri_Fantini_Wilders_Severi_2017.cellml",
+            "json_config": {
+                "simulation": {
+                    "Ending point": 0.003,
+                    "Point interval": 0.001,
+                },
+                "output": ["Membrane/V"]
+            }
         }
     }
     res = {
@@ -66,13 +66,17 @@ def test_osparc_valid_data(client):
 
 def test_osparc_failing_simulation(client):
     data = {
-        "model_url": "https://models.physiomeproject.org/e/611/HumanSAN_Fabbri_Fantini_Wilders_Severi_2017.cellml",
-        "json_config": {
-            "simulation": {
-                "Ending point": 3.0,
-                "Point interval": 1.0,
-            },
-            "output": ["Membrane/V"]
+        "solver_name": "simcore/services/comp/opencor",
+        "solver_version": "1.0.3",
+        "opencor": {
+            "model_url": "https://models.physiomeproject.org/e/611/HumanSAN_Fabbri_Fantini_Wilders_Severi_2017.cellml",
+            "json_config": {
+                "simulation": {
+                    "Ending point": 3.0,
+                    "Point interval": 1.0,
+                },
+                "output": ["Membrane/V"]
+            }
         }
     }
     res = {

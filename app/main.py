@@ -1016,10 +1016,10 @@ def simulation_ui_file(identifier):
 def simulation():
     data = request.get_json()
 
-    if data and "model_url" in data and "json_config" in data:
-        return json.dumps(run_simulation(data["model_url"], data["json_config"]))
+    if data and "solver_name" in data and "solver_version" in data:
+        return json.dumps(run_simulation(data))
     else:
-        abort(400, description="Missing model URL and/or JSON configuration")
+        abort(400, description="Missing solver name and version")
 
 
 @app.route("/pmr_latest_exposure", methods=["POST"])

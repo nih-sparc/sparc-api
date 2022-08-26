@@ -167,9 +167,6 @@ def contact():
 
 @app.route("/email_comms", methods=["POST"])
 def email_comms():
-  print('email_comms request files = ', request.files)
-  print('email_comms request form = ', request.form)
-
   form = request.form
   if form and 'email' in form and 'name' in form and 'title' in form and 'summary' in form and 'form_type' in form:
     email = form["email"]
@@ -179,8 +176,6 @@ def email_comms():
     form_type = form["form_type"]
 
     # Optional Parameters 
-    body = ''
-    subject = ''
     location = 'N/A'
     date = 'N/A'
     url = 'N/A'
@@ -194,38 +189,30 @@ def email_comms():
     if 'has_attachment' in form:
       has_attachment = form['has_attachment']
 
+    body = ''
+    subject = ''
     if form_type == 'communitySpotlight':
-      print('FORM TYPE = community spotlight')
-      subject = 'Community Spotlight Story'
-      body = community_spotlight_submit_form_email.substitute({ 'name': name, 'email': email, 'subject': subject, 'title': title, 'summary': summary, 'url': url })
+      subject = 'Success Story/Fireside Chat creation request'
+      body = community_spotlight_submit_form_email.substitute({ 'name': name, 'email': email, 'title': title, 'summary': summary, 'url': url })
     elif form_type == 'newsOrEvent':
-      subject = 'News or Event'
-      body = news_and_events_submit_form_email.substitute({ 'name': name, 'email': email, 'subject': subject, 'title': title, 'url': url, 'location': location, 'date': date, 'summary': summary })
+      subject = 'News/Event creation request'
+      body = news_and_events_submit_form_email.substitute({ 'name': name, 'email': email, 'title': title, 'url': url, 'location': location, 'date': date, 'summary': summary })
     else:
       abort(400, description="Incorrect submission form type!")
 
     if has_attachment:
-      print('HAS ATTACHMENT = TRUE')
-      if 'file_name' in form and 'file_type' in form:
-        file_name = form["file_name"]
-        print('FILE NAME = ', file_name)
-        file_type= form["file_type"]
-        attachment_file = request.files['attachment_file']
-        print('ATTACHMENT FILE = ', attachment_file)
-        print('ATTACHMENT FILE NAME = ', attachment_file.filename)
-        print('ATTACHMENT FILE = ', attachment_file.content_type)
+      files = request.files
+      if files and 'attachment_file' in files:
+        attachment_file = files['attachment_file']
+        fileData = attachment_file.read()
 
-        data = attachment_file.read()
-        print('FILE DATA = ', data)
-        encoded_file = base64.b64encode(data).decode()
-        print('ENCODED FILE = ', encoded_file)
+        encoded_file = base64.b64encode(fileData).decode()
         
-        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, encoded_file, file_name, file_type)
-        return json.dumps({"status": "sent"})
+        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, encoded_file, attachment_file.filename, attachment_file.content_type)
       else:
         abort(400, description="Missing file attachment information!")
-
-    email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body)
+    else:
+      email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body)
     return json.dumps({"status": "sent"})
   else:
     abort(400, description="Missing email, name, or submission form type")

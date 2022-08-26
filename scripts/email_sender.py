@@ -33,25 +33,29 @@ $message
 ''')
 
 community_spotlight_submit_form_email = Template('''\
-<b>Request to create a $subject</b>
-<br>
 <b>Requestor's Contact Info</b>
+<br>
 <br>
 <b>Name:</b>
 <br>
 $name
 <br>
+<br>
 <b>E-mail:</b>
 <br>
 $email
 <br>
+<br>
 <b>Community Spotlight Details</b>
+<br>
 <br>
 <b>Title:</b><br>
 $title
 <br>
+<br>
 <b>Summary/details:</b><br>
 $summary
+<br>
 <br>
 <b>Supporting Info Url:</b><br>
 $url
@@ -59,32 +63,39 @@ $url
 ''')
 
 news_and_events_submit_form_email = Template('''\
-<b>Request to create a $subject</b>
-<br>
 <b>Requestor's Contact Info</b>
+<br>
 <br>
 <b>Name:</b>
 <br>
 $name
 <br>
+<br>
 <b>E-mail:</b><br>
 $email
 <br>
+<br>
 <b>News or Event Details</b>
+<br>
 <br>
 <b>Title:</b><br>
 $title
 <br>
+<br>
 <b>Summary/details:</b><br>
 $summary
+<br>
 <br>
 <b>Supporting Info Url:</b><br>
 $url
 <br>
+<br>
 <b>Event specific details</b>
+<br>
 <br>
 <b>Location:</b><br>
 $location
+<br>
 <br>
 <b>Date:</b><br>
 $date
@@ -125,11 +136,7 @@ class EmailSender(object):
             FileType(file_type),
             Disposition('attachment')
         )
-        print('AttachedFile = ', attachedFile)
-
         mail.attachment = attachedFile
-
-        print('MAIL = ', mail)
 
         response = sg_client.send(mail)
         logging.info(f"Sending a '{subject}' mail with attachment using SendGrid")

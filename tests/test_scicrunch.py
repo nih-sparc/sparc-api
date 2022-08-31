@@ -166,7 +166,7 @@ def test_response_abi_plot(client):
         json_data = json.loads(data)
         assert len(json_data['result']) == 1
         if json_data['result'][0]['version'] == '1.1.5':
-            assert len(json_data['result'][0]['abi-plot']) == 5
+            assert len(json_data['result'][0]['abi-plot']) == 21
             identifier = json_data['result'][0]["dataset_identifier"]
             version = json_data['result'][0]["dataset_version"]
             assert identifier == "141"
@@ -406,7 +406,8 @@ def test_getting_curies(client):
     assert total > human
     # Test if the uberon - name match the one from the hardcoded list
     for item in uberons_results['uberon']['array']:
-        assert UBERONS_DICT[item['id']] == item['name'].lower()
+        if item['id'] in UBERONS_DICT:
+            assert UBERONS_DICT[item['id']] == item['name'].lower()
 
 
 def test_get_related_terms(client):
@@ -417,8 +418,12 @@ def test_get_related_terms(client):
     print(uberons_results)
     total = len(uberons_results['uberon']['array'])
     assert total > 0
-    assert uberons_results['uberon']['array'][0]['id'] == 'UBERON:0000948'
-    assert uberons_results['uberon']['array'][0]['name'] == 'heart'
+    findHeart = False
+    for item in uberons_results['uberon']['array']:
+        if item['id'] == 'UBERON:0000948' and item['name'] == 'heart':
+            findHeart = True
+            break
+    assert findHeart == True
 
 
 def test_scaffold_files(client):

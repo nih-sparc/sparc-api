@@ -1,4 +1,5 @@
 UBERONS_DICT = {
+    'UBERON:0000013': 'sympathetic nervous system',
     'UBERON:0000948': 'heart',
     'UBERON:0001155': 'colon',
     'UBERON:0001759': 'vagus nerve',

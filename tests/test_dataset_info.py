@@ -142,7 +142,6 @@ def test_generic_mouse_colon_dataset_search(client):
     assert SCAFFOLD_FILE in result.keys()
     assert THUMBNAIL_IMAGE in result.keys()
 
-
 def test_complex_title_dataset_search(client):
     title = "Spatial distribution and morphometric characterization of vagal efferents associated with the myenteric plexus of the rat stomach"
 

@@ -19,7 +19,7 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email
+from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, community_spotlight_submit_form_email, news_and_events_submit_form_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -164,6 +164,58 @@ def contact():
     email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({ 'message': message }))
 
     return json.dumps({"status": "sent"})
+
+@app.route("/email_comms", methods=["POST"])
+def email_comms():
+  form = request.form
+  if form and 'email' in form and 'name' in form and 'title' in form and 'summary' in form and 'form_type' in form:
+    email = form["email"]
+    name = form["name"]
+    title = form["title"]
+    summary = form["summary"]
+    form_type = form["form_type"]
+
+    # Optional Parameters 
+    location = 'N/A'
+    date = 'N/A'
+    url = 'N/A'
+    has_attachment = 'false'
+    if 'url' in form:
+      url = form['url']
+    if 'location' in form:
+      location = form['location']
+    if 'date' in form:
+      date = form['date']
+    if 'has_attachment' in form:
+      has_attachment = form['has_attachment']
+
+    body = ''
+    subject = ''
+    if form_type == 'communitySpotlight':
+      subject = 'Success Story/Fireside Chat creation request'
+      body = community_spotlight_submit_form_email.substitute({ 'name': name, 'email': email, 'title': title, 'summary': summary, 'url': url })
+    elif form_type == 'newsOrEvent':
+      subject = 'News/Event creation request'
+      body = news_and_events_submit_form_email.substitute({ 'name': name, 'email': email, 'title': title, 'url': url, 'location': location, 'date': date, 'summary': summary })
+    else:
+      abort(400, description="Incorrect submission form type!")
+
+    if has_attachment:
+      files = request.files
+      if files and 'attachment_file' in files:
+        attachment_file = files['attachment_file']
+        fileData = attachment_file.read()
+
+        encoded_file = base64.b64encode(fileData).decode()
+        
+        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, encoded_file, attachment_file.filename, attachment_file.content_type)
+      else:
+        abort(400, description="Missing file attachment information!")
+    else:
+      email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body)
+    return json.dumps({"status": "sent"})
+  else:
+    abort(400, description="Missing email, name, or submission form type")
 
 
 def create_s3_presigned_url(key, content_type, expiration):

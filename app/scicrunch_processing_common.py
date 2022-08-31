@@ -39,7 +39,7 @@ MAPPED_MIME_TYPES = {
     'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,
     'inode/vnd.abi.scaffold.thumbnail+file': THUMBNAIL_IMAGE,
     'inode/vnd.abi.scaffold.view+file': SCAFFOLD_VIEW_FILE,
-    'text/vnd.abi.plot+Tab-separated-values': PLOT_FILE,
+    'text/vnd.abi.plot+tab-separated-values': PLOT_FILE,
     'text/vnd.abi.plot+csv': PLOT_FILE,
     'image/png': COMMON_IMAGES,
     'image/tiff': 'tiff-image',
@@ -104,3 +104,26 @@ SKIPPED_OBJ_ATTRIBUTES = [
     'issupplementalto',
     'updated'
 ]
+
+def map_mime_type(mime_type, obj):
+    if mime_type == '':
+        return SKIP
+
+    if mime_type == NOT_SPECIFIED:
+        return SKIP
+
+    lower_mime_type = mime_type.lower()
+
+    if lower_mime_type in SKIPPED_MIME_TYPES:
+        return SKIP
+
+    if lower_mime_type in MAPPED_MIME_TYPES:
+        if lower_mime_type in ["image/jpeg", "image/png"]:
+            try:
+                if obj['dataset']['path'].startswith('derivative'):
+                    return SKIP
+            except KeyError:
+                return SKIP
+        return MAPPED_MIME_TYPES[lower_mime_type]
+
+    return NOT_SPECIFIED

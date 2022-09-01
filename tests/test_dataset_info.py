@@ -225,7 +225,7 @@ def test_title_plot_annotation_dataset_search(client):
 def test_object_identifier_dataset_search(client):
     #Dataset 141
     print()
-    identifier = "package:cc63e3f6-c2d6-4355-9c46-604660377bcb"
+    identifier = "package:ea813c23-e110-46ba-815f-d134b955a8b5"
     start = timer()
     r = client.get('/dataset_info/using_object_identifier', query_string={'identifier': identifier})
     end = timer()

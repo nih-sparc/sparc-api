@@ -1,3 +1,7 @@
+from app.scicrunch_processing_common import PASS_THROUGH_KEYS as BASE_PASS_THROUGH_KEYS
+
+PASS_THROUGH_KEYS = ["doi", "dataset_identifier", "dataset_version", "dataset_revision", *BASE_PASS_THROUGH_KEYS]
+
 # attributes is used to map desired parameters onto the path of keys needed in the sci-crunch response.
 #  For example:
 #  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
@@ -21,4 +25,5 @@ def sort_files_by_mime_type(obj_list):
 
 
 def process_result(result):
-    return {}
+    output = dict(filter(lambda x: x[0] in PASS_THROUGH_KEYS, result.items()))
+    return output

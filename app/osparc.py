@@ -148,13 +148,9 @@ def run_simulation(data):
             abort(400, description="Missing OpenCOR settings")
     else:
         if "osparc" in data:
-            if ((data["solver_name"] == "simcore/services/comp/rabbit-ss-0d-cardiac-model") or
-                (data["solver_name"] == "simcore/services/comp/rabbit-ss-1d-cardiac-model") or
-                (data["solver_name"] == "simcore/services/comp/rabbit-ss-2d-cardiac-model")):
+            if data["solver_name"] == "simcore/services/comp/rabbit-ss-0d-cardiac-model":
                 return do_run_simulation(data, DATASET_4_SIMULATION)
-            elif ((data["solver_name"] == "simcore/services/comp/human-gb-0d-cardiac-model") or
-                  (data["solver_name"] == "simcore/services/comp/human-gb-1d-cardiac-model") or
-                  (data["solver_name"] == "simcore/services/comp/human-gb-2d-cardiac-model")):
+            elif data["solver_name"] == "simcore/services/comp/human-gb-0d-cardiac-model":
                 return do_run_simulation(data, DATASET_17_SIMULATION)
             elif data["solver_name"] == "simcore/services/comp/kember-cardiac-model":
                 return do_run_simulation(data, DATASET_78_SIMULATION)

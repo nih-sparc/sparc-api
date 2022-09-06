@@ -18,6 +18,7 @@ ATTRIBUTES_MAP = {
     'dataset_version': ['pennsieve', 'version', 'identifier'],
     'dataset_revision': ['pennsieve', 'revision', 'identifier'],
     'description': ['item', 'description'],
+    'contributors': ['contributors']
 }
 
 def sort_files_by_mime_type(obj_list):

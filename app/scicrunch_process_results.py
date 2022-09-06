@@ -14,7 +14,8 @@ def _prepare_results(results):
         try:
             version = hit['_source']['item']['version']['keyword']
         except KeyError:
-            continue
+            #Try to get minimal information out from the datasets
+            version = 'unknown'
 
         package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
         m = importlib.import_module(f'app.{package_version}')

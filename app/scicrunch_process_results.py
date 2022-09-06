@@ -14,7 +14,8 @@ def _prepare_results(results):
         try:
             version = hit['_source']['item']['version']['keyword']
         except KeyError:
-            continue
+            #Try to get minimal information out from the datasets
+            version = 'undefined'
 
         package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
         m = importlib.import_module(f'app.{package_version}')
@@ -74,7 +75,11 @@ def reform_dataset_results(results):
     processed_outputs = []
     kb_results = _prepare_results(results)
     for kb_result in kb_results:
-        version = kb_result['version']
+        try:
+            version = kb_result['version']
+        except KeyError:
+            #Try to get minimal information out from the datasets
+            version = 'undefined'
         package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
         m = importlib.import_module(f'app.{package_version}')
         process_result = getattr(m, 'process_result')

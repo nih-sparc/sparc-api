@@ -1071,7 +1071,7 @@ def simulation():
     if data and "solver_name" in data and "solver_version" in data:
         return json.dumps(start_simulation(data))
     else:
-        abort(400, description="Missing solver name and version")
+        abort(400, description="Missing solver name and/or solver version")
 
 
 @app.route("/pmr_latest_exposure", methods=["POST"])

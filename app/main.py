@@ -175,7 +175,7 @@ def email_comms():
     summary = form["summary"]
     form_type = form["form_type"]
 
-    # Optional Parameters 
+    # Optional Parameters
     location = 'N/A'
     date = 'N/A'
     url = 'N/A'
@@ -207,7 +207,7 @@ def email_comms():
         fileData = attachment_file.read()
 
         encoded_file = base64.b64encode(fileData).decode()
-        
+
         email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, encoded_file, attachment_file.filename, attachment_file.content_type)
       else:
         abort(400, description="Missing file attachment information!")

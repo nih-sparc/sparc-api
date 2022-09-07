@@ -18,7 +18,25 @@ class SimulationException(Exception):
     pass
 
 
-def do_run_simulation(data, simulation_type):
+def run_simulation(data):
+    if data["solver_name"] == "simcore/services/comp/opencor":
+        if "opencor" in data:
+            simulation_type = OPENCOR_SIMULATION
+        else:
+            abort(400, description="Missing OpenCOR settings")
+    else:
+        if "osparc" in data:
+            if data["solver_name"] == "simcore/services/comp/rabbit-ss-0d-cardiac-model":
+                simulation_type = DATASET_4_SIMULATION
+            elif data["solver_name"] == "simcore/services/comp/human-gb-0d-cardiac-model":
+                simulation_type = DATASET_17_SIMULATION
+            elif data["solver_name"] == "simcore/services/comp/kember-cardiac-model":
+                simulation_type = DATASET_78_SIMULATION
+            else:
+                abort(400, description="Unknown oSPARC solver")
+        else:
+            abort(400, description="Missing oSPARC settings")
+
     try:
         api_client = osparc.ApiClient(osparc.Configuration(
             host=Config.OSPARC_API_URL,
@@ -138,23 +156,3 @@ def do_run_simulation(data, simulation_type):
         }
 
     return res
-
-
-def run_simulation(data):
-    if data["solver_name"] == "simcore/services/comp/opencor":
-        if "opencor" in data:
-            return do_run_simulation(data, OPENCOR_SIMULATION)
-        else:
-            abort(400, description="Missing OpenCOR settings")
-    else:
-        if "osparc" in data:
-            if data["solver_name"] == "simcore/services/comp/rabbit-ss-0d-cardiac-model":
-                return do_run_simulation(data, DATASET_4_SIMULATION)
-            elif data["solver_name"] == "simcore/services/comp/human-gb-0d-cardiac-model":
-                return do_run_simulation(data, DATASET_17_SIMULATION)
-            elif data["solver_name"] == "simcore/services/comp/kember-cardiac-model":
-                return do_run_simulation(data, DATASET_78_SIMULATION)
-            else:
-                abort(400, description="Unknown oSPARC solver")
-        else:
-            abort(400, description="Missing oSPARC settings")

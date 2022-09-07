@@ -18,7 +18,7 @@ class SimulationException(Exception):
     pass
 
 
-def run_simulation(data):
+def start_simulation(data):
     if data["solver_name"] == "simcore/services/comp/opencor":
         if "opencor" in data:
             simulation_type = OPENCOR_SIMULATION

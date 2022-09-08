@@ -29,7 +29,8 @@ from app.scicrunch_process_results import reform_dataset_results, process_result
     reform_related_terms
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
-from app.osparc import start_simulation
+from app.osparc import start_simulation as do_start_simulation
+from app.osparc import check_simulation as do_check_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
 
 app = Flask(__name__)
@@ -1065,13 +1066,23 @@ def simulation_ui_file(identifier):
 
 
 @app.route("/start_simulation", methods=["POST"])
-def simulation():
+def start_simulation():
     data = request.get_json()
 
     if data and "solver_name" in data and "solver_version" in data:
-        return json.dumps(start_simulation(data))
+        return json.dumps(do_start_simulation(data))
     else:
         abort(400, description="Missing solver name and/or solver version")
+
+
+@app.route("/check_simulation", methods=["POST"])
+def check_simulation():
+    data = request.get_json()
+
+    if data and "solver_id" in data and "solver_version" in data and "job_id" in data:
+        return json.dumps(do_check_simulation(data))
+    else:
+        abort(400, description="Missing solver id, solver version and/or job id")
 
 
 @app.route("/pmr_latest_exposure", methods=["POST"])

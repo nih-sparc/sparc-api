@@ -8,10 +8,10 @@ from osparc.rest import ApiException
 from time import sleep
 
 
-OPENCOR_SIMULATION = 0
-DATASET_4_SIMULATION = 1
-DATASET_17_SIMULATION = 2
-DATASET_78_SIMULATION = 3
+OPENCOR_SOLVER = "simcore/services/comp/opencor"
+DATASET_4_SOLVER = "simcore/services/comp/rabbit-ss-0d-cardiac-model"
+DATASET_17_SOLVER = "simcore/services/comp/human-gb-0d-cardiac-model"
+DATASET_78_SOLVER = "simcore/services/comp/kember-cardiac-model"
 
 
 class SimulationException(Exception):
@@ -19,23 +19,23 @@ class SimulationException(Exception):
 
 
 def start_simulation(data):
-    if data["solver_name"] == "simcore/services/comp/opencor":
-        if "opencor" in data:
-            simulation_type = OPENCOR_SIMULATION
-        else:
+    # Determine the type of simulation.
+
+    solver_name = data["solver_name"]
+
+    if solver_name == OPENCOR_SOLVER:
+        if not "opencor" in data:
             abort(400, description="Missing OpenCOR settings")
     else:
         if "osparc" in data:
-            if data["solver_name"] == "simcore/services/comp/rabbit-ss-0d-cardiac-model":
-                simulation_type = DATASET_4_SIMULATION
-            elif data["solver_name"] == "simcore/services/comp/human-gb-0d-cardiac-model":
-                simulation_type = DATASET_17_SIMULATION
-            elif data["solver_name"] == "simcore/services/comp/kember-cardiac-model":
-                simulation_type = DATASET_78_SIMULATION
-            else:
+            if ((solver_name != DATASET_4_SOLVER)
+                and (solver_name != DATASET_17_SOLVER)
+                    and (solver_name != DATASET_78_SOLVER)):
                 abort(400, description="Unknown oSPARC solver")
         else:
             abort(400, description="Missing oSPARC settings")
+
+    # Start the simulation.
 
     try:
         api_client = osparc.ApiClient(osparc.Configuration(
@@ -46,9 +46,7 @@ def start_simulation(data):
 
         # Upload the configuration file, in the case of an OpenCOR simulation.
 
-        files_api = osparc.FilesApi(api_client)
-
-        if simulation_type == OPENCOR_SIMULATION:
+        if solver_name == OPENCOR_SOLVER:
             temp_config_file = tempfile.NamedTemporaryFile(mode="w+")
 
             json.dump(data["opencor"]["json_config"], temp_config_file)
@@ -56,6 +54,8 @@ def start_simulation(data):
             temp_config_file.seek(0)
 
             try:
+                files_api = osparc.FilesApi(api_client)
+
                 config_file = files_api.upload_file(temp_config_file.name)
             except ApiException as e:
                 raise SimulationException(
@@ -70,12 +70,12 @@ def start_simulation(data):
 
         try:
             solver = solvers_api.get_solver_release(
-                data["solver_name"], data["solver_version"])
+                solver_name, data["solver_version"])
         except ApiException as e:
             raise SimulationException(
                 f"the requested solver could not be retrieved ({e})")
 
-        if simulation_type == OPENCOR_SIMULATION:
+        if solver_name == OPENCOR_SOLVER:
             job_inputs = {
                 "model_url": data["opencor"]["model_url"],
                 "config_file": config_file
@@ -97,58 +97,82 @@ def start_simulation(data):
             raise SimulationException(
                 "the simulation job could not be submitted")
 
-        # Wait for the simulation job to complete (or to fail).
-
-        while True:
-            status = solvers_api.inspect_job(
-                solver.id, solver.version, job.id)
-
-            if status.progress == 100:
-                break
-
-            sleep(1)
-
-        status = solvers_api.inspect_job(
-            solver.id, solver.version, job.id)
-
-        if status.state != "SUCCESS":
-            raise SimulationException("the simulation failed")
-
-        # Retrieve the simulation job outputs.
-
-        try:
-            outputs = solvers_api.get_job_outputs(
-                solver.id, solver.version, job.id)
-        except ApiException as e:
-            raise SimulationException(
-                f"the simulation job outputs could not be retrieved ({e})")
-
-        # Download the simulation results.
-
-        if simulation_type == OPENCOR_SIMULATION:
-            output_name = "output_1"
-        else:
-            output_name = "out_1"
-
-        try:
-            results_filename = files_api.download_file(
-                outputs.results[output_name].id)
-        except ApiException as e:
-            raise SimulationException(
-                f"the simulation results could not be retrieved ({e})")
-
-        results_file = open(results_filename, "r")
-
         res = {
             "status": "ok",
+            "data": {
+                "solver_id": solver.id,
+                "solver_version": solver.version,
+                "job_id": job.id
+            }
+        }
+    except SimulationException as e:
+        res = {
+            "status": "nok",
+            "description": e.args[0] if len(e.args) > 0 else "unknown"
         }
 
-        if simulation_type == OPENCOR_SIMULATION:
-            res["results"] = json.load(results_file)
-        else:
-            res["results"] = results_file.read()
+    return res
 
-        results_file.close()
+
+def check_simulation(data):
+    try:
+        # Check whether the simulation has completed (or failed).
+
+        api_client = osparc.ApiClient(osparc.Configuration(
+            host=Config.OSPARC_API_URL,
+            username=Config.OSPARC_API_KEY,
+            password=Config.OSPARC_API_SECRET
+        ))
+        solvers_api = osparc.SolversApi(api_client)
+        solver_id = data["solver_id"]
+        solver_version = data["solver_version"]
+        job_id = data["job_id"]
+        status = solvers_api.inspect_job(solver_id, solver_version, job_id)
+
+        if status.progress == 100:
+            # The simulation has completed, but was it successful?
+
+            if status.state != "SUCCESS":
+                raise SimulationException("the simulation failed")
+
+            # Retrieve the simulation job outputs.
+
+            try:
+                outputs = solvers_api.get_job_outputs(
+                    solver_id, solver_version, job_id)
+            except ApiException as e:
+                raise SimulationException(
+                    f"the simulation job outputs could not be retrieved ({e})")
+
+            # Download the simulation results.
+
+            try:
+                files_api = osparc.FilesApi(api_client)
+
+                results_filename = files_api.download_file(
+                    outputs.results[list(outputs.results.keys())[0]].id)
+            except ApiException as e:
+                raise SimulationException(
+                    f"the simulation results could not be retrieved ({e})")
+
+            results_file = open(results_filename, "r")
+
+            res = {
+                "status": "ok",
+            }
+
+            if solver_id == OPENCOR_SOLVER:
+                res["results"] = json.load(results_file)
+            else:
+                res["results"] = results_file.read()
+
+            results_file.close()
+        else:
+            # The simulation is not complete yet.
+
+            res = {
+                "status": "ok"
+            }
     except SimulationException as e:
         res = {
             "status": "nok",

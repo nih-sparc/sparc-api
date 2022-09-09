@@ -1069,7 +1069,7 @@ def simulation_ui_file(identifier):
 def start_simulation():
     data = request.get_json()
 
-    if data and "solver_name" in data and "solver_version" in data:
+    if data and "solver" in data and "name" in data["solver"] and "version" in data["solver"]:
         return json.dumps(do_start_simulation(data))
     else:
         abort(400, description="Missing solver name and/or solver version")
@@ -1079,10 +1079,10 @@ def start_simulation():
 def check_simulation():
     data = request.get_json()
 
-    if data and "solver_id" in data and "solver_version" in data and "job_id" in data:
+    if data and "job_id" in data and "solver" in data and "name" in data["solver"] and "version" in data["solver"]:
         return json.dumps(do_check_simulation(data))
     else:
-        abort(400, description="Missing solver id, solver version and/or job id")
+        abort(400, description="Missing solver name, solver version and/or job id")
 
 
 @app.route("/pmr_latest_exposure", methods=["POST"])

@@ -21,7 +21,7 @@ class SimulationException(Exception):
 def start_simulation(data):
     # Determine the type of simulation.
 
-    solver_name = data["solver_name"]
+    solver_name = data["solver"]["name"]
 
     if solver_name == OPENCOR_SOLVER:
         if not "opencor" in data:
@@ -70,7 +70,7 @@ def start_simulation(data):
 
         try:
             solver = solvers_api.get_solver_release(
-                solver_name, data["solver_version"])
+                solver_name, data["solver"]["version"])
         except ApiException as e:
             raise SimulationException(
                 f"the requested solver could not be retrieved ({e})")
@@ -100,9 +100,11 @@ def start_simulation(data):
         res = {
             "status": "ok",
             "data": {
-                "solver_id": solver.id,
-                "solver_version": solver.version,
-                "job_id": job.id
+                "job_id": job.id,
+                "solver": {
+                    "name": solver.id,
+                    "version": solver.version
+                }
             }
         }
     except SimulationException as e:
@@ -124,10 +126,10 @@ def check_simulation(data):
             password=Config.OSPARC_API_SECRET
         ))
         solvers_api = osparc.SolversApi(api_client)
-        solver_id = data["solver_id"]
-        solver_version = data["solver_version"]
         job_id = data["job_id"]
-        status = solvers_api.inspect_job(solver_id, solver_version, job_id)
+        solver_name = data["solver"]["name"]
+        solver_version = data["solver"]["version"]
+        status = solvers_api.inspect_job(solver_name, solver_version, job_id)
 
         if status.progress == 100:
             # The simulation has completed, but was it successful?
@@ -139,7 +141,7 @@ def check_simulation(data):
 
             try:
                 outputs = solvers_api.get_job_outputs(
-                    solver_id, solver_version, job_id)
+                    solver_name, solver_version, job_id)
             except ApiException as e:
                 raise SimulationException(
                     f"the simulation job outputs could not be retrieved ({e})")
@@ -161,7 +163,7 @@ def check_simulation(data):
                 "status": "ok",
             }
 
-            if solver_id == OPENCOR_SOLVER:
+            if solver_name == OPENCOR_SOLVER:
                 res["results"] = json.load(results_file)
             else:
                 res["results"] = results_file.read()

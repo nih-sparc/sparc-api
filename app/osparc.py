@@ -44,7 +44,10 @@ def start_simulation(data):
             password=Config.OSPARC_API_SECRET
         ))
 
-        # Upload the configuration file, in the case of an OpenCOR simulation.
+        # Upload the configuration file, in the case of an OpenCOR simulation or
+        # in the case of an oSPARC simulation input file.
+
+        has_solver_input = "input" in data["solver"]
 
         if solver_name == OPENCOR_SOLVER:
             temp_config_file = tempfile.NamedTemporaryFile(mode="w+")
@@ -62,6 +65,21 @@ def start_simulation(data):
                     f"the simulation configuration file could not be uploaded ({e})")
 
             temp_config_file.close()
+        elif has_solver_input:
+            temp_input_file = tempfile.NamedTemporaryFile(mode="w+")
+
+            temp_input_file.write(data["solver"]["input"]["value"])
+            temp_input_file.seek(0)
+
+            try:
+                files_api = osparc.FilesApi(api_client)
+
+                input_file = files_api.upload_file(temp_input_file.name)
+            except ApiException as e:
+                raise SimulationException(
+                    f"the solver input file could not be uploaded ({e})")
+
+            temp_input_file.close()
 
         # Create the simulation job with the job inputs that matches our
         # simulation type.
@@ -81,6 +99,9 @@ def start_simulation(data):
                 "config_file": config_file
             }
         else:
+            if has_solver_input:
+                data["osparc"]["job_inputs"][data["solver"]["input"]["name"]] = input_file
+
             job_inputs = data["osparc"]["job_inputs"]
 
         job = solvers_api.create_job(

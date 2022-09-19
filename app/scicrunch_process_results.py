@@ -13,6 +13,10 @@ def _prepare_results(results):
         except KeyError:
             continue
 
+        if version >= '1.1.5':
+            print('WARINING! Scicrunch processing is out of date!')
+            version = '1.1.5'
+
         package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
         m = importlib.import_module(f'app.{package_version}')
         attributes_map = getattr(m, 'ATTRIBUTES_MAP')

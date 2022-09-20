@@ -200,7 +200,7 @@ def email_comms():
     else:
       abort(400, description="Incorrect submission form type!")
 
-    if has_attachment:
+    if has_attachment == 'true':
       files = request.files
       if files and 'attachment_file' in files:
         attachment_file = files['attachment_file']

@@ -124,7 +124,7 @@ viewers_scheduler = BackgroundScheduler()
 def get_osparc_file_viewers():
     logging.info('Getting oSPARC viewers')
     # Gets a list of default viewers.
-    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers/default')
+    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers')
     viewers = req.json()
     table = build_filetypes_table(viewers["data"])
     osparc_data["file_viewers"] = table

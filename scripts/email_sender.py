@@ -24,6 +24,19 @@ Your message:<br>
 <br>
 $message
 ''')
+creation_request_confirmation_email = Template('''\
+<b>Thank you for submitting the following SPARC creation request!</b>
+<br>
+<br>
+Title:<br>
+$title
+<br>
+Summary:<br>
+$summary
+<br>
+<br>
+We have received your request and will be in contact as soon as possible.
+''')
 issue_reporting_email = Template('''\
 <b>You reported an issue on the SPARC Portal</b><br>
 <br>

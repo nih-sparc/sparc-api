@@ -349,7 +349,7 @@ def presign_resource_url():
 
 # This version of s3-resouces is used for accessing files on staging. Use it as a replacement for 's3-resource'
 # No changes are need on the front end, just use s3-resource as normal
-@app.route("/s3-resource/<path:path>")
+# @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
     print(path)
     filePath = path.split('files/')[-1]
@@ -377,6 +377,33 @@ def direct_download_url(path):
         return resp2.content
     return jsonify({'error': 'error with the provided ID '}, status=502)
 
+# This version of s3-resouces is used for accessing files on staging that have never been published
+@app.route("/s3-resource/<path:path>")
+def direct_download_url2(path):
+    print(path)
+    filePath = path.split('files/')[-1]
+    pennsieveId = path.split('/')[0]
+
+    # If length is small, we have a pennsieve discover id. We will process this one with the normal s3-resource route
+    if len(pennsieveId) <= 4:
+        return direct_download_url(path)
+
+    if 'N:package:' not in pennsieveId:
+        pennsieveId = 'N:dataset:' + pennsieveId
+
+    url = bfWorker.getURLFromDatasetIdAndFilePath(pennsieveId, filePath)
+    if url != None:
+        resp2 = requests.get(url)
+        return resp2.content
+    return jsonify({'error': 'error with the provided ID '}, status=502)
+
+
+@app.route("/proxy/")
+def proxy():
+    url = request.args.get('url')
+    resp = requests.get(url)
+    return resp.content
+    return jsonify({'error': 'error with the provided ID '}, status=502)
 
 @app.route("/scicrunch-dataset/<doi1>/<doi2>")
 def sci_doi(doi1, doi2):

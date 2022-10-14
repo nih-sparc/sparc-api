@@ -153,19 +153,22 @@ def get_metrics():
     
 
 # Gets oSPARC viewers before the first request after startup and then once a day.
-viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", seconds=20)
+viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=3)
 
 # Gathers all the required metrics, once every three hours
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', )
 
 
-def shutdown_scheduler():
+def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
     if viewers_scheduler.running:
         viewers_scheduler.shutdown()
+    logging.info('Stopping scheduler for metrics acquisition')
+    if metrics_scheduler.running:
+        metrics_scheduler.shutdown()
 
 
-atexit.register(shutdown_scheduler)
+atexit.register(shutdown_schedulers)
 
 
 @app.route("/health")

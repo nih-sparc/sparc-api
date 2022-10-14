@@ -1,5 +1,9 @@
 import atexit
 import base64
+
+from app.metrics.algolia import get_dataset_count, init_algolia_client
+from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
+
 import boto3
 import json
 import logging
@@ -118,6 +122,7 @@ def connect_to_pennsieve():
 
 
 viewers_scheduler = BackgroundScheduler()
+metrics_scheduler = BackgroundScheduler()
 
 
 @app.before_first_request
@@ -133,8 +138,25 @@ def get_osparc_file_viewers():
         viewers_scheduler.start()
 
 
+usage_metrics = {}
+google_analytics = init_ga_reporting()
+algolia = init_algolia_client()
+
+
+@app.before_first_request
+def get_metrics():
+    logging.info('Gathering metrics data')
+    ga_response = get_ga_1year_sessions(google_analytics)
+    algolia_response = get_dataset_count(algolia)
+    usage_metrics['1year_sessions_count'] = ga_response
+    usage_metrics['dataset_count'] = algolia_response
+    
+
 # Gets oSPARC viewers before the first request after startup and then once a day.
-viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
+viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", seconds=20)
+
+# Gathers all the required metrics, once every three hours
+metrics_scheduler.add_job(func=get_metrics, trigger='interval', )
 
 
 def shutdown_scheduler():
@@ -1151,3 +1173,7 @@ def search_readme(query):
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return jsonify({'error': str(err), 'message': 'Readme is not currently reachable, please try again later'}), 502
+
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    return usage_metrics

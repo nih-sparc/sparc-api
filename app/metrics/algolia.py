@@ -1,8 +1,12 @@
 from algoliasearch.search_client import SearchClient
+from app.config import Config
+
+APP_ID = Config.ALGOLIA_APP_ID
+API_KEY = Config.ALGOLIA_API_KEY
 
 
 def init_algolia_client():
-    return SearchClient.create("04WW1V1O0F", "9f55092cb37c3896a8bfc48ef87206d6")
+    return SearchClient.create(APP_ID, API_KEY)
 
 
 def get_dataset_count(client):

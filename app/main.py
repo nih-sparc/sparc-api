@@ -1,6 +1,7 @@
 import atexit
 import base64
 
+from app.metrics.contentful import init_cf_client, get_funded_projects_count
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 
@@ -141,6 +142,7 @@ def get_osparc_file_viewers():
 usage_metrics = {}
 google_analytics = init_ga_reporting()
 algolia = init_algolia_client()
+contentful = init_cf_client()
 
 
 @app.before_first_request
@@ -148,8 +150,10 @@ def get_metrics():
     logging.info('Gathering metrics data')
     ga_response = get_ga_1year_sessions(google_analytics)
     algolia_response = get_dataset_count(algolia)
+    cf_response = get_funded_projects_count(contentful)
     usage_metrics['1year_sessions_count'] = ga_response
     usage_metrics['dataset_count'] = algolia_response
+    usage_metrics['funded_projects_count'] = cf_response
     
 
 # Gets oSPARC viewers before the first request after startup and then once a day.

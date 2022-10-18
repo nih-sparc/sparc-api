@@ -1,6 +1,7 @@
 import atexit
 import base64
 
+from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_client, get_funded_projects_count
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
@@ -151,9 +152,11 @@ def get_metrics():
     ga_response = get_ga_1year_sessions(google_analytics)
     algolia_response = get_dataset_count(algolia)
     cf_response = get_funded_projects_count(contentful)
+    ps_response = get_download_count()
     usage_metrics['1year_sessions_count'] = ga_response
     usage_metrics['dataset_count'] = algolia_response
     usage_metrics['funded_projects_count'] = cf_response
+    usage_metrics['download_count'] = ps_response
     if not metrics_scheduler.running:
         logging.info('Starting scheduler for metrics acquisition')
         metrics_scheduler.start()

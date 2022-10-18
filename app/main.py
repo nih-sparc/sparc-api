@@ -156,7 +156,7 @@ def get_metrics():
     usage_metrics['1year_sessions_count'] = ga_response
     usage_metrics['dataset_count'] = algolia_response
     usage_metrics['funded_projects_count'] = cf_response
-    usage_metrics['download_count'] = ps_response
+    usage_metrics['1year_download_count'] = ps_response
     if not metrics_scheduler.running:
         logging.info('Starting scheduler for metrics acquisition')
         metrics_scheduler.start()

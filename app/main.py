@@ -154,13 +154,16 @@ def get_metrics():
     usage_metrics['1year_sessions_count'] = ga_response
     usage_metrics['dataset_count'] = algolia_response
     usage_metrics['funded_projects_count'] = cf_response
+    if not metrics_scheduler.running:
+        logging.info('Starting scheduler for metrics acquisition')
+        metrics_scheduler.start()
     
 
 # Gets oSPARC viewers before the first request after startup and then once a day.
-viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=3)
+viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 
 # Gathers all the required metrics, once every three hours
-metrics_scheduler.add_job(func=get_metrics, trigger='interval', )
+metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
 
 def shutdown_schedulers():

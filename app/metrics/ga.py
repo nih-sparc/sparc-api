@@ -39,7 +39,8 @@ def get_ga_1year_sessions(analytics):
         ).execute()
 
         if len(report["reports"]):
-            return report["reports"][0]["data"]["totals"][0]["values"][0]
+            total = report["reports"][0]["data"]["totals"][0]["values"][0]
+            return int(total)
 
     except:
         return None

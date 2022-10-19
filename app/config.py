@@ -58,6 +58,7 @@ class Config(object):
     GOOGLE_API_GA_VIEW_ID = os.environ.get("GOOGLE_API_GA_VIEW_ID", "198433812")
     ALGOLIA_APP_ID = os.environ.get("ALGOLIA_APP_ID")
     ALGOLIA_API_KEY = os.environ.get("ALGOLIA_API_KEY")
+    ALGOLIA_API_INDEX = os.environ.get("ALGOLIA_API_INDEX", "k-core_dev")
     CTF_API_HOST = os.environ.get("CTF_API_HOST", "preview.contentful.com")
     CTF_CDA_ACCESS_TOKEN = os.environ.get("CTF_CDA_ACCESS_TOKEN")
     CTF_SPACE_ID = os.environ.get("CTF_SPACE_ID")

@@ -3,6 +3,7 @@ from app.config import Config
 
 APP_ID = Config.ALGOLIA_APP_ID
 API_KEY = Config.ALGOLIA_API_KEY
+INDEX = Config.ALGOLIA_API_INDEX
 
 
 def init_algolia_client():
@@ -10,6 +11,6 @@ def init_algolia_client():
 
 
 def get_dataset_count(client):
-    index = client.init_index("k-core_dev")
+    index = client.init_index(INDEX)
     res = index.search("")
     return res["nbHits"]

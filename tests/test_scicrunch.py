@@ -444,3 +444,14 @@ def test_finding_contextual_information(client):
     assert results['numberOfHits'] > 0  # Test we could find the generic colon scaffold dataset
     for item in results['results']:
         assert len(item['abi-contextual-information']) > 0  # Check it has contextual information
+
+def test_undefined_version_dataset_search(client):
+    # Testing with dataset 17
+    identifier = "17"
+    doi = "10.26275/mlua-o9oj"
+    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
+    data = r.data.decode('utf-8')
+    json_data = json.loads(data)
+    assert len(json_data['result']) == 1
+    assert 'dataset_identifier' in json_data['result'][0]
+    assert json_data['result'][0]['dataset_identifier'] == '17'

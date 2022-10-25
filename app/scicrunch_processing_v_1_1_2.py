@@ -1,7 +1,7 @@
 import logging
 
 from app import Config
-from app.scicrunch_processing_common import SEGMENTATION_FILES, COMMON_IMAGES, NOT_SPECIFIED, SKIP, PASS_THROUGH_KEYS, PLOT_FILE, SCAFFOLD_THUMBNAIL, SCAFFOLD_FILE, SCAFFOLD_DIR, \
+from app.scicrunch_processing_common import SEGMENTATION_FILES, COMMON_IMAGES, NOT_SPECIFIED, SKIP, PASS_THROUGH_KEYS, PLOT_FILE, THUMBNAIL_IMAGE, SCAFFOLD_FILE, SCAFFOLD_DIR, \
     VIDEO, BIOLUCIDA_2D, BIOLUCIDA_3D, CSV
 
 # Hit layout:
@@ -146,7 +146,6 @@ from app.scicrunch_processing_common import SEGMENTATION_FILES, COMMON_IMAGES, N
 #  samples: ['attributes','sample','subject'] will find and enter dict keys in the following order:
 #  attributes > sample > subject
 ATTRIBUTES_MAP = {
-    'scaffolds': ['scaffolds'],
     'samples': ['attributes', 'sample', 'subject'],
     'name': ['item', 'name'],
     'identifier': ['item', 'identifier'],
@@ -194,15 +193,15 @@ def _fudge_object(obj):
     return obj
 
 
-def _mapped_mime_type(mime_type, obj):
+def _map_mime_type(mime_type, obj):
     mapped_mime_types = {
         'text/csv': CSV,
         'application/vnd.mbfbioscience.metadata+xml': SEGMENTATION_FILES,
         'application/vnd.mbfbioscience.neurolucida+xml': SEGMENTATION_FILES,
         'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
         'inode/vnd.abi.scaffold+file': SCAFFOLD_FILE,
-        'inode/vnd.abi.scaffold+thumbnail': SCAFFOLD_THUMBNAIL,
-        'text/vnd.abi.plot+Tab-separated-values': PLOT_FILE,
+        'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,
+        'text/vnd.abi.plot+tab-separated-values': PLOT_FILE,
         'text/vnd.abi.plot+csv': PLOT_FILE,
         'image/png': COMMON_IMAGES,
         'image/tiff': 'tiff-image',
@@ -264,17 +263,19 @@ def _mapped_mime_type(mime_type, obj):
     if mime_type == NOT_SPECIFIED:
         return SKIP
 
-    if mime_type in skipped_mime_types:
+    lower_mime_type = mime_type.lower()
+
+    if lower_mime_type in skipped_mime_types:
         return SKIP
 
-    if mime_type in mapped_mime_types:
-        if mime_type in ["image/jpeg", "image/png"]:
+    if lower_mime_type in mapped_mime_types:
+        if lower_mime_type in ["image/jpeg", "image/png"]:
             try:
                 if obj['dataset']['path'].startswith('derivative'):
                     return SKIP
             except KeyError:
                 return SKIP
-        return mapped_mime_types[mime_type]
+        return mapped_mime_types[lower_mime_type]
 
     return NOT_SPECIFIED
 
@@ -294,7 +295,7 @@ def sort_files_by_mime_type(obj_list):
         else:
             mime_type = obj['mimetype'].get('name', NOT_SPECIFIED)
 
-        mapped_mime_type = _mapped_mime_type(mime_type, obj)
+        mapped_mime_type = _map_mime_type(mime_type, obj)
         if mapped_mime_type == NOT_SPECIFIED:
             logging.warning('Unhandled mime type:', mime_type)
         elif mapped_mime_type == SKIP:

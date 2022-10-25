@@ -101,11 +101,6 @@ def test_scicrunch_filter_scaffolds(client):
     assert json.loads(r.data)['numberOfHits'] > 10
 
 
-def test_scicrunch_filter_simulations(client):
-    r = client.get('/filter-search/?facet=simulations&term=datasets')
-    assert json.loads(r.data)['numberOfHits'] > 0
-
-
 def test_scicrunch_basic_search(client):
     r = client.get('/filter-search/Heart/?facet=All+Species&term=species')
     assert json.loads(r.data)['numberOfHits'] > 10
@@ -139,7 +134,7 @@ def test_create_identifier_query(client):
 
     result = results[0]
     assert 'version' in result
-    assert result['version'] == '1.1.3'
+    assert result['version'] == '1.1.5'
 
     assert 'title' in result
     assert result['title'] == 'Morphometric analysis of the abdominal vagus nerve in rats'
@@ -171,7 +166,7 @@ def test_response_abi_plot(client):
         json_data = json.loads(data)
         assert len(json_data['result']) == 1
         if json_data['result'][0]['version'] == '1.1.5':
-            assert len(json_data['result'][0]['abi-plot']) == 5
+            assert len(json_data['result'][0]['abi-plot']) == 21
             identifier = json_data['result'][0]["dataset_identifier"]
             version = json_data['result'][0]["dataset_version"]
             assert identifier == "141"
@@ -265,23 +260,24 @@ def test_response_sample_subject_size(client):
 
 source_structure = {
     'type': dict,
-    'required': ['contributors', 'dataItem', 'dates', 'distributions',
+    'required': ['contributors', 'dataItem',
                  {'item':
                      {
                          'type': dict,
-                         'required': [{'version': {'type': dict, 'required': ['keyword'], 'optional': []}}, 'types', 'contentTypes', 'names', 'statistics', 'keywords', 'published',
+                         'required': ['types', 'contentTypes', 'statistics', 'keywords', 'published',
                                       'description',
-                                      'name', 'readme', 'identifier', 'docid', 'curie'],
-                         'optional': ['techniques', 'modalities']
-                     }}, 'organization', 'provenance', 'supportingAwards'],
-    'optional': ['anatomy', 'attributes', 'diseases',
+                                      'name', 'identifier', 'docid', 'curie'],
+                         'optional': [{'version': {'type': dict, 'required': ['keyword'], 'optional': []}},
+                                       'techniques', 'readme', 'modalities', 'names']
+                     }}, 'pennsieve', 'provenance', 'supportingAwards'],
+    'optional': ['anatomy', 'attributes', 'dates', 'diseases', 'distributions',
                  {'objects':
                      {
                          'type': list,
                          'item': {
                              'type': dict,
-                             'required': ['bytes', 'dataset', 'distributions', 'identifier', 'mimetype', 'name', 'updated'],
-                             'optional': []}
+                             'required': ['bytes', 'dataset', 'identifier', 'mimetype', 'name', 'updated'],
+                             'optional': [ 'distributions' ]}
                      }
                  }, 'organisms', 'protocols', 'publication', 'xrefs']
 }
@@ -410,7 +406,24 @@ def test_getting_curies(client):
     assert total > human
     # Test if the uberon - name match the one from the hardcoded list
     for item in uberons_results['uberon']['array']:
-        assert UBERONS_DICT[item['id']] == item['name'].lower()
+        if item['id'] in UBERONS_DICT:
+            assert UBERONS_DICT[item['id']] == item['name'].lower()
+
+
+def test_get_related_terms(client):
+    # Test if we can get the uberon term of heart using the uberon term
+    # of left ventricle
+    r = client.get('/get-related-terms/UBERON:0002084')
+    uberons_results = json.loads(r.data)
+    print(uberons_results)
+    total = len(uberons_results['uberon']['array'])
+    assert total > 0
+    findHeart = False
+    for item in uberons_results['uberon']['array']:
+        if item['id'] == 'UBERON:0000948' and item['name'] == 'heart':
+            findHeart = True
+            break
+    assert findHeart == True
 
 
 def test_scaffold_files(client):
@@ -431,3 +444,14 @@ def test_finding_contextual_information(client):
     assert results['numberOfHits'] > 0  # Test we could find the generic colon scaffold dataset
     for item in results['results']:
         assert len(item['abi-contextual-information']) > 0  # Check it has contextual information
+
+def test_undefined_version_dataset_search(client):
+    # Testing with dataset 17
+    identifier = "17"
+    doi = "10.26275/mlua-o9oj"
+    r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
+    data = r.data.decode('utf-8')
+    json_data = json.loads(data)
+    assert len(json_data['result']) == 1
+    assert 'dataset_identifier' in json_data['result'][0]
+    assert json_data['result'][0]['dataset_identifier'] == '17'

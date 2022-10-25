@@ -3,6 +3,9 @@ import json
 import re
 from flask import jsonify
 
+from app.scicrunch_processing_common import SKIPPED_OBJ_ATTRIBUTES
+
+
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
 def _prepare_results(results):
     output = []
@@ -11,7 +14,8 @@ def _prepare_results(results):
         try:
             version = hit['_source']['item']['version']['keyword']
         except KeyError:
-            continue
+            #Try to get minimal information out from the datasets
+            version = 'undefined'
 
         if version >= '1.1.5':
             print('WARINING! Scicrunch processing is out of date!')
@@ -25,16 +29,19 @@ def _prepare_results(results):
         attr = _transform_attributes(attributes_map, hit)
         attr['doi'] = _convert_doi_to_url(attr['doi'])
         attr['took'] = results['took']
-        # find context files by looking through object mimetypes
-        attr['abi-contextual-information'] = [
-            file['dataset']['path']
-            for file in hit['_source']['objects']
-            if file['additional_mimetype']['name'].find('abi.context-information') is not -1
-        ]
-        print([
-            file['additional_mimetype']['name']
-            for file in hit['_source']['objects']
-        ])
+
+        # Hot fix for some datasets having no objects:
+        if 'objects' in hit['_source'].keys():
+            # Find context files by looking through object mimetypes.
+            attr['abi-contextual-information'] = [
+                file['dataset']['path']
+                for file in hit['_source']['objects']
+                if 'additional_mimetype' in file and \
+                    file['additional_mimetype']['name'].find('abi.context-information') != -1
+            ]
+        else:
+            attr['abi-contextual-information'] = []
+
         try:
             attr['readme'] = hit['_source']['item']['readme']['description']
         except KeyError:
@@ -45,10 +52,23 @@ def _prepare_results(results):
         except KeyError:
             attr['title'] = ''
 
+        _remove_unused_files_information(attr['files'])
         attr.update(sort_files_by_mime_type(attr['files']))
+        #All files are sorted, files are not required anymore
+        del attr['files']
         output.append(attr)
 
     return output
+
+#Remove unused attributes in the obj list, this does not need to be version dependent at this moment
+def _remove_unused_files_information(obj_list):
+    if not obj_list:
+        return None
+
+    for obj in obj_list:
+        for key in SKIPPED_OBJ_ATTRIBUTES:
+            if key in obj:
+                del obj[key]
 
 
 def process_results(results):
@@ -59,7 +79,11 @@ def reform_dataset_results(results):
     processed_outputs = []
     kb_results = _prepare_results(results)
     for kb_result in kb_results:
-        version = kb_result['version']
+        try:
+            version = kb_result['version']
+        except KeyError:
+            #Try to get minimal information out from the datasets
+            version = 'undefined'
         package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
         m = importlib.import_module(f'app.{package_version}')
         process_result = getattr(m, 'process_result')
@@ -119,7 +143,6 @@ def _manipulate_attr(output):
 
     return output
 
-
 def _extract_dataset_path_remote_id(data, key, id_):
     extracted_data = None
     for dataset_path_remote_id in data[key]:
@@ -153,10 +176,19 @@ def reform_curies_results(data):
             # Example string: 
             # "{curie=UBERON:0002298, name=brainstem, matchingStatus=Exact Match}"
             pattern = "curie=(.*?),"
-            curie = re.search(pattern, item['key']).group(1)
+            curie = ''
+            match = re.search(pattern, item['key'])
+            if match:
+                curie = match.group(1)
+
             pattern = "name=(.*?),"
-            name = re.search(pattern, item['key']).group(1)
-            id_name_map[curie] = name
+            name = ''
+            match = re.search(pattern, item['key'])
+            if match:
+                name = match.group(1)
+                
+            if curie and name:
+                id_name_map[curie] = name
         except KeyError:
             continue
     # Turn the map into an the output array
@@ -166,5 +198,33 @@ def reform_curies_results(data):
             'name': id_name_map[key]
         }
         result['uberon']['array'].append(pair)
+
+    return result
+
+# Turn the result into a list in the uberon.array field
+def reform_related_terms(data):
+    result = {
+        'uberon': {
+            'array': []
+        }
+    }
+    id_name_map = {}
+
+    # Iterate through to get an uberon - name map
+    if 'nodes' in data:
+        for item in data['nodes']:
+            id_name_map[item['id']] = item['lbl']
+    else:
+        raise BaseException
+
+    if 'edges' in data:
+        for item in data['edges']:
+            pair = {
+                'id': item['obj'],
+                'name': id_name_map[item['obj']]
+            }
+            result['uberon']['array'].append(pair)
+    else:
+        raise BaseException
 
     return result

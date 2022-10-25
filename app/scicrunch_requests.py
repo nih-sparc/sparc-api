@@ -20,15 +20,7 @@ def create_doi_query(doi):
         }
     }
 
-def create_multiple_doi_query(dois, size=10, from_=0):
-    print(json.dumps({
-        "size": 999,
-        "query": {
-            "terms": {
-                "item.curie": dois
-            }
-        }
-    }))
+def create_multiple_doi_query(dois):
     return {
         "size": 999,
         "query": {
@@ -223,7 +215,6 @@ def create_filter_request(query, terms, facets, size, start):
 
     qs = facet_query_string(query, terms, facets, get_facet_type_map())
     data["query"]["query_string"]["query"] = qs
-
     return data
 
 
@@ -279,9 +270,7 @@ def facet_query_string(query, terms, facets, type_map):
                 qt += "("
             for l in t[k]:
                 if l == "scaffolds":
-                    qt += "objects.additional_mimetype.name:((inode%2fvnd.abi.scaffold) AND (file))"
-                elif l == "simulations":
-                    qt += "xrefs.additionalLinks.description:((CellML) OR (SED-ML))"
+                    qt += "objects.additional_mimetype.name:(application%2fx.vnd.abi.scaffold.meta%2Bjson)"
                 if l is not t[k][-1]:
                     qt += " OR "  # 'OR' if more terms in this facet are coming
             if needParentheses:

@@ -4,7 +4,7 @@ from app import app
 
 from timeit import default_timer as timer
 
-from app.scicrunch_processing_common import SCAFFOLD_FILE, PLOT_FILE, COMMON_IMAGES, SCAFFOLD_THUMBNAIL, NAME, BIOLUCIDA_3D, VIDEO, SEGMENTATION_FILES, BIOLUCIDA_2D
+from app.scicrunch_processing_common import SCAFFOLD_FILE, PLOT_FILE, COMMON_IMAGES, THUMBNAIL_IMAGE, NAME, BIOLUCIDA_3D, VIDEO, SEGMENTATION_FILES, BIOLUCIDA_2D
 from known_dois import current_list, warn_doi_changes
 
 
@@ -68,9 +68,9 @@ def print_search_result(result):
     if PLOT_FILE in keys:
         found = True
         messages.append(f" - Found plot: {len(result[PLOT_FILE])}")
-    if SCAFFOLD_THUMBNAIL in keys:
+    if THUMBNAIL_IMAGE in keys:
         found = True
-        messages.append(f" - Found scaffold thumbnail: {len(result[SCAFFOLD_THUMBNAIL])}")
+        messages.append(f" - Found scaffold thumbnail: {len(result[THUMBNAIL_IMAGE])}")
     if VIDEO in keys:
         found = True
         messages.append(f" - Found video: {len(result[VIDEO])}")
@@ -140,8 +140,7 @@ def test_generic_mouse_colon_dataset_search(client):
     print_search_result(result)
 
     assert SCAFFOLD_FILE in result.keys()
-    assert SCAFFOLD_THUMBNAIL in result.keys()
-
+    assert THUMBNAIL_IMAGE in result.keys()
 
 def test_complex_title_dataset_search(client):
     title = "Spatial distribution and morphometric characterization of vagal efferents associated with the myenteric plexus of the rat stomach"
@@ -226,7 +225,7 @@ def test_title_plot_annotation_dataset_search(client):
 def test_object_identifier_dataset_search(client):
     #Dataset 141
     print()
-    identifier = "package:cc63e3f6-c2d6-4355-9c46-604660377bcb"
+    identifier = "package:ea813c23-e110-46ba-815f-d134b955a8b5"
     start = timer()
     r = client.get('/dataset_info/using_object_identifier', query_string={'identifier': identifier})
     end = timer()
@@ -275,49 +274,3 @@ def test_pennsieve_identifier_dataset_search(client):
     print(first_result)
     for r in result[BIOLUCIDA_3D]:
         print(r['dataset']['path'])
-
-
-def test_api_uri_s3_resource_fetch(client):
-    print()
-    identifier = "73"
-    start = timer()
-    r = client.get('/dataset_info/using_pennsieve_identifier', query_string={'identifier': identifier})
-    end = timer()
-    print('elapsed: ', end - start)
-    response = json.loads(r.data)
-    assert 'result' in response
-    assert len(response['result']) == 1
-    result = response['result'][0]
-    assert "iBAT (interscapular brown adipose tissue) sympathetic innervation circuit pseudorabies viral tracing in reporter mice" == result['name']
-
-    assert VIDEO in result
-    assert len(result[VIDEO])
-
-    assert 'readme' in result
-
-    for r in result[VIDEO]:
-        rr = client.get('/s3-resource/presign_discover_file_uri', query_string={'uri': r['distributions']['api'][0]['uri'], 'contentType': r['mimetype']})
-        assert rr.data.decode().startswith('https://pennsieve-prod-discover-publish-use1.s3.amazonaws.com')
-
-
-def test_discover_path(client):
-    print()
-    identifier = "43"
-    start = timer()
-    r = client.get('/dataset_info/using_pennsieve_identifier', query_string={'identifier': identifier})
-    end = timer()
-    print('elapsed: ', end - start)
-    response = json.loads(r.data)
-    assert 'result' in response
-    assert len(response['result']) == 1
-    result = response['result'][0]
-    assert "human islet microvasculature analysis" == result['name'].lower()
-
-    assert SEGMENTATION_FILES in result
-    assert len(result[SEGMENTATION_FILES])
-
-    assert 'readme' in result
-
-    for r in result[SEGMENTATION_FILES]:
-        rr = client.get('/s3-resource/discover_path', query_string={'uri': r['distributions']['api'][0]['uri']})
-        assert rr.data.decode() == 'files/derivative/sub-6384/sam-28_sub-6384_islet3/sub-6384_20x_MsGcg_RbCol4_SMACy3_islet3 (1).xml'

@@ -20,6 +20,7 @@ class Config(object):
     MONGODB_URI = os.environ.get("MONGODB_URI")
     SES_ARN = os.environ.get("SES_ARN")
     SES_SENDER = os.environ.get("SES_SENDER")
+    COMMS_EMAIL = os.environ.get("COMMS_EMAIL")
     SPARC_PORTAL_AWS_KEY = os.environ.get("SPARC_PORTAL_USER_ID")
     SPARC_PORTAL_AWS_SECRET = os.environ.get("SPARC_PORTAL_USER_SECRET")
     OSPARC_API_HOST = os.environ.get("OSPARC_API_HOST", "https://osparc.io/v0")
@@ -48,3 +49,6 @@ class Config(object):
     S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"
     NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")
     SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://scicrunch.org/api/1/elastic/Interlex_pr")
+    SCI_CRUNCH_SCIGRAPH_HOST = os.environ.get("SCI_CRUNCH_SCIGRAPH_HOST", "https://scicrunch.org/api/1/sparc-scigraph")
+    SENDGRID_API_KEY =  os.environ.get("SENDGRID_API_KEY")
+    README_API_KEY =  os.environ.get("README_API_KEY")

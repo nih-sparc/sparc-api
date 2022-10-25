@@ -142,7 +142,7 @@ def test_create_wrike_task(client):
 
 
 def test_subscribe_to_mailchimp(client):
-    r = client.post(f"/mailchimp", json={})
+    r = client.post(f"/mailchimp_subscribe", json={})
     assert r.status_code == 400
 
     letters = string.ascii_lowercase
@@ -151,7 +151,7 @@ def test_subscribe_to_mailchimp(client):
 
     email_address = '{}@{}.com'.format(email, domain)
 
-    r2 = client.post(f"/mailchimp", json={"email_address": email_address, "first_name": "Test", "last_name": "User"})
+    r2 = client.post(f"/mailchimp_subscribe", json={"email_address": email_address, "first_name": "Test", "last_name": "User"})
     assert r2.status_code == 200
 
     # this part is only for cleaning the mailchimp list and not pollute the mailing list
@@ -183,3 +183,14 @@ def test_onto_term_lookup(client):
     assert r.status_code == 200
     json_data = r.get_json()
     assert json_data['label'] == 'Human'
+
+
+def test_non_existing_simualtion_ui_file(client):
+    r = client.get('/simulation_ui_file/137')
+    assert r.status_code == 404
+
+
+def test_simualtion_ui_file(client):
+    r = client.get('/simulation_ui_file/135')
+    assert r.status_code == 200
+    assert r.get_json()['input'][1]['enabled'] == '(sm == 1) || (sm == 2)'

@@ -19,13 +19,14 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender
+from scripts.email_sender import EmailSender, feedback_email, resource_submission_confirmation_email, creation_request_confirmation_email, issue_reporting_email, community_spotlight_submit_form_email, news_and_events_submit_form_email
 from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable
-from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results
+from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results, \
+    reform_related_terms
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc import run_simulation
@@ -125,7 +126,7 @@ viewers_scheduler = BackgroundScheduler()
 def get_osparc_file_viewers():
     logging.info('Getting oSPARC viewers')
     # Gets a list of default viewers.
-    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers/default')
+    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers')
     viewers = req.json()
     table = build_filetypes_table(viewers["data"])
     osparc_data["file_viewers"] = table
@@ -162,9 +163,75 @@ def contact():
     message = contact_request["message"]
 
     email_sender.send_email(name, email, message)
+    email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({ 'message': message }))
 
     return json.dumps({"status": "sent"})
 
+@app.route("/email_comms", methods=["POST"])
+def email_comms():
+  form = request.form
+  if form and 'email' in form and 'name' in form and 'title' in form and 'summary' in form and 'form_type' in form:
+    email = form["email"]
+    name = form["name"]
+    title = form["title"]
+    summary = form["summary"]
+    form_type = form["form_type"]
+
+    # Optional Parameters 
+    location = 'N/A'
+    date = 'N/A'
+    url = 'N/A'
+    has_attachment = 'false'
+    if 'url' in form:
+      url = form['url']
+    if 'location' in form:
+      location = form['location']
+    if 'date' in form:
+      date = form['date']
+    if 'has_attachment' in form:
+      has_attachment = form['has_attachment']
+
+    body = ''
+    subject = ''
+    if form_type == 'communitySpotlight':
+      subject = 'Success Story/Fireside Chat creation request'
+      body = community_spotlight_submit_form_email.substitute({ 'name': name, 'email': email, 'title': title, 'summary': summary, 'url': url })
+    elif form_type == 'newsOrEvent':
+      subject = 'News/Event creation request'
+      body = news_and_events_submit_form_email.substitute({ 'name': name, 'email': email, 'title': title, 'url': url, 'location': location, 'date': date, 'summary': summary })
+    else:
+      abort(400, description="Incorrect submission form type!")
+
+    if has_attachment == 'true':
+      files = request.files
+      if files and 'attachment_file' in files:
+        attachment_file = files['attachment_file']
+        fileData = attachment_file.read()
+
+        encoded_file = base64.b64encode(fileData).decode()
+        
+        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, encoded_file, attachment_file.filename, attachment_file.content_type)
+      else:
+        abort(400, description="Missing file attachment information!")
+    else:
+      email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body)
+    email_sender.sendgrid_email(Config.SES_SENDER, email, 'SPARC creation request', creation_request_confirmation_email.substitute({ 'title': title, 'summary': summary }))
+    return json.dumps({"status": "sent"})
+  else:
+    abort(400, description="Missing email, name, or submission form type")
+
+@app.route("/submit_resource", methods=["POST"])
+def submit_resource():
+    data = json.loads(request.data)
+    contact_request = ContactRequestSchema().load(data)
+
+    email = contact_request["email"]
+    message = contact_request["message"]
+
+    email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, 'Tools and Resources submission', message)
+    email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', resource_submission_confirmation_email.substitute({ 'message': message }))
+
+    return json.dumps({"status": "sent"})
 
 def create_s3_presigned_url(key, content_type, expiration):
     response = s3.generate_presigned_url(
@@ -300,22 +367,6 @@ def get_discover_path():
         return file_info['path']
 
     return abort(404, description=f'Failed to retrieve uri {uri}')
-
-
-@app.route("/s3-resource/presign_discover_file_uri")
-def presign_resource_url():
-    uri = request.args.get('uri')
-
-    json_response = fetch_discover_file_information(uri)
-    if 'totalCount' in json_response and json_response['totalCount'] == 1:
-        file_info = json_response['files'][0]
-        key = file_info['uri'].replace('s3://' + Config.S3_BUCKET_NAME + '/', '')
-        content_type = request.args.get("contentType") or "application/octet-stream"
-
-        return create_s3_presigned_url(key, content_type, 3600)
-
-    return abort(404, description=f'Failed to retrieve uri {uri}')
-
 
 # Reverse proxy for objects from S3, a simple get object
 # operation. This is used by scaffoldvuer and its
@@ -832,13 +883,31 @@ def image_search_by_dataset_id(dataset_id):
 @app.route("/image_xmp_info/<image_id>", methods=["GET"])
 def image_xmp_info(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/xmpmetadata/{0}".format(image_id)
-    result = requests.request("GET", url)
+    try:
+        result = requests.request("GET", url)
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to Biolucida.")
 
     response = result.json()
     if response['status'] == 'success':
         return process_biolucida_results(response['data'])
 
     return abort(400, description=f"XMP info not found for {image_id}")
+
+
+@app.route("/image_blv_link/<image_id>", methods=["GET"])
+def image_blv_link(image_id):
+    url = Config.BIOLUCIDA_ENDPOINT + "/image/blv_link/{0}".format(image_id)
+    try:
+        result = requests.request("GET", url)
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to Biolucida.")
+
+    response = result.json()
+    if response['status'] == 'success':
+        return jsonify({'link': response['link']})
+
+    return abort(400, description=f"BLV link not found for {image_id}")
 
 
 def authenticate_biolucida():
@@ -939,6 +1008,10 @@ def create_wrike_task():
         )
 
         if resp.status_code == 200:
+
+            if 'userEmail' in json_data and json_data['userEmail'] is not None:
+                email_sender.sendgrid_email(Config.SES_SENDER, json_data['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': json_data['description'] }))
+
             return jsonify(
                 title=title,
                 description=description,
@@ -950,7 +1023,7 @@ def create_wrike_task():
         abort(400, description="Missing title or description")
 
 
-@app.route("/mailchimp", methods=["POST"])
+@app.route("/mailchimp_subscribe", methods=["POST"])
 def subscribe_to_mailchimp():
     json_data = request.get_json()
     if json_data and 'email_address' in json_data and 'first_name' in json_data and 'last_name' in json_data:
@@ -958,7 +1031,7 @@ def subscribe_to_mailchimp():
         first_name = json_data['first_name']
         last_name = json_data['last_name']
         auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members'
+        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
 
         data = {
             "email_address": email_address,
@@ -968,27 +1041,65 @@ def subscribe_to_mailchimp():
                 "LNAME": last_name
             }
         }
-        resp = requests.post(
+        resp = requests.put(
             url=url,
             json=data,
             auth=auth
         )
 
         if resp.status_code == 200:
-            return jsonify(
-                email_address=email_address,
-                id=resp.json()["id"]
-            )
+          return resp.json()
         else:
-            return resp.json()
+          return "Failed to subscribe user with response: " + resp.json()
     else:
         abort(400, description="Missing email_address, first_name or last_name")
 
+@app.route("/mailchimp_unsubscribe", methods=["POST"])
+def unsubscribe_to_mailchimp():
+  json_data = request.get_json()
+  if json_data and 'email_address' in json_data:
+      email_address = json_data["email_address"]
+      auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+      url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
+
+      data = {
+        "status": "unsubscribed",
+      }
+      resp = requests.put(
+          url=url,
+          json=data,
+          auth=auth
+      )
+
+      if resp.status_code == 200:
+        return resp.json()
+      else:
+        return "Failed to unsubscribe user with response: " + resp.json()
+  else:
+      abort(400, description="Missing email_address")
+
+@app.route("/mailchimp_member_info/<email_address>", methods=["GET"])
+def get_mailchimp_member_info(email_address):
+    if email_address:
+        auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
+
+        resp = requests.get(
+            url=url,
+            auth=auth
+        )
+
+        if resp.status_code == 200:
+          return resp.json()
+        else:
+          return "Failed to get member info with response: " + resp.json()
+    else:
+        abort(400, description="Missing email_address")
+
 
 # Get list of available name / curie pair
-@app.route("/get-organ-curies/", defaults={'query': ''})
-@app.route("/get-organ-curies/<query>/")
-def get_available_uberonids(query):
+@app.route("/get-organ-curies/")
+def get_available_uberonids():
     species = request.args.getlist('species')
 
     requestBody = create_request_body_for_curies(species)
@@ -1005,6 +1116,46 @@ def get_available_uberonids(query):
                         'error': 'BaseException'}), 502
 
     return jsonify(result)
+
+
+# Get list of terms a level up/down from 
+@app.route("/get-related-terms/<query>")
+def get_related_terms(query):
+    
+    payload = {
+        'direction': request.args.get('direction', default='OUTGOING'),
+        'relationshipType': request.args.get('relationshipType', default='BFO:0000050'),
+        'entail':  request.args.get('entail', default='true'),
+        'api_key': Config.KNOWLEDGEBASE_KEY
+    }
+
+    result = {}
+
+    response = requests.get(
+        f'{Config.SCI_CRUNCH_SCIGRAPH_HOST}/graph/neighbors/{query}',
+        params=payload)
+    try:
+        result = reform_related_terms(response.json())
+    except BaseException:
+        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
+                        'error': 'BaseException'}), 502
+
+    return jsonify(result)
+
+@app.route("/simulation_ui_file/<identifier>")
+def simulation_ui_file(identifier):
+    results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
+    results_json = json.loads(results.data)
+
+    try:
+        item = results_json["results"][0]
+        uri = item["s3uri"]
+        path = item["abi-simulation-file"][0]["dataset"]["path"]
+        key = f"{uri}files/{path}".replace(f"s3://{Config.S3_BUCKET_NAME}/", "")
+
+        return jsonify(json.loads(direct_download_url(key)))
+    except Exception:
+        abort(404, description="no simulation UI file could be found")
 
 
 @app.route("/simulation", methods=["POST"])
@@ -1069,3 +1220,18 @@ def find_by_onto_term():
         json_data = {'label': 'not found'}
 
     return json_data
+
+@app.route("/search-readme/<query>", methods=["GET"])
+def search_readme(query):
+    url = 'https://dash.readme.com/api/v1/docs/search?search=' + query
+    headers = { 'Authorization': 'Basic ' + Config.README_API_KEY }
+
+    try:
+        response = requests.post(
+          url = url,
+          headers = headers
+        )
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        logging.error(err)
+        return jsonify({'error': str(err), 'message': 'Readme is not currently reachable, please try again later'}), 502

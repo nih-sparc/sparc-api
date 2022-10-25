@@ -18,11 +18,33 @@ ses_client = boto3.client(
 sg_client = sendgrid.SendGridAPIClient(api_key=Config.SENDGRID_API_KEY)
 
 feedback_email = Template('''\
-<b>Thank you for your feedback</b><br>
+<b>Thank you for your feedback!</b><br>
 <br>
-Your message:<br>
+Your message:
+<br>
 <br>
 $message
+''')
+resource_submission_confirmation_email = Template('''\
+<b>Thank you for your tool/resource submission!</b><br>
+<br>
+Your submission:
+<br>
+<br>
+$message
+''')
+creation_request_confirmation_email = Template('''\
+<b>Thank you for submitting the following SPARC creation request!</b>
+<br>
+<br>
+Title:<br>
+$title
+<br>
+Summary:<br>
+$summary
+<br>
+<br>
+We have received your request and will be in contact as soon as possible.
 ''')
 issue_reporting_email = Template('''\
 <b>You reported an issue on the SPARC Portal</b><br>
@@ -101,8 +123,6 @@ $location
 $date
 <br>
 ''')
-
-
 
 class EmailSender(object):
     def __init__(self):

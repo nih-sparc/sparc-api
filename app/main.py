@@ -19,7 +19,7 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, community_spotlight_submit_form_email, news_and_events_submit_form_email
+from scripts.email_sender import EmailSender, feedback_email, resource_submission_confirmation_email, creation_request_confirmation_email, issue_reporting_email, community_spotlight_submit_form_email, news_and_events_submit_form_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -125,7 +125,7 @@ viewers_scheduler = BackgroundScheduler()
 def get_osparc_file_viewers():
     logging.info('Getting oSPARC viewers')
     # Gets a list of default viewers.
-    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers/default')
+    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers')
     viewers = req.json()
     table = build_filetypes_table(viewers["data"])
     osparc_data["file_viewers"] = table
@@ -201,7 +201,7 @@ def email_comms():
     else:
       abort(400, description="Incorrect submission form type!")
 
-    if has_attachment:
+    if has_attachment == 'true':
       files = request.files
       if files and 'attachment_file' in files:
         attachment_file = files['attachment_file']
@@ -214,10 +214,23 @@ def email_comms():
         abort(400, description="Missing file attachment information!")
     else:
       email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body)
+    email_sender.sendgrid_email(Config.SES_SENDER, email, 'SPARC creation request', creation_request_confirmation_email.substitute({ 'title': title, 'summary': summary }))
     return json.dumps({"status": "sent"})
   else:
     abort(400, description="Missing email, name, or submission form type")
 
+@app.route("/submit_resource", methods=["POST"])
+def submit_resource():
+    data = json.loads(request.data)
+    contact_request = ContactRequestSchema().load(data)
+
+    email = contact_request["email"]
+    message = contact_request["message"]
+
+    email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, 'Tools and Resources submission', message)
+    email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', resource_submission_confirmation_email.substitute({ 'message': message }))
+
+    return json.dumps({"status": "sent"})
 
 def create_s3_presigned_url(key, content_type, expiration):
     response = s3.generate_presigned_url(

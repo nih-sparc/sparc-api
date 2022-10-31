@@ -898,10 +898,10 @@ def get_scaffold_state():
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
-    json_data = request.get_json()
-    if json_data and 'title' in json_data and 'description' in json_data:
-        title = json_data["title"]
-        description = json_data["description"]
+    form = request.form
+    if form and 'title' in form and 'description' in form:
+        title = form["title"]
+        description = form["description"]
         hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
         url = 'https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks'
 
@@ -923,29 +923,33 @@ def create_wrike_task():
             headers=hed
         )
 
-        if ('attachment' in json_data and json_data['attachment'] != '' and 'data' in resp.json() and resp.json()["data"] != []):
-            attachment = json_data['attachment']
+        files = request.files
+        if files and 'attachment' in files and 'data' in resp.json() and resp.json()["data"] != []:
             task_id = resp.json()["data"][0]["id"]
+            attachment = files['attachment']
+            attachment_data = attachment.read()
+            encoded_attachment = base64.b64encode(attachment_data).decode()
             headers = {
                 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN,
-                'X-File-Name': attachment,
-                'content-type': 'application/octet-stream',
+                'X-File-Name': attachment.filename,
+                'content-type': attachment.content_type,
                 'X-Requested-With': 'XMLHttpRequest'
               }
-            attachmentUrl = "https://www.wrike.com/api/v4/tasks/" + task_id + "/attachments"
+            attachment_url = "https://www.wrike.com/api/v4/tasks/" + task_id + "/attachments"
 
-            attachmentResp = requests.post(
-                url=attachmentUrl,
+            try:
+              requests.post(
+                url=attachment_url,
                 json={},
                 headers=headers
-            )
+              )
+            except:
+              print("File attachment for task with id: " + task_id + " failed to attach to wrike ticket")    
 
-            if (attachmentResp.status_code != 200):
-              print("File attachment for task with id: " + task_id + " failed to attach to wrike ticket")
         if (resp.status_code == 200):
 
-            if 'userEmail' in json_data and json_data['userEmail'] is not None:
-                email_sender.sendgrid_email(Config.SES_SENDER, json_data['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': json_data['description'] }))
+            if 'userEmail' in form and form['userEmail'] is not None:
+                email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': form['description'] }))
 
             return jsonify(
                 title=title,

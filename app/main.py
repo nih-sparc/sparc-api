@@ -1,10 +1,10 @@
 import atexit
 import base64
 
-from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_client, get_funded_projects_count
-from app.metrics.algolia import get_dataset_count, init_algolia_client
-from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
+# from app.metrics.pennsieve import get_download_count
+# from app.metrics.contentful import init_cf_client, get_funded_projects_count
+# from app.metrics.algolia import get_dataset_count, init_algolia_client
+# from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 
 import boto3
 import json
@@ -124,7 +124,7 @@ def connect_to_pennsieve():
 
 
 viewers_scheduler = BackgroundScheduler()
-metrics_scheduler = BackgroundScheduler()
+# metrics_scheduler = BackgroundScheduler()
 
 
 @app.before_first_request
@@ -140,42 +140,42 @@ def get_osparc_file_viewers():
         viewers_scheduler.start()
 
 
-usage_metrics = {}
-google_analytics = init_ga_reporting()
-algolia = init_algolia_client()
-contentful = init_cf_client()
+# usage_metrics = {}
+# google_analytics = init_ga_reporting()
+# algolia = init_algolia_client()
+# contentful = init_cf_client()
 
 
-@app.before_first_request
-def get_metrics():
-    logging.info('Gathering metrics data')
-    ga_response = get_ga_1year_sessions(google_analytics)
-    algolia_response = get_dataset_count(algolia)
-    cf_response = get_funded_projects_count(contentful)
-    ps_response = get_download_count()
-    usage_metrics['1year_sessions_count'] = ga_response
-    usage_metrics['dataset_count'] = algolia_response
-    usage_metrics['funded_projects_count'] = cf_response
-    usage_metrics['1year_download_count'] = ps_response
-    if not metrics_scheduler.running:
-        logging.info('Starting scheduler for metrics acquisition')
-        metrics_scheduler.start()
+# @app.before_first_request
+# def get_metrics():
+    # logging.info('Gathering metrics data')
+    # ga_response = get_ga_1year_sessions(google_analytics)
+    # algolia_response = get_dataset_count(algolia)
+    # cf_response = get_funded_projects_count(contentful)
+    # ps_response = get_download_count()
+    # usage_metrics['1year_sessions_count'] = ga_response
+    # usage_metrics['dataset_count'] = algolia_response
+    # usage_metrics['funded_projects_count'] = cf_response
+    # usage_metrics['1year_download_count'] = ps_response
+    # if not metrics_scheduler.running:
+        # logging.info('Starting scheduler for metrics acquisition')
+        # metrics_scheduler.start()
     
 
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 
 # Gathers all the required metrics, once every three hours
-metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
+# metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
     if viewers_scheduler.running:
         viewers_scheduler.shutdown()
-    logging.info('Stopping scheduler for metrics acquisition')
-    if metrics_scheduler.running:
-        metrics_scheduler.shutdown()
+    # logging.info('Stopping scheduler for metrics acquisition')
+    # if metrics_scheduler.running:
+        # metrics_scheduler.shutdown()
 
 
 atexit.register(shutdown_schedulers)

@@ -958,7 +958,26 @@ def create_wrike_task():
             headers=hed
         )
 
-        if resp.status_code == 200:
+        if ('attachment' in json_data and json_data['attachment'] != '' and 'data' in resp.json() and resp.json()["data"] != []):
+            attachment = json_data['attachment']
+            task_id = resp.json()["data"][0]["id"]
+            headers = {
+                'Authorization': 'Bearer ' + Config.WRIKE_TOKEN,
+                'X-File-Name': attachment,
+                'content-type': 'application/octet-stream',
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            attachmentUrl = "https://www.wrike.com/api/v4/tasks/" + task_id + "/attachments"
+
+            attachmentResp = requests.post(
+                url=attachmentUrl,
+                json={},
+                headers=headers
+            )
+
+            if (attachmentResp.status_code != 200):
+              print("File attachment for task with id: " + task_id + " failed to attach to wrike ticket")
+        if (resp.status_code == 200):
 
             if 'userEmail' in json_data and json_data['userEmail'] is not None:
                 email_sender.sendgrid_email(Config.SES_SENDER, json_data['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': json_data['description'] }))

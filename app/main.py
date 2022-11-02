@@ -151,14 +151,22 @@ contentful = init_cf_client()
 @app.before_first_request
 def get_metrics():
     logging.info('Gathering metrics data')
-    ga_response = get_ga_1year_sessions(google_analytics)
-    algolia_response = get_dataset_count(algolia)
-    cf_response = get_funded_projects_count(contentful)
+
+    if google_analytics:
+        ga_response = get_ga_1year_sessions(google_analytics)
+        usage_metrics['1year_sessions_count'] = ga_response
+
+    if algolia:
+        algolia_response = get_dataset_count(algolia)
+        usage_metrics['dataset_count'] = algolia_response
+
+    if contentful:
+        cf_response = get_funded_projects_count(contentful)
+        usage_metrics['funded_projects_count'] = cf_response
+        
     ps_response = get_download_count()
-    usage_metrics['1year_sessions_count'] = ga_response
-    usage_metrics['dataset_count'] = algolia_response
-    usage_metrics['funded_projects_count'] = cf_response
     usage_metrics['1year_download_count'] = ps_response
+
     if not metrics_scheduler.running:
         logging.info('Starting scheduler for metrics acquisition')
         metrics_scheduler.start()

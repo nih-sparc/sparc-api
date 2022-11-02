@@ -11,6 +11,7 @@ INDEX = Config.ALGOLIA_INDEX
 def init_algolia_client():
     try:
         return SearchClient.create(APP_ID, API_KEY)
+        
     except Exception as e:
         logging.error('An error occured while instantiating the Algolia search client.', e)
         return None

@@ -1,3 +1,5 @@
+import logging
+
 from algoliasearch.search_client import SearchClient
 from app.config import Config
 
@@ -7,7 +9,11 @@ INDEX = Config.ALGOLIA_INDEX
 
 
 def init_algolia_client():
-    return SearchClient.create(APP_ID, API_KEY)
+    try:
+        return SearchClient.create(APP_ID, API_KEY)
+    except Exception as e:
+        logging.error('An error occured while instantiating the Algolia search client.', e)
+        return None
 
 
 def get_dataset_count(client):

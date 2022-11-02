@@ -1,5 +1,11 @@
 import atexit
 import base64
+
+from app.metrics.pennsieve import get_download_count
+from app.metrics.contentful import init_cf_client, get_funded_projects_count
+from app.metrics.algolia import get_dataset_count, init_algolia_client
+from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
+
 import boto3
 import json
 import logging
@@ -31,6 +37,8 @@ from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc import run_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
+
+logging.basicConfig()
 
 app = Flask(__name__)
 # set environment variable
@@ -118,6 +126,7 @@ def connect_to_pennsieve():
 
 
 viewers_scheduler = BackgroundScheduler()
+metrics_scheduler = BackgroundScheduler()
 
 
 @app.before_first_request
@@ -133,17 +142,53 @@ def get_osparc_file_viewers():
         viewers_scheduler.start()
 
 
+usage_metrics = {}
+google_analytics = init_ga_reporting()
+algolia = init_algolia_client()
+contentful = init_cf_client()
+
+
+@app.before_first_request
+def get_metrics():
+    logging.info('Gathering metrics data')
+
+    if google_analytics:
+        ga_response = get_ga_1year_sessions(google_analytics)
+        usage_metrics['1year_sessions_count'] = ga_response
+
+    if algolia:
+        algolia_response = get_dataset_count(algolia)
+        usage_metrics['dataset_count'] = algolia_response
+
+    if contentful:
+        cf_response = get_funded_projects_count(contentful)
+        usage_metrics['funded_projects_count'] = cf_response
+        
+    ps_response = get_download_count()
+    usage_metrics['1year_download_count'] = ps_response
+
+    if not metrics_scheduler.running:
+        logging.info('Starting scheduler for metrics acquisition')
+        metrics_scheduler.start()
+    
+
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 
+# Gathers all the required metrics, once every three hours
+metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
-def shutdown_scheduler():
+
+def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
     if viewers_scheduler.running:
         viewers_scheduler.shutdown()
+    logging.info('Stopping scheduler for metrics acquisition')
+    if metrics_scheduler.running:
+        metrics_scheduler.shutdown()
 
 
-atexit.register(shutdown_scheduler)
+atexit.register(shutdown_schedulers)
 
 
 @app.route("/health")
@@ -1170,3 +1215,7 @@ def search_readme(query):
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return jsonify({'error': str(err), 'message': 'Readme is not currently reachable, please try again later'}), 502
+
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    return usage_metrics

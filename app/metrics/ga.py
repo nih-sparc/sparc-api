@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 
-SCOPES = [Config.GOOGLE_API_GA_SCOPE]
+SCOPE = Config.GOOGLE_API_GA_SCOPE
 KEY_PATH = Config.GOOGLE_API_GA_KEY_PATH
 VIEW_ID = Config.GOOGLE_API_GA_VIEW_ID
 
@@ -13,7 +13,7 @@ VIEW_ID = Config.GOOGLE_API_GA_VIEW_ID
 def init_ga_reporting():
     credentials = ServiceAccountCredentials.from_json_keyfile_name(
         KEY_PATH,
-        SCOPES
+        SCOPE
     )
     analytics = build('analyticsreporting', 'v4', credentials=credentials)
     return analytics

@@ -3,7 +3,7 @@ from app.config import Config
 
 APP_ID = Config.ALGOLIA_APP_ID
 API_KEY = Config.ALGOLIA_API_KEY
-INDEX = Config.ALGOLIA_API_INDEX
+INDEX = Config.ALGOLIA_INDEX
 
 
 def init_algolia_client():

@@ -38,6 +38,8 @@ from app.utilities import img_to_base64_str
 from app.osparc import run_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
 
+logging.basicConfig()
+
 app = Flask(__name__)
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV

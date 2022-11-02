@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from app.config import Config
@@ -11,12 +12,17 @@ VIEW_ID = Config.GOOGLE_API_GA_VIEW_ID
 
 
 def init_ga_reporting():
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(
-        KEY_PATH,
-        SCOPE
-    )
-    analytics = build('analyticsreporting', 'v4', credentials=credentials)
-    return analytics
+    try:
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(
+            KEY_PATH,
+            SCOPE
+        )
+        analytics = build('analyticsreporting', 'v4', credentials=credentials)
+        return analytics
+
+    except Exception as e:
+        logging.error('An error occured while instantiating the GA reporter.', e)
+        return None
 
 
 def get_ga_1year_sessions(analytics):

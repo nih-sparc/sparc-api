@@ -1,4 +1,4 @@
-from email import contentmanager
+import logging
 
 from app.config import Config
 
@@ -10,12 +10,17 @@ SPACE_ID = Config.CTF_SPACE_ID
 
 
 def init_cf_client():
-    client = contentful.Client(
-        SPACE_ID,
-        ACCESS_TOKEN,
-        api_url=API_HOST
-    )
-    return client
+    try:
+        client = contentful.Client(
+            SPACE_ID,
+            ACCESS_TOKEN,
+            api_url=API_HOST
+        )
+        return client
+        
+    except Exception as e:
+        logging.error('An error occured while instantiating the Contentful client.', e)
+        return None
 
 
 def get_funded_projects_count(client):

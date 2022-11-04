@@ -972,8 +972,6 @@ def create_wrike_task():
         if files and 'attachment' in files and 'data' in resp.json() and resp.json()["data"] != []:
             task_id = resp.json()["data"][0]["id"]
             attachment = files['attachment']
-            attachment_data = attachment.read()
-            encoded_attachment = base64.b64encode(attachment_data).decode()
             headers = {
                 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN,
                 'X-File-Name': attachment.filename,
@@ -985,7 +983,7 @@ def create_wrike_task():
             try:
               requests.post(
                 url=attachment_url,
-                json={},
+                files=attachment,
                 headers=headers
               )
             except:

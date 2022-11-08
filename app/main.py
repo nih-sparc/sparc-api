@@ -986,8 +986,8 @@ def create_wrike_task():
                 files=attachment,
                 headers=headers
               )
-            except:
-              print("File attachment for task with id: " + task_id + " failed to attach to wrike ticket")    
+            except Exception as e:
+              print("File attachment for task with id: " + task_id + " failed to attach to wrike ticket due to the following exception being thrown: " + e)    
 
         if (resp.status_code == 200):
 

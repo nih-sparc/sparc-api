@@ -972,10 +972,13 @@ def create_wrike_task():
         if files and 'attachment' in files and 'data' in resp.json() and resp.json()["data"] != []:
             task_id = resp.json()["data"][0]["id"]
             attachment = files['attachment']
+            file_data = attachment.read()
+            file_name = attachment.filename
+            content_type = attachment.content_type
             headers = {
                 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN,
-                'X-File-Name': attachment.filename,
-                'content-type': attachment.content_type,
+                'X-File-Name': file_name,
+                'content-type': content_type,
                 'X-Requested-With': 'XMLHttpRequest'
               }
             attachment_url = "https://www.wrike.com/api/v4/tasks/" + task_id + "/attachments"
@@ -983,11 +986,11 @@ def create_wrike_task():
             try:
               requests.post(
                 url=attachment_url,
-                files=attachment,
+                data=file_data,
                 headers=headers
               )
-            except:
-              print("File attachment for task with id: " + task_id + " failed to attach to wrike ticket")    
+            except Exception as e:
+              print(e)    
 
         if (resp.status_code == 200):
 

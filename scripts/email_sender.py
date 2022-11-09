@@ -25,103 +25,13 @@ Your message:
 <br>
 $message
 ''')
-resource_submission_confirmation_email = Template('''\
-<b>Thank you for your tool/resource submission!</b><br>
-<br>
-Your submission:
-<br>
-<br>
-$message
-''')
-creation_request_confirmation_email = Template('''\
-<b>Thank you for submitting the following SPARC creation request!</b>
-<br>
-<br>
-Title:<br>
-$title
-<br>
-Summary:<br>
-$summary
-<br>
-<br>
-We have received your request and will be in contact as soon as possible.
-''')
+
 issue_reporting_email = Template('''\
 <b>You reported an issue on the SPARC Portal</b><br>
 <br>
 Provided data:<br>
 <br>
 $message
-''')
-
-community_spotlight_submit_form_email = Template('''\
-<b>Requestor's Contact Info</b>
-<br>
-<br>
-<b>Name:</b>
-<br>
-$name
-<br>
-<br>
-<b>E-mail:</b>
-<br>
-$email
-<br>
-<br>
-<b>Community Spotlight Details</b>
-<br>
-<br>
-<b>Title:</b><br>
-$title
-<br>
-<br>
-<b>Summary/details:</b><br>
-$summary
-<br>
-<br>
-<b>Supporting Info Url:</b><br>
-$url
-<br>
-''')
-
-news_and_events_submit_form_email = Template('''\
-<b>Requestor's Contact Info</b>
-<br>
-<br>
-<b>Name:</b>
-<br>
-$name
-<br>
-<br>
-<b>E-mail:</b><br>
-$email
-<br>
-<br>
-<b>News or Event Details</b>
-<br>
-<br>
-<b>Title:</b><br>
-$title
-<br>
-<br>
-<b>Summary/details:</b><br>
-$summary
-<br>
-<br>
-<b>Supporting Info Url:</b><br>
-$url
-<br>
-<br>
-<b>Event specific details</b>
-<br>
-<br>
-<b>Location:</b><br>
-$location
-<br>
-<br>
-<b>Date:</b><br>
-$date
-<br>
 ''')
 
 class EmailSender(object):

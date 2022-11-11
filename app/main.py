@@ -1,5 +1,11 @@
 import atexit
 import base64
+
+from app.metrics.pennsieve import get_download_count
+from app.metrics.contentful import init_cf_client, get_funded_projects_count
+from app.metrics.algolia import get_dataset_count, init_algolia_client
+from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
+
 import boto3
 import json
 import logging
@@ -19,7 +25,7 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender, feedback_email, resource_submission_confirmation_email, creation_request_confirmation_email, issue_reporting_email, community_spotlight_submit_form_email, news_and_events_submit_form_email
+from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -32,6 +38,8 @@ from app.utilities import img_to_base64_str
 from app.osparc import start_simulation as do_start_simulation
 from app.osparc import check_simulation as do_check_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
+
+logging.basicConfig()
 
 app = Flask(__name__)
 # set environment variable
@@ -119,6 +127,7 @@ def connect_to_pennsieve():
 
 
 viewers_scheduler = BackgroundScheduler()
+metrics_scheduler = BackgroundScheduler()
 
 
 @app.before_first_request
@@ -134,17 +143,53 @@ def get_osparc_file_viewers():
         viewers_scheduler.start()
 
 
+usage_metrics = {}
+google_analytics = init_ga_reporting()
+algolia = init_algolia_client()
+contentful = init_cf_client()
+
+
+@app.before_first_request
+def get_metrics():
+    logging.info('Gathering metrics data')
+
+    if google_analytics:
+        ga_response = get_ga_1year_sessions(google_analytics)
+        usage_metrics['1year_sessions_count'] = ga_response
+
+    if algolia:
+        algolia_response = get_dataset_count(algolia)
+        usage_metrics['dataset_count'] = algolia_response
+
+    if contentful:
+        cf_response = get_funded_projects_count(contentful)
+        usage_metrics['funded_projects_count'] = cf_response
+
+    ps_response = get_download_count()
+    usage_metrics['1year_download_count'] = ps_response
+
+    if not metrics_scheduler.running:
+        logging.info('Starting scheduler for metrics acquisition')
+        metrics_scheduler.start()
+
+
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 
+# Gathers all the required metrics, once every three hours
+metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
-def shutdown_scheduler():
+
+def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
     if viewers_scheduler.running:
         viewers_scheduler.shutdown()
+    logging.info('Stopping scheduler for metrics acquisition')
+    if metrics_scheduler.running:
+        metrics_scheduler.shutdown()
 
 
-atexit.register(shutdown_scheduler)
+atexit.register(shutdown_schedulers)
 
 
 @app.route("/health")
@@ -163,72 +208,6 @@ def contact():
 
     email_sender.send_email(name, email, message)
     email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({ 'message': message }))
-
-    return json.dumps({"status": "sent"})
-
-@app.route("/email_comms", methods=["POST"])
-def email_comms():
-  form = request.form
-  if form and 'email' in form and 'name' in form and 'title' in form and 'summary' in form and 'form_type' in form:
-    email = form["email"]
-    name = form["name"]
-    title = form["title"]
-    summary = form["summary"]
-    form_type = form["form_type"]
-
-    # Optional Parameters
-    location = 'N/A'
-    date = 'N/A'
-    url = 'N/A'
-    has_attachment = 'false'
-    if 'url' in form:
-      url = form['url']
-    if 'location' in form:
-      location = form['location']
-    if 'date' in form:
-      date = form['date']
-    if 'has_attachment' in form:
-      has_attachment = form['has_attachment']
-
-    body = ''
-    subject = ''
-    if form_type == 'communitySpotlight':
-      subject = 'Success Story/Fireside Chat creation request'
-      body = community_spotlight_submit_form_email.substitute({ 'name': name, 'email': email, 'title': title, 'summary': summary, 'url': url })
-    elif form_type == 'newsOrEvent':
-      subject = 'News/Event creation request'
-      body = news_and_events_submit_form_email.substitute({ 'name': name, 'email': email, 'title': title, 'url': url, 'location': location, 'date': date, 'summary': summary })
-    else:
-      abort(400, description="Incorrect submission form type!")
-
-    if has_attachment == 'true':
-      files = request.files
-      if files and 'attachment_file' in files:
-        attachment_file = files['attachment_file']
-        fileData = attachment_file.read()
-
-        encoded_file = base64.b64encode(fileData).decode()
-
-        email_sender.sendgrid_email_with_attachment(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body, encoded_file, attachment_file.filename, attachment_file.content_type)
-      else:
-        abort(400, description="Missing file attachment information!")
-    else:
-      email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, subject, body)
-    email_sender.sendgrid_email(Config.SES_SENDER, email, 'SPARC creation request', creation_request_confirmation_email.substitute({ 'title': title, 'summary': summary }))
-    return json.dumps({"status": "sent"})
-  else:
-    abort(400, description="Missing email, name, or submission form type")
-
-@app.route("/submit_resource", methods=["POST"])
-def submit_resource():
-    data = json.loads(request.data)
-    contact_request = ContactRequestSchema().load(data)
-
-    email = contact_request["email"]
-    message = contact_request["message"]
-
-    email_sender.sendgrid_email(Config.SES_SENDER, Config.COMMS_EMAIL, 'Tools and Resources submission', message)
-    email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', resource_submission_confirmation_email.substitute({ 'message': message }))
 
     return json.dumps({"status": "sent"})
 
@@ -902,10 +881,10 @@ def get_scaffold_state():
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
-    json_data = request.get_json()
-    if json_data and 'title' in json_data and 'description' in json_data:
-        title = json_data["title"]
-        description = json_data["description"]
+    form = request.form
+    if form and 'title' in form and 'description' in form:
+        title = form["title"]
+        description = form["description"]
         hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
         url = 'https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks'
 
@@ -927,10 +906,34 @@ def create_wrike_task():
             headers=hed
         )
 
-        if resp.status_code == 200:
+        files = request.files
+        if files and 'attachment' in files and 'data' in resp.json() and resp.json()["data"] != []:
+            task_id = resp.json()["data"][0]["id"]
+            attachment = files['attachment']
+            file_data = attachment.read()
+            file_name = attachment.filename
+            content_type = attachment.content_type
+            headers = {
+                'Authorization': 'Bearer ' + Config.WRIKE_TOKEN,
+                'X-File-Name': file_name,
+                'content-type': content_type,
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            attachment_url = "https://www.wrike.com/api/v4/tasks/" + task_id + "/attachments"
 
-            if 'userEmail' in json_data and json_data['userEmail'] is not None:
-                email_sender.sendgrid_email(Config.SES_SENDER, json_data['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': json_data['description'] }))
+            try:
+              requests.post(
+                url=attachment_url,
+                data=file_data,
+                headers=headers
+              )
+            except Exception as e:
+              print(e)
+
+        if (resp.status_code == 200):
+
+            if 'userEmail' in form and form['userEmail'] is not None:
+                email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': form['description'] }))
 
             return jsonify(
                 title=title,
@@ -1165,3 +1168,7 @@ def search_readme(query):
     except requests.exceptions.HTTPError as err:
         logging.error(err)
         return jsonify({'error': str(err), 'message': 'Readme is not currently reachable, please try again later'}), 502
+
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    return usage_metrics

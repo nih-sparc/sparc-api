@@ -1,0 +1,94 @@
+import logging
+import boto3
+from app.config import Config
+from app.metrics.pennsieve import get_pennseive_download_metrics
+import requests
+from dateutil.relativedelta import relativedelta
+
+class MonthlyStats(object):
+    def __init__(self):
+        self.user_stats = {}
+        self.organization = Config.PENNSIEVE_ORGANIZATION
+        self._pennsieve_temp_api_key = ''
+
+    def run(self):
+        self._pennsieve_temp_api_key = self.pennsieve_login()
+        metrics = self.get_download_metrics_one_month()
+        dataset_details_for_downloaded_datasets = self.get_dataset_details_from_pennsieve(metrics)
+        self.user_stats = self.create_user_download_object(dataset_details_for_downloaded_datasets, metrics)
+        self.pennsieve_user_details = self.get_emails_orcid_id_map_from_pennsieve()
+        self.add_emails_to_user_stats_object()
+        return self.user_stats
+
+    # Get 1 month's metrics from Pennsieve
+    def get_download_metrics_one_month(self):
+        return get_pennseive_download_metrics(relativedelta(months=1))
+
+    # Returns pennsieve api token valid for 24 hours
+    def pennsieve_login(self):
+        r = requests.get(f"{Config.PENNSIEVE_API_HOST}/authentication/cognito-config")
+        r.raise_for_status()
+
+        cognito_app_client_id = r.json()["tokenPool"]["appClientId"]
+        cognito_region = r.json()["region"]
+
+        cognito_idp_client = boto3.client(
+            "cognito-idp",
+            region_name=cognito_region,
+            aws_access_key_id="",
+            aws_secret_access_key="",
+        )
+
+        login_response = cognito_idp_client.initiate_auth(
+            AuthFlow="USER_PASSWORD_AUTH",
+            AuthParameters={"USERNAME": Config.PENNSIEVE_API_TOKEN, "PASSWORD": Config.PENNSIEVE_API_SECRET},
+            ClientId=cognito_app_client_id,
+        )
+
+        api_key = login_response["AuthenticationResult"]["AccessToken"]
+        return api_key
+
+    # Places emails on the an object with orcid_ids
+    def get_emails_orcid_id_map_from_pennsieve(self):
+        r = requests.get(f"{Config.PENNSIEVE_API_HOST}/organizations/{self.organization}/members",
+                         headers={"Authorization": f"Bearer {self._pennsieve_temp_api_key}"})
+        r.raise_for_status()
+        return r.json()
+
+    # Add an emails field to the user stats object (which has a highest level of orcid id)
+    def add_emails_to_user_stats_object(self):
+        for user in self.pennsieve_user_details:
+            if 'orcid' in user.keys():
+                orcid_id = user['orcid']['orcid']
+                if orcid_id in self.user_stats.keys():
+                    self.user_stats[orcid_id]['email'] = user['email']
+
+    # Get details for a given metrics object
+    def get_dataset_details_from_pennsieve(self, metrics):
+        # send a request asking for info on the datsets with downloads
+        r = requests.get(f'{Config.PENNSIEVE_API_HOST}/discover/datasets', {
+            'limit': 1000,
+            'ids': [d['datasetId'] for d in metrics]
+        })
+        r.raise_for_status()
+        return r.json()['datasets']
+
+
+    def create_user_download_object(self, dataset_details_object, download_stats):
+        users = {}
+        for dataset in dataset_details_object:
+
+            # filter to only have datsets with downloads
+            downloadInfo = [d for d in download_stats if dataset['id'] == d['datasetId']]
+            for contributor in dataset['contributors']:
+                orcid_id = contributor['orcid']
+
+                # Add the download info with an orcid id as a key
+                if orcid_id not in users.keys():
+                    users[orcid_id] = {}
+                    users[orcid_id]['datasets'] = downloadInfo
+                else:
+                    users[orcid_id]['datasets'] += downloadInfo
+
+        return users
+

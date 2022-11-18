@@ -2,16 +2,23 @@ import logging
 import boto3
 from app.config import Config
 from app.metrics.pennsieve import get_pennseive_download_metrics
+from scripts.monthly_downloads_html_template import create_html_template
+from scripts.email_sender import EmailSender
 import requests
 from dateutil.relativedelta import relativedelta
 
 class MonthlyStats(object):
     def __init__(self):
+        self.send_grid = EmailSender()
         self.user_stats = {}
         self.organization = Config.PENNSIEVE_ORGANIZATION
         self._pennsieve_temp_api_key = ''
 
     def run(self):
+        self.get_stats()
+        self.send_stats(self.user_stats)
+
+    def get_stats(self):
         self._pennsieve_temp_api_key = self.pennsieve_login()
         metrics = self.get_download_metrics_one_month()
         dataset_details_for_downloaded_datasets = self.get_dataset_details_from_pennsieve(metrics)
@@ -19,6 +26,12 @@ class MonthlyStats(object):
         self.pennsieve_user_details = self.get_emails_orcid_id_map_from_pennsieve()
         self.add_emails_to_user_stats_object()
         return self.user_stats
+
+    def send_stats(self, user_stats):
+        for orcid_id in user_stats:
+            email_address = user_stats[orcid_id]['email']
+            email_body = create_html_template(user_stats[orcid_id]['datasets'])
+            self.send_email(email_address, email_body)
 
     # Get 1 month's metrics from Pennsieve
     def get_download_metrics_one_month(self):
@@ -91,4 +104,10 @@ class MonthlyStats(object):
                     users[orcid_id]['datasets'] += downloadInfo
 
         return users
+
+    def send_email(self, email_address, email_body):
+        return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.SES_SENDER,
+                                                             email_address,
+                                                             'SPARC monthly dataset download summary',
+                                                             email_body)
 

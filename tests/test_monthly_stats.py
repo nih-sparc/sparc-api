@@ -31,7 +31,8 @@ test_data = {
     }
 }
 
-ms = MonthlyStats()
+ms = MonthlyStats(debug_mode=True, debug_email=test_email_recipient)
+
 
 def test_pennsieve_login():
     key = ms.pennsieve_login()
@@ -39,14 +40,22 @@ def test_pennsieve_login():
                      headers={"Authorization": f"Bearer {key}"})
     assert_true(r.status_code == 200)
 
+
 def test_metrics_endpoint():
     stats = ms.get_download_metrics_one_month()
-    assert_true(len(stats.keys()) > 0) # note this assumes there is at least one download a month
+    assert_true(len(stats) > 0)  # note this assumes there is at least one download a month
+
 
 def test_stats_generation():
     stats = ms.get_stats()
     assert_true(len(stats.keys()) > 0)
 
-def test_email(): # Note that this will send an email to the test_"email_recipient" provided at the top of this doc
+
+def test_email():  # Note that this will send an email to the test_"email_recipient" provided at the top of this doc
     response = ms.send_stats(test_data)
     assert_true(response.status_code == 200)
+
+
+def test_full_run():  # For each recipient, this will send an email to the test_email for each email that would have been sent to a user
+    responses = ms.run()
+    assert_true(False not in [r.status_code == 200 for r in responses])  # Check all responses were 200

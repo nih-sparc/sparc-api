@@ -19,6 +19,9 @@ class MonthlyStats(object):
         self.debug_email = debug_email
         self.debug_mode = debug_mode
 
+    # daily_run_check runs on a set day of the month. However, since we do nt want to send two emails to users if the
+    #       app restarts on the first day of the month, We assume an email has already been sent if the app has just
+    #       started and set a cooldown period of 24h. This ensures we pass the 1 day trigger for sending the emails
     def daily_run_check(self):
         now = datetime.datetime.now()
         if now.day == self.run_day:  # Check if current day is run day

@@ -5,18 +5,32 @@ from app.metrics.pennsieve import get_pennseive_download_metrics
 from scripts.monthly_downloads_html_template import create_html_template
 from scripts.email_sender import EmailSender
 import requests
+import datetime
 from dateutil.relativedelta import relativedelta
 
 class MonthlyStats(object):
-    def __init__(self):
+    def __init__(self, debug_mode=False, debug_email=''):
         self.send_grid = EmailSender()
         self.user_stats = {}
         self.organization = Config.PENNSIEVE_ORGANIZATION
         self._pennsieve_temp_api_key = ''
+        self.created_at = datetime.datetime.now()
+        self.run_day = 1  # This is the day of the month emails will be sent
+        self.debug_email = debug_email
+        self.debug_mode = debug_mode
+
+    def daily_run_check(self):
+        now = datetime.datetime.now()
+        if now.day == self.run_day:  # Check if current day is run day
+            if (now - self.created_at) > datetime.timedelta(days=1):  # Do not run if app was started within 24h
+                self.run()
+            else:
+                logging.info('SPARC api has started in the last 24 hours. Waiting until 24h has passed before '
+                             'sending emails')
 
     def run(self):
         self.get_stats()
-        self.send_stats(self.user_stats)
+        return self.send_stats(self.user_stats)
 
     def get_stats(self):
         self._pennsieve_temp_api_key = self.pennsieve_login()
@@ -28,10 +42,13 @@ class MonthlyStats(object):
         return self.user_stats
 
     def send_stats(self, user_stats):
+        responses = []
         for orcid_id in user_stats:
             email_address = user_stats[orcid_id]['email']
             email_body = create_html_template(user_stats[orcid_id]['datasets'])
-            self.send_email(email_address, email_body)
+            r = self.send_email(email_address, email_body)
+            responses.append(r)
+        return responses
 
     # Get 1 month's metrics from Pennsieve
     def get_download_metrics_one_month(self):
@@ -86,7 +103,7 @@ class MonthlyStats(object):
         r.raise_for_status()
         return r.json()['datasets']
 
-
+    #  Creates dictionary keyed by orcid id with download stats in a list for each orcid id
     def create_user_download_object(self, dataset_details_object, download_stats):
         users = {}
         for dataset in dataset_details_object:
@@ -105,9 +122,15 @@ class MonthlyStats(object):
 
         return users
 
+    # send email using sendgrid
     def send_email(self, email_address, email_body):
+        if not self.debug_mode:
+            email_destination = email_address
+        else:
+            email_destination = self.debug_email
+
         return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.SES_SENDER,
-                                                             email_address,
-                                                             'SPARC monthly dataset download summary',
-                                                             email_body)
+                                                                    email_destination,
+                                                                    'SPARC monthly dataset download summary',
+                                                                    email_body)
 

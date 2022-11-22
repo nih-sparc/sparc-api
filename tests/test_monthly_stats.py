@@ -3,6 +3,9 @@ from app.config import Config
 from scripts.monthly_stats import MonthlyStats
 from nose.tools import assert_true
 
+#  The email address below can be modified to check the emails are sending and look as expected
+#  (using any email you control is fine as long as it is not pushed to github)
+
 test_email_recipient = 'myname@domain.com'
 
 test_data = {

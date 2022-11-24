@@ -55,10 +55,14 @@ def test_stats_generation():
 
 
 def test_email():  # Note that this will send an email to the test_"email_recipient" provided at the top of this doc
-    response = ms.send_stats(test_data)
-    assert_true(response.status_code == 200)
+    responses = ms.send_stats(test_data)
+    if True in [r.status_code == 202 for r in responses]:
+        print('Uh-oh, we have hit the sendgrid max email limit!')
+    assert_true(False not in [r.status_code == 200 for r in responses])  # Check all responses were 200
 
 
 def test_full_run():  # For each recipient, this will send an email to the test_email for each email that would have been sent to a user
     responses = ms.run()
-    assert_true(False not in [r.status_code == 200 for r in responses])  # Check all responses were 200
+    if True in [r.status_code == 202 for r in responses]:
+        print('Uh-oh, we have hit the sendgrid max email limit!')
+    assert_true(False not in [r.status_code == 200 for r in responses])

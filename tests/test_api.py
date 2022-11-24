@@ -114,11 +114,12 @@ def test_scaffold_get_share_id_and_state(client):
 
 
 def test_create_wrike_task(client):
-    r = client.post(f"/tasks", json={"title": "test-integration-task-sparc-api"})
+    
+    r = client.post(f"/tasks", data={"title": "test-integration-task-sparc-api"})
     assert r.status_code == 400
-    r2 = client.post(f"/tasks", json={"description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
+    r2 = client.post(f"/tasks", data={"description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
     assert r2.status_code == 400
-    r3 = client.post(f"/tasks", json={"title": "test-integration-task-sparc-api", "description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
+    r3 = client.post(f"/tasks", data={"title": "test-integration-task-sparc-api", "description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
     assert r3.status_code == 200
 
     # this part is only for cleaning the wrike board

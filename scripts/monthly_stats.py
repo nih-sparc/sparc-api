@@ -6,7 +6,14 @@ from scripts.monthly_downloads_html_template import create_html_template
 from scripts.email_sender import EmailSender
 import requests
 import datetime
+import json
 from dateutil.relativedelta import relativedelta
+
+def remove_duplicates(d_array):
+    json_list = [json.dumps(d) for d in d_array]
+    json_set = set(json_list)
+    unique_list = [json.loads(d) for d in json_set]
+    return unique_list
 
 class MonthlyStats(object):
     def __init__(self, debug_mode=False, debug_email=''):
@@ -49,7 +56,7 @@ class MonthlyStats(object):
         for orcid_id in user_stats:
             if 'email' in user_stats[orcid_id].keys():
                 email_address = user_stats[orcid_id]['email']
-                email_body = create_html_template(user_stats[orcid_id]['datasets'])
+                email_body = create_html_template(remove_duplicates(user_stats[orcid_id]['datasets']))
                 r = self.send_email(email_address, email_body)
             responses.append(r)
         return responses

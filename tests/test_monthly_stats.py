@@ -53,16 +53,15 @@ def test_stats_generation():
     stats = ms.get_stats()
     assert_true(len(stats.keys()) > 0)
 
+# Note: unfortunately the sendgrid python client returns 202 regardless of whether the email was sent or not.
+#   There is also no body to see if the request is successful. Because of this all we will do is check for 202
+#   There may be more control calling the sendgrid api directly if we switch to it
 
 def test_email():  # Note that this will send an email to the test_"email_recipient" provided at the top of this doc
     responses = ms.send_stats(test_data)
-    if True in [r.status_code == 202 for r in responses]:
-        print('Uh-oh, we have hit the sendgrid max email limit!')
-    assert_true(False not in [r.status_code == 200 for r in responses])  # Check all responses were 200
+    assert_true(False not in [r.status_code == 202 for r in responses])  # Check all responses were 202
 
 
 def test_full_run():  # For each recipient, this will send an email to the test_email for each email that would have been sent to a user
     responses = ms.run()
-    if True in [r.status_code == 202 for r in responses]:
-        print('Uh-oh, we have hit the sendgrid max email limit!')
-    assert_true(False not in [r.status_code == 200 for r in responses])
+    assert_true(False not in [r.status_code == 202 for r in responses])

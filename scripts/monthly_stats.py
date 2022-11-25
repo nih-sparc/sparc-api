@@ -47,9 +47,10 @@ class MonthlyStats(object):
     def send_stats(self, user_stats):
         responses = []
         for orcid_id in user_stats:
-            email_address = user_stats[orcid_id]['email']
-            email_body = create_html_template(user_stats[orcid_id]['datasets'])
-            r = self.send_email(email_address, email_body)
+            if 'email' in user_stats[orcid_id].keys():
+                email_address = user_stats[orcid_id]['email']
+                email_body = create_html_template(user_stats[orcid_id]['datasets'])
+                r = self.send_email(email_address, email_body)
             responses.append(r)
         return responses
 

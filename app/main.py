@@ -5,6 +5,7 @@ from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_client, get_funded_projects_count
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
+from scripts.monthly_stats import MonthlyStats
 
 import boto3
 import json
@@ -128,6 +129,12 @@ def connect_to_pennsieve():
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
 
+# Run monthly stats email schedule on production
+if Config.DEPLOY_ENV is 'production':
+    monthly_stats_email_scheduler = BackgroundScheduler()
+    ms = MonthlyStats()
+    monthly_stats_email_scheduler.start()
+    monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
 
 @app.before_first_request
 def get_osparc_file_viewers():

@@ -128,11 +128,13 @@ def connect_to_pennsieve():
 
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
-monthly_stats_email_scheduler = BackgroundScheduler()
 
-ms = MonthlyStats()
-monthly_stats_email_scheduler.start()
-monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
+# Run monthly stats email schedule on production
+if Config.DEPLOY_ENV is 'production':
+    monthly_stats_email_scheduler = BackgroundScheduler()
+    ms = MonthlyStats()
+    monthly_stats_email_scheduler.start()
+    monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
 
 @app.before_first_request
 def get_osparc_file_viewers():

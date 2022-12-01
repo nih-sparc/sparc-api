@@ -130,7 +130,7 @@ viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
 
 # Run monthly stats email schedule on production
-if Config.DEPLOY_ENV is 'production':
+if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler = BackgroundScheduler()
     ms = MonthlyStats()
     monthly_stats_email_scheduler.start()

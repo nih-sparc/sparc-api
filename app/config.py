@@ -52,7 +52,7 @@ class Config(object):
     SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://scicrunch.org/api/1/elastic/Interlex_pr")
     SCI_CRUNCH_SCIGRAPH_HOST = os.environ.get("SCI_CRUNCH_SCIGRAPH_HOST", "https://scicrunch.org/api/1/sparc-scigraph")
     SENDGRID_API_KEY =  os.environ.get("SENDGRID_API_KEY")
-    SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP = os.environ.get("SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP")
+    SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP = os.environ.get("SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP", '')
     README_API_KEY =  os.environ.get("README_API_KEY")
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")

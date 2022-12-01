@@ -42,7 +42,7 @@ class EmailSender(object):
         self.ses_sender = Config.SES_SENDER
         self.ses_arn = Config.SES_ARN
         self.unsubscribe_group = 0  # Note that this must be an integer for use in "sendgrid.GoupId"
-        if Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP is not '':
+        if Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP != '':
             self.unsubscribe_group = int(Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP)
 
     def send_email(self, name, email_address, message):

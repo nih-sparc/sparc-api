@@ -7,6 +7,7 @@ from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 
+import botocore
 import boto3
 import json
 import logging
@@ -358,11 +359,16 @@ def get_discover_path():
 # other required files.
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
-    head_response = s3.head_object(
-        Bucket=Config.S3_BUCKET_NAME,
-        Key=path,
-        RequestPayer="requester"
-    )
+    try:
+        head_response = s3.head_object(
+            Bucket=Config.S3_BUCKET_NAME,
+            Key=path,
+            RequestPayer="requester"
+        )
+    except botocore.exceptions.ClientError as err:
+        # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
+        if err.response["Error"]["Code"] == "404":
+            return abort(404, description=f'Provided path was not found on the s3 resource')
 
     content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
     if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB

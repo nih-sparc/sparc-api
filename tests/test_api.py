@@ -30,6 +30,17 @@ def test_direct_download_url_thumbnail(client):
     assert r.status_code == 200
     assert b"PNG" in r.data
 
+def test_direct_download_incorrect_path(client):
+    incorrect_path = '32/4/files/?encodeBase64=true'
+    r = client.get(f"/s3-resource/{incorrect_path}")
+
+    assert r.status_code == 404
+
+def test_direct_download_empty_path(client):
+    r = client.get(f"/s3-resource/")
+
+    assert r.status_code == 404
+
 
 def test_direct_download_url_large_file(client):
     large_s3_file = '61%2F2%2Ffiles%2Fprimary%2Fsub-44%2Fsam-1%2Fmicroscopy%2Fsub-44sam-1C44-1Slide2p2MT_10x.nd2'

@@ -28,11 +28,20 @@ $message
 ''')
 
 issue_reporting_email = Template('''\
-<b>You reported an issue on the SPARC Portal</b><br>
+<b>Thank you for reporting the following issue on the SPARC Portal!</b>
 <br>
-Provided data:<br>
 <br>
 $message
+''')
+
+creation_request_confirmation_email = Template('''\
+<b>Thank you for submitting the following SPARC creation request!</b>
+<br>
+<br>
+$message
+<br>
+<br>
+We have received your request and will be in contact as soon as possible.
 ''')
 
 class EmailSender(object):

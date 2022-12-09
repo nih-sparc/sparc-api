@@ -4,6 +4,7 @@ import boto3
 import json
 import logging
 import requests
+from flask import make_response
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from botocore.exceptions import ClientError
@@ -32,6 +33,7 @@ from app.utilities import img_to_base64_str
 from app.osparc import run_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
 from app.bfworker import BFWorker
+from scripts.pennsieve import pennsieve_login, get_banner
 
 app = Flask(__name__)
 # set environment variable
@@ -250,6 +252,12 @@ def create_presigned_url(expiration=3600):
     content_type = request.args.get("contentType") or "application/octet-stream"
 
     return create_s3_presigned_url(key, content_type, expiration)
+
+@app.route("/get_banner/<datasetId>")
+def get_banner_pen(datasetId):
+    p_temp_key = pennsieve_login()
+    ban = get_banner(p_temp_key, datasetId)
+    return ban
 
 
 @app.route("/thumbnail/neurolucida")

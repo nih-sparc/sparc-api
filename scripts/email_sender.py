@@ -4,7 +4,8 @@ from string import Template
 import boto3
 import sendgrid
 from app.config import Config
-from sendgrid.helpers.mail import Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, FileContent
+from sendgrid.helpers.mail import Asm, Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, \
+    FileContent, GroupId, GroupsToDisplay
 
 subject = "Message from SPARC Portal"
 
@@ -27,11 +28,20 @@ $message
 ''')
 
 issue_reporting_email = Template('''\
-<b>You reported an issue on the SPARC Portal</b><br>
+<b>Thank you for reporting the following issue on the SPARC Portal!</b>
 <br>
-Provided data:<br>
 <br>
 $message
+''')
+
+creation_request_confirmation_email = Template('''\
+<b>Thank you for submitting the following SPARC creation request!</b>
+<br>
+<br>
+$message
+<br>
+<br>
+We have received your request and will be in contact as soon as possible.
 ''')
 
 class EmailSender(object):
@@ -40,6 +50,9 @@ class EmailSender(object):
         self.charset = "UTF-8"
         self.ses_sender = Config.SES_SENDER
         self.ses_arn = Config.SES_ARN
+        self.unsubscribe_group = 0  # Note that this must be an integer for use in "sendgrid.GoupId"
+        if Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP != '':
+            self.unsubscribe_group = int(Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP)
 
     def send_email(self, name, email_address, message):
         body = name + "\n" + email_address + "\n" + message
@@ -52,6 +65,7 @@ class EmailSender(object):
             },
             SourceArn=self.ses_arn,
         )
+
     
     def sendgrid_email_with_attachment(self, fromm, to, subject, body, encoded_file, file_name, file_type):
         mail = Mail(
@@ -80,6 +94,19 @@ class EmailSender(object):
             subject,
             Content("text/html", body)
         )
+        response = sg_client.send(mail)
+        logging.info(f"Sending a '{subject}' mail using SendGrid")
+        logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")
+        return response
+
+    def sendgrid_email_with_unsubscribe_group(self, fromm, to, subject, body):
+        mail = Mail(
+            Email(fromm),
+            To(to),
+            subject,
+            Content("text/html", body)
+        )
+        mail.asm = Asm(GroupId(self.unsubscribe_group), GroupsToDisplay([self.unsubscribe_group]))
         response = sg_client.send(mail)
         logging.info(f"Sending a '{subject}' mail using SendGrid")
         logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")

@@ -4,10 +4,11 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 class Config(object):
-    PENNSIEVE_API_HOST = os.environ.get("PENNSIEVE_API_HOST")
+    PENNSIEVE_API_HOST = os.environ.get("PENNSIEVE_API_HOST", "https://api.pennsieve.io")
     PENNSIEVE_API_SECRET = os.environ.get("PENNSIEVE_API_SECRET", "local-secret-key")
     PENNSIEVE_API_TOKEN = os.environ.get("PENNSIEVE_API_TOKEN", "local-api-key")
     PENNSIEVE_EMBARGO_TEAM_ID = os.environ.get("PENNSIEVE_EMBARGO_TEAM_ID")
+    PENNSIEVE_ORGANIZATION = os.environ.get("PENNSIEVE_ORGANIZATION")
     DATABASE_URL = os.environ.get('DATABASE_URL')
     DISCOVER_API_HOST = os.environ.get(
         "DISCOVER_API_HOST", "https://api.pennsieve.io/discover"
@@ -35,6 +36,15 @@ class Config(object):
     MAPSTATE_TABLENAME = os.environ.get("MAPSTATE_TABLENAME", "mapstates")
     SCAFFOLDSTATE_TABLENAME = os.environ.get("SCAFFOLDSTATE_TABLENAME", "scaffoldstates")
     WRIKE_TOKEN = os.environ.get("WRIKE_TOKEN")
+    DRC_FEEDBACK_FOLDER_ID = os.environ.get("DRC_FEEDBACK_FOLDER_ID", "IEADBYQEI4MM37FH")
+    DRC_WRIKE_CUSTOM_STATUS_ID = os.environ.get("DRC_WRIKE_CUSTOM_STATUS_ID", "IEADBYQEJMBJODZU")
+    NEWS_AND_EVENTS_FOLDER_ID = os.environ.get("NEWS_AND_EVENTS_FOLDER_ID", "IEADBYQEI4TFTY2U")
+    TOOLS_AND_RESOURCES_FOLDER_ID = os.environ.get("TOOLS_AND_RESOURCES_FOLDER_ID", "IEADBYQEI46DRBAD")
+    COMMUNITY_SPOTLIGHT_FOLDER_ID = os.environ.get("COMMUNITY_SPOTLIGHT_FOLDER_ID", "IEADBYQEI4VVKGPZ")
+    COMMS_LEAD_1_WRIKE_ID = os.environ.get("COMMS_LEAD_1_WRIKE_ID", "KUANMWS4")
+    COMMS_LEAD_2_WRIKE_ID = os.environ.get("COMMS_LEAD_2_WRIKE_ID", "KUAMBOTN")
+    COMMS_LEAD_3_WRIKE_ID = os.environ.get("COMMS_LEAD_3_WRIKE_ID", "KUAPGH66")
+    COMMS_WRIKE_CUSTOM_STATUS_ID = os.environ.get("COMMS_WRIKE_CUSTOM_STATUS_ID", "IEADBYQEJMAAAAAA")
     SIM_CORE_TECH_LEAD_WRIKE_ID = os.environ.get("SIM_CORE_TECH_LEAD_WRIKE_ID")
     MAP_CORE_TECH_LEAD_WRIKE_ID = os.environ.get("MAP_CORE_TECH_LEAD_WRIKE_ID")
     DAT_CORE_TECH_LEAD_WRIKE_ID = os.environ.get("DAT_CORE_TECH_LEAD_WRIKE_ID")
@@ -51,6 +61,7 @@ class Config(object):
     SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://scicrunch.org/api/1/elastic/Interlex_pr")
     SCI_CRUNCH_SCIGRAPH_HOST = os.environ.get("SCI_CRUNCH_SCIGRAPH_HOST", "https://scicrunch.org/api/1/sparc-scigraph")
     SENDGRID_API_KEY =  os.environ.get("SENDGRID_API_KEY")
+    SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP = os.environ.get("SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP", '')
     README_API_KEY =  os.environ.get("README_API_KEY")
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")

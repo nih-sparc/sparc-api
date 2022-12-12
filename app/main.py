@@ -5,7 +5,9 @@ from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_client, get_funded_projects_count
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
+from scripts.monthly_stats import MonthlyStats
 
+import botocore
 import boto3
 import json
 import logging
@@ -25,7 +27,7 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email
+from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -129,6 +131,12 @@ def connect_to_pennsieve():
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
 
+# Run monthly stats email schedule on production
+if Config.DEPLOY_ENV == 'production':
+    monthly_stats_email_scheduler = BackgroundScheduler()
+    ms = MonthlyStats()
+    monthly_stats_email_scheduler.start()
+    monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
 
 @app.before_first_request
 def get_osparc_file_viewers():
@@ -352,11 +360,16 @@ def get_discover_path():
 # other required files.
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
-    head_response = s3.head_object(
-        Bucket=Config.S3_BUCKET_NAME,
-        Key=path,
-        RequestPayer="requester"
-    )
+    try:
+        head_response = s3.head_object(
+            Bucket=Config.S3_BUCKET_NAME,
+            Key=path,
+            RequestPayer="requester"
+        )
+    except botocore.exceptions.ClientError as err:
+        # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
+        if err.response["Error"]["Code"] == "404":
+            return abort(404, description=f'Provided path was not found on the s3 resource')
 
     content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
     if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
@@ -885,20 +898,42 @@ def create_wrike_task():
     if form and 'title' in form and 'description' in form:
         title = form["title"]
         description = form["description"]
-        hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
-        url = 'https://www.wrike.com/api/v4/folders/IEADBYQEI4MM37FH/tasks'
+        
+        ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
+        url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'
+        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]     
+        responsibles = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
+        customStatus = Config.DRC_WRIKE_CUSTOM_STATUS_ID
+        taskType = ""
+        if form and 'type' in form:
+            taskType = form["type"]
+        if (taskType == "newsAndEvents"):
+          url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
+          followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+          responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+          customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+        elif (taskType == "toolsAndResources"):
+          url = 'https://www.wrike.com/api/v4/folders/' + Config.TOOLS_AND_RESOURCES_FOLDER_ID + '/tasks'
+          followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+          responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+          customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+        elif (taskType == "communitySpotlight"):
+          url = 'https://www.wrike.com/api/v4/folders/' + Config.COMMUNITY_SPOTLIGHT_FOLDER_ID + '/tasks'
+          followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+          responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+          customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
 
         data = {
             "title": title,
             "description": description,
-            "customStatus": "IEADBYQEJMBJODZU",
-            "followers": [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID,
-                          Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID],
-            "responsibles": [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID,
-                             Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID],
+            "customStatus": customStatus,
+            "followers": followers,
+            "responsibles": responsibles,
             "follow": False,
             "dates": {"type": "Backlog"}
         }
+
+        hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
 
         resp = requests.post(
             url=url,
@@ -914,7 +949,7 @@ def create_wrike_task():
             file_name = attachment.filename
             content_type = attachment.content_type
             headers = {
-                'Authorization': 'Bearer ' + Config.WRIKE_TOKEN,
+                'Authorization': 'Bearer ' +  Config.WRIKE_TOKEN,
                 'X-File-Name': file_name,
                 'content-type': content_type,
                 'X-Requested-With': 'XMLHttpRequest'
@@ -931,14 +966,26 @@ def create_wrike_task():
               print(e)
 
         if (resp.status_code == 200):
-
             if 'userEmail' in form and form['userEmail'] is not None:
-                email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], 'Issue reporting', issue_reporting_email.substitute({ 'message': form['description'] }))
+              # default to bug form if task type not specified
+              subject = 'Issue Reporting'
+              body = issue_reporting_email.substitute({ 'message': description })
+              if (taskType == "newsAndEvents"):
+                subject = 'News/Event creation request'
+                body = creation_request_confirmation_email.substitute({ 'message': description })
+              elif (taskType == "toolsAndResources"):
+                subject = 'Tool/Resource creation request'
+                body = creation_request_confirmation_email.substitute({ 'message': description })
+              elif (taskType == "communitySpotlight"):
+                subject = 'Success Story/Fireside Chat creation request'
+                body = creation_request_confirmation_email.substitute({ 'message': description })
+
+              email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], subject, body)
 
             return jsonify(
-                title=title,
-                description=description,
-                task_id=resp.json()["data"][0]["id"]
+              title=title,
+              description=description,
+              task_id=resp.json()["data"][0]["id"]
             )
         else:
             return resp.json()

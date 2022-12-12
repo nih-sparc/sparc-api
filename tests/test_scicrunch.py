@@ -249,13 +249,13 @@ def test_response_abi_scaffold(client):
 
 def test_response_sample_subject_size(client):
     # Only filter search returns the sample and subjectSuze
-    r = client.get('/filter-search/?facet=pig&term=species&facet=urinary+bladder&term=organ')
+    r = client.get('/filter-search/?facet=liver&term=organ')
     data = r.data.decode('utf-8')
     json_data = json.loads(data)
     print(json_data)
     assert len(json_data['results']) == 1
-    assert json_data['results'][0]['sampleSize'] == '509'
-    assert json_data['results'][0]['subjectSize'] == '8'
+    assert json_data['results'][0]['sampleSize'] == '9'
+    assert json_data['results'][0]['subjectSize'] == '9'
 
 
 source_structure = {
@@ -446,7 +446,7 @@ def test_finding_contextual_information(client):
         assert len(item['abi-contextual-information']) > 0  # Check it has contextual information
 
 def test_undefined_version_dataset_search(client):
-    # Testing with dataset 17
+    # Testing with dataset 17 which is not versioned
     identifier = "17"
     doi = "10.26275/mlua-o9oj"
     r = client.get('/dataset_info/using_doi', query_string={'doi': doi})

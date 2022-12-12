@@ -197,4 +197,4 @@ def test_non_existing_simulation_ui_file(client):
 def test_simulation_ui_file(client):
     r = client.get('/simulation_ui_file/135')
     assert r.status_code == 200
-    assert r.get_json()['input'][1]['enabled'] == '(sm == 1) || (sm == 2)'
+    assert r.get_json()['input'][1]['visible'] == 'sm == 1'

@@ -960,53 +960,53 @@ def create_wrike_task():
 
         # add the file as an attachment to the newly created ticket
         files = request.files
-        new_task_id = ""
-        if files and 'attachment' in files and 'data' in resp.json() and resp.json()["data"] != []:
-            new_task_id = resp.json()["data"][0]["id"]
-            attachment = files['attachment']
-            file_data = attachment.read()
-            file_name = attachment.filename
-            content_type = attachment.content_type
-            headers = {
-                'Authorization': 'Bearer ' +  Config.WRIKE_TOKEN,
-                'X-File-Name': file_name,
-                'content-type': content_type,
-                'X-Requested-With': 'XMLHttpRequest'
-              }
-            attachment_url = "https://www.wrike.com/api/v4/tasks/" + new_task_id + "/attachments"
+        if 'data' in resp.json() and resp.json()["data"] != []:
+          new_task_id = resp.json()["data"][0]["id"]
+          if files and 'attachment' in files:
+              attachment = files['attachment']
+              file_data = attachment.read()
+              file_name = attachment.filename
+              content_type = attachment.content_type
+              headers = {
+                  'Authorization': 'Bearer ' +  Config.WRIKE_TOKEN,
+                  'X-File-Name': file_name,
+                  'content-type': content_type,
+                  'X-Requested-With': 'XMLHttpRequest'
+                }
+              attachment_url = "https://www.wrike.com/api/v4/tasks/" + new_task_id + "/attachments"
 
-            try:
-              requests.post(
-                url=attachment_url,
-                data=file_data,
-                headers=headers
-              )
-            except Exception as e:
-              print(e)
+              try:
+                requests.post(
+                  url=attachment_url,
+                  data=file_data,
+                  headers=headers
+                )
+              except Exception as e:
+                print(e)
 
-        # create copies of all the templates subtasks and add them to the newly created ticket
-        for subTaskId in templateSubTaskIds:
-          subTaskTemplateUrl = 'https://www.wrike.com/api/v4/tasks/' + subTaskId
-          subTaskTemplateResp = requests.get(
-            url = subTaskTemplateUrl,
-            headers=hed
-          )
-          if 'data' in subTaskTemplateResp.json() and subTaskTemplateResp.json()["data"] != []:
-            subTaskData = {
-              "title": subTaskTemplateResp.json()["data"][0]["title"],
-              "description": subTaskTemplateResp.json()["data"][0]["description"],
-              "customStatus": subTaskTemplateResp.json()["data"][0]["customStatusId"],
-              "followers": subTaskTemplateResp.json()["data"][0]["followerIds"],
-              "responsibles": subTaskTemplateResp.json()["data"][0]["responsibleIds"],
-              "follow": False,
-              "superTasks": [new_task_id],
-              "dates": {"type": "Backlog"}
-            }
-            requests.post(
-              url=url,
-              json=subTaskData,
+          # create copies of all the templates subtasks and add them to the newly created ticket
+          for subTaskId in templateSubTaskIds:
+            subTaskTemplateUrl = 'https://www.wrike.com/api/v4/tasks/' + subTaskId
+            subTaskTemplateResp = requests.get(
+              url = subTaskTemplateUrl,
               headers=hed
-            )  
+            )
+            if 'data' in subTaskTemplateResp.json() and subTaskTemplateResp.json()["data"] != []:
+              subTaskData = {
+                "title": subTaskTemplateResp.json()["data"][0]["title"],
+                "description": subTaskTemplateResp.json()["data"][0]["description"],
+                "customStatus": subTaskTemplateResp.json()["data"][0]["customStatusId"],
+                "followers": subTaskTemplateResp.json()["data"][0]["followerIds"],
+                "responsibles": subTaskTemplateResp.json()["data"][0]["responsibleIds"],
+                "follow": False,
+                "superTasks": [new_task_id],
+                "dates": {"type": "Backlog"}
+              }
+              requests.post(
+                url=url,
+                json=subTaskData,
+                headers=hed
+              )
 
         if (resp.status_code == 200):
             if 'userEmail' in form and form['userEmail'] is not None:

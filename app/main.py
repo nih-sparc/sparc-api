@@ -895,6 +895,7 @@ def create_wrike_task():
         title = form["title"]
         description = form["description"]
         
+        hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
         ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
         url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'
         followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]     
@@ -932,7 +933,10 @@ def create_wrike_task():
 
         if (templateTaskId != ""):
           templateUrl = 'https://www.wrike.com/api/v4/tasks/' + templateTaskId
-          templateResp = requests.get(templateUrl)
+          templateResp = requests.get(
+            url=templateUrl,
+            headers=hed
+          )
           if 'data' in templateResp.json() and templateResp.json()["data"] != []:
             description = templateResp.json()["data"][0]["description"] + "<br/><br/>" + description
             templateSubTaskIds = templateResp.json()["data"][0]["subTaskIds"]
@@ -946,8 +950,6 @@ def create_wrike_task():
             "follow": False,
             "dates": {"type": "Backlog"}
         }
-
-        hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
 
         resp = requests.post(
             url=url,
@@ -984,7 +986,10 @@ def create_wrike_task():
         # create copies of all the templates subtasks and add them to the newly created ticket
         for subTaskId in templateSubTaskIds:
           subTaskTemplateUrl = 'https://www.wrike.com/api/v4/tasks/' + subTaskId
-          subTaskTemplateResp = requests.get(subTaskTemplateUrl)
+          subTaskTemplateResp = requests.get(
+            url = subTaskTemplateUrl,
+            headers=hed
+          )
           if 'data' in subTaskTemplateResp.json() and subTaskTemplateResp.json()["data"] != []:
             subTaskData = {
               "title": subTaskTemplateResp.json()["data"][0]["title"],

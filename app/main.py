@@ -894,6 +894,7 @@ def create_wrike_task():
     if form and 'title' in form and 'description' in form:
         title = form["title"]
         description = form["description"]
+        newTaskDescription = form["description"]
         
         hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
         ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
@@ -938,12 +939,12 @@ def create_wrike_task():
             headers=hed
           )
           if 'data' in templateResp.json() and templateResp.json()["data"] != []:
-            description = templateResp.json()["data"][0]["description"] + "<br/><br/>" + description
+            newTaskDescription = templateResp.json()["data"][0]["description"] + description
             templateSubTaskIds = templateResp.json()["data"][0]["subTaskIds"]
 
         data = {
             "title": title,
-            "description": description,
+            "description": newTaskDescription,
             "customStatus": customStatus,
             "followers": followers,
             "responsibles": responsibles,
@@ -1012,8 +1013,11 @@ def create_wrike_task():
               # default to bug form if task type not specified
               subject = 'Issue Reporting'
               body = issue_reporting_email.substitute({ 'message': description })
-              if (taskType == "newsAndEvents"):
-                subject = 'News/Event creation request'
+              if (taskType == "news"):
+                subject = 'News creation request'
+                body = creation_request_confirmation_email.substitute({ 'message': description })
+              elif (taskType == "event"):
+                subject = 'Event creation request'
                 body = creation_request_confirmation_email.substitute({ 'message': description })
               elif (taskType == "toolsAndResources"):
                 subject = 'Tool/Resource creation request'

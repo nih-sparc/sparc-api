@@ -630,7 +630,7 @@ def inject_markdown(resp):
         resp["markdown"] = mark_req.text
 
 
-def inject_template_data(resp, debug):
+def inject_template_data(resp):
     id_ = resp.get("id")
     version = resp.get("version")
     if id_ is None or version is None:
@@ -644,7 +644,8 @@ def inject_template_data(resp, debug):
         )
     except ClientError:
         # If the file is not under folder 'files', check under folder 'packages'
-        if debug:
+        debugging = Config.SPARC_API_DEBUGGING == "TRUE"
+        if debugging:
             logging.warning(
                 "Required file template.json was not found under /files folder, trying under /packages..."
             )
@@ -655,7 +656,7 @@ def inject_template_data(resp, debug):
                 RequestPayer="requester",
             )
         except ClientError as e:
-            if debug:
+            if debugging:
                 logging.error(e)
             return
 
@@ -688,14 +689,13 @@ def build_filetypes_table(osparc_viewers):
 
 
 @app.route("/sim/dataset/<id_>")
-@app.route("/sim/dataset/<id_>/<debug_>")
-def sim_dataset(id_, debug_="debug"):
+def sim_dataset(id_):
     if request.method == "GET":
         req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
         if req.ok:
             json_data = req.json()
             inject_markdown(json_data)
-            inject_template_data(json_data, debug_ == "debug")
+            inject_template_data(json_data)
             return jsonify(json_data)
         abort(404, description="Resource not found")
 
@@ -898,10 +898,10 @@ def create_wrike_task():
     if form and 'title' in form and 'description' in form:
         title = form["title"]
         description = form["description"]
-        
+
         ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
         url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'
-        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]     
+        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
         responsibles = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
         customStatus = Config.DRC_WRIKE_CUSTOM_STATUS_ID
         taskType = ""

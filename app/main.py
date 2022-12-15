@@ -898,34 +898,57 @@ def create_wrike_task():
     if form and 'title' in form and 'description' in form:
         title = form["title"]
         description = form["description"]
-
+        newTaskDescription = form["description"]
+        
+        hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
         ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
         url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'
         followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
         responsibles = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
         customStatus = Config.DRC_WRIKE_CUSTOM_STATUS_ID
         taskType = ""
+        templateTaskId = ""
+        templateSubTaskIds = []
         if form and 'type' in form:
             taskType = form["type"]
-        if (taskType == "newsAndEvents"):
+        if (taskType == "news"):
           url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
           followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
           responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
           customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+          templateTaskId = Config.NEWS_TEMPLATE_TASK_ID
+        if (taskType == "event"):
+          url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
+          followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+          responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+          customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+          templateTaskId = Config.EVENT_TEMPLATE_TASK_ID
         elif (taskType == "toolsAndResources"):
           url = 'https://www.wrike.com/api/v4/folders/' + Config.TOOLS_AND_RESOURCES_FOLDER_ID + '/tasks'
           followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
           responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
           customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+          templateTaskId = Config.TOOLS_AND_RESOURCES_TEMPLATE_TASK_ID
         elif (taskType == "communitySpotlight"):
           url = 'https://www.wrike.com/api/v4/folders/' + Config.COMMUNITY_SPOTLIGHT_FOLDER_ID + '/tasks'
           followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
           responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
           customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+          templateTaskId = Config.COMMUNITY_SPOTLIGHT_TEMPLATE_TASK_ID
+
+        if (templateTaskId != ""):
+          templateUrl = 'https://www.wrike.com/api/v4/tasks/' + templateTaskId
+          templateResp = requests.get(
+            url=templateUrl,
+            headers=hed
+          )
+          if 'data' in templateResp.json() and templateResp.json()["data"] != []:
+            newTaskDescription = templateResp.json()["data"][0]["description"] + description
+            templateSubTaskIds = templateResp.json()["data"][0]["subTaskIds"]
 
         data = {
             "title": title,
-            "description": description,
+            "description": newTaskDescription,
             "customStatus": customStatus,
             "followers": followers,
             "responsibles": responsibles,
@@ -933,45 +956,72 @@ def create_wrike_task():
             "dates": {"type": "Backlog"}
         }
 
-        hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
-
         resp = requests.post(
             url=url,
             json=data,
             headers=hed
         )
 
+        # add the file as an attachment to the newly created ticket
         files = request.files
-        if files and 'attachment' in files and 'data' in resp.json() and resp.json()["data"] != []:
-            task_id = resp.json()["data"][0]["id"]
-            attachment = files['attachment']
-            file_data = attachment.read()
-            file_name = attachment.filename
-            content_type = attachment.content_type
-            headers = {
-                'Authorization': 'Bearer ' +  Config.WRIKE_TOKEN,
-                'X-File-Name': file_name,
-                'content-type': content_type,
-                'X-Requested-With': 'XMLHttpRequest'
-              }
-            attachment_url = "https://www.wrike.com/api/v4/tasks/" + task_id + "/attachments"
+        if 'data' in resp.json() and resp.json()["data"] != []:
+          new_task_id = resp.json()["data"][0]["id"]
+          if files and 'attachment' in files:
+              attachment = files['attachment']
+              file_data = attachment.read()
+              file_name = attachment.filename
+              content_type = attachment.content_type
+              headers = {
+                  'Authorization': 'Bearer ' +  Config.WRIKE_TOKEN,
+                  'X-File-Name': file_name,
+                  'content-type': content_type,
+                  'X-Requested-With': 'XMLHttpRequest'
+                }
+              attachment_url = "https://www.wrike.com/api/v4/tasks/" + new_task_id + "/attachments"
 
-            try:
+              try:
+                requests.post(
+                  url=attachment_url,
+                  data=file_data,
+                  headers=headers
+                )
+              except Exception as e:
+                print(e)
+
+          # create copies of all the templates subtasks and add them to the newly created ticket
+          for subTaskId in templateSubTaskIds:
+            subTaskTemplateUrl = 'https://www.wrike.com/api/v4/tasks/' + subTaskId
+            subTaskTemplateResp = requests.get(
+              url = subTaskTemplateUrl,
+              headers=hed
+            )
+            if 'data' in subTaskTemplateResp.json() and subTaskTemplateResp.json()["data"] != []:
+              subTaskData = {
+                "title": subTaskTemplateResp.json()["data"][0]["title"],
+                "description": subTaskTemplateResp.json()["data"][0]["description"],
+                "customStatus": subTaskTemplateResp.json()["data"][0]["customStatusId"],
+                "followers": subTaskTemplateResp.json()["data"][0]["followerIds"],
+                "responsibles": subTaskTemplateResp.json()["data"][0]["responsibleIds"],
+                "follow": False,
+                "superTasks": [new_task_id],
+                "dates": {"type": "Backlog"}
+              }
               requests.post(
-                url=attachment_url,
-                data=file_data,
-                headers=headers
+                url=url,
+                json=subTaskData,
+                headers=hed
               )
-            except Exception as e:
-              print(e)
 
         if (resp.status_code == 200):
             if 'userEmail' in form and form['userEmail'] is not None:
               # default to bug form if task type not specified
               subject = 'Issue Reporting'
               body = issue_reporting_email.substitute({ 'message': description })
-              if (taskType == "newsAndEvents"):
-                subject = 'News/Event creation request'
+              if (taskType == "news"):
+                subject = 'News creation request'
+                body = creation_request_confirmation_email.substitute({ 'message': description })
+              elif (taskType == "event"):
+                subject = 'Event creation request'
                 body = creation_request_confirmation_email.substitute({ 'message': description })
               elif (taskType == "toolsAndResources"):
                 subject = 'Tool/Resource creation request'

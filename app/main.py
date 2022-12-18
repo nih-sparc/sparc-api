@@ -37,7 +37,8 @@ from app.scicrunch_process_results import reform_dataset_results, process_result
     reform_related_terms
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
-from app.osparc import run_simulation
+from app.osparc import start_simulation as do_start_simulation
+from app.osparc import check_simulation as do_check_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
 
 logging.basicConfig()
@@ -171,14 +172,14 @@ def get_metrics():
     if contentful:
         cf_response = get_funded_projects_count(contentful)
         usage_metrics['funded_projects_count'] = cf_response
-        
+
     ps_response = get_download_count()
     usage_metrics['1year_download_count'] = ps_response
 
     if not metrics_scheduler.running:
         logging.info('Starting scheduler for metrics acquisition')
         metrics_scheduler.start()
-    
+
 
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
@@ -643,9 +644,11 @@ def inject_template_data(resp):
         )
     except ClientError:
         # If the file is not under folder 'files', check under folder 'packages'
-        logging.warning(
-            "Required file template.json was not found under /files folder, trying under /packages..."
-        )
+        debugging = Config.SPARC_API_DEBUGGING == "TRUE"
+        if debugging:
+            logging.warning(
+                "Required file template.json was not found under /files folder, trying under /packages..."
+            )
         try:
             response = s3.get_object(
                 Bucket="pennsieve-prod-discover-publish-use1",
@@ -653,7 +656,8 @@ def inject_template_data(resp):
                 RequestPayer="requester",
             )
         except ClientError as e:
-            logging.error(e)
+            if debugging:
+                logging.error(e)
             return
 
     template = response["Body"].read()
@@ -899,7 +903,7 @@ def create_wrike_task():
         hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
         ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
         url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'
-        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]     
+        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
         responsibles = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
         customStatus = Config.DRC_WRIKE_CUSTOM_STATUS_ID
         taskType = ""
@@ -1134,10 +1138,10 @@ def get_available_uberonids():
     return jsonify(result)
 
 
-# Get list of terms a level up/down from 
+# Get list of terms a level up/down from
 @app.route("/get-related-terms/<query>")
 def get_related_terms(query):
-    
+
     payload = {
         'direction': request.args.get('direction', default='OUTGOING'),
         'relationshipType': request.args.get('relationshipType', default='BFO:0000050'),
@@ -1174,14 +1178,24 @@ def simulation_ui_file(identifier):
         abort(404, description="no simulation UI file could be found")
 
 
-@app.route("/simulation", methods=["POST"])
-def simulation():
+@app.route("/start_simulation", methods=["POST"])
+def start_simulation():
     data = request.get_json()
 
-    if data and "model_url" in data and "json_config" in data:
-        return json.dumps(run_simulation(data["model_url"], data["json_config"]))
+    if data and "solver" in data and "name" in data["solver"] and "version" in data["solver"]:
+        return json.dumps(do_start_simulation(data))
     else:
-        abort(400, description="Missing model URL and/or JSON configuration")
+        abort(400, description="Missing solver name and/or solver version")
+
+
+@app.route("/check_simulation", methods=["POST"])
+def check_simulation():
+    data = request.get_json()
+
+    if data and "job_id" in data and "solver" in data and "name" in data["solver"] and "version" in data["solver"]:
+        return json.dumps(do_check_simulation(data))
+    else:
+        abort(400, description="Missing solver name, solver version and/or job id")
 
 
 @app.route("/pmr_latest_exposure", methods=["POST"])

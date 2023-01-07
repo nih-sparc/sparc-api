@@ -140,7 +140,7 @@ class MonthlyStats(object):
         else:
             email_destination = self.debug_email
 
-        return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.SES_SENDER,
+        return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
                                                                     email_destination,
                                                                     'SPARC monthly dataset download summary',
                                                                     email_body)

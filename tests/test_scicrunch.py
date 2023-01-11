@@ -156,9 +156,9 @@ def test_response_version(client):
 
 
 def test_response_abi_plot(client):
-    # Testing abi-plot with dataset 141
-    identifier = "141"
-    doi = "10.26275/9qws-u3px"
+    # Testing abi-plot with dataset 212
+    identifier = "212"
+    doi = "10.26275/lok5-wje6"
     run_doi_test = check_doi_status(client, identifier, doi)
     if run_doi_test:
         r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
@@ -166,12 +166,12 @@ def test_response_abi_plot(client):
         json_data = json.loads(data)
         assert len(json_data['result']) == 1
         if json_data['result'][0]['version'] == '1.1.5':
-            assert len(json_data['result'][0]['abi-plot']) == 21
+            assert len(json_data['result'][0]['abi-plot']) == 4
             identifier = json_data['result'][0]["dataset_identifier"]
             version = json_data['result'][0]["dataset_version"]
-            assert identifier == "141"
-            assert version == "3"
-            # Construct the file path prefix, it should be /exists/141/3/files
+            assert identifier == "212"
+            assert version == "1"
+            # Construct the file path prefix, it should be /exists/212/1/files
             path_prefix = '/'.join(('', 'exists', identifier, version, 'files'))
             for plot in json_data['result'][0]['abi-plot']:
                 for path in  plot['datacite']['isDescribedBy']['path']:

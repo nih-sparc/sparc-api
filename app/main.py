@@ -1013,23 +1013,24 @@ def create_wrike_task():
               )
 
         if (resp.status_code == 200):
-            if 'userEmail' in form and form['userEmail'] is not None:
-              # default to bug form if task type not specified
-              subject = 'Issue Reporting'
-              body = issue_reporting_email.substitute({ 'message': description })
-              if (taskType == "news"):
-                subject = 'News creation request'
-                body = creation_request_confirmation_email.substitute({ 'message': description })
-              elif (taskType == "event"):
-                subject = 'Event creation request'
-                body = creation_request_confirmation_email.substitute({ 'message': description })
-              elif (taskType == "toolsAndResources"):
-                subject = 'Tool/Resource creation request'
-                body = creation_request_confirmation_email.substitute({ 'message': description })
-              elif (taskType == "communitySpotlight"):
-                subject = 'Success Story/Fireside Chat creation request'
-                body = creation_request_confirmation_email.substitute({ 'message': description })
-
+          if 'userEmail' in form and form['userEmail']:
+            # default to bug form if task type not specified
+            subject = 'Issue Reporting'
+            body = issue_reporting_email.substitute({ 'message': description })
+            if (taskType == "news"):
+              subject = 'News creation request'
+              body = creation_request_confirmation_email.substitute({ 'message': description })
+            elif (taskType == "event"):
+              subject = 'Event creation request'
+              body = creation_request_confirmation_email.substitute({ 'message': description })
+            elif (taskType == "toolsAndResources"):
+              subject = 'Tool/Resource creation request'
+              body = creation_request_confirmation_email.substitute({ 'message': description })
+            elif (taskType == "communitySpotlight"):
+              subject = 'Success Story/Fireside Chat creation request'
+              body = creation_request_confirmation_email.substitute({ 'message': description })
+            userEmail = form['userEmail']
+            if len(userEmail) > 0:
               email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], subject, body)
 
             return jsonify(

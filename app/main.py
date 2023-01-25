@@ -1033,11 +1033,11 @@ def create_wrike_task():
             if len(userEmail) > 0:
               email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], subject, body)
 
-            return jsonify(
-              title=title,
-              description=description,
-              task_id=resp.json()["data"][0]["id"]
-            )
+          return jsonify(
+            title=title,
+            description=description,
+            task_id=resp.json()["data"][0]["id"]
+          )
         else:
             return resp.json()
     else:

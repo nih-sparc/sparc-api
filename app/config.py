@@ -21,6 +21,7 @@ class Config(object):
     MONGODB_URI = os.environ.get("MONGODB_URI")
     SES_ARN = os.environ.get("SES_ARN")
     SES_SENDER = os.environ.get("SES_SENDER")
+    METRICS_EMAIL_ADDRESS = os.environ.get("METRICS_EMAIL_ADDRESS", "metrics@sparc.science")
     COMMS_EMAIL = os.environ.get("COMMS_EMAIL")
     SPARC_PORTAL_AWS_KEY = os.environ.get("SPARC_PORTAL_USER_ID")
     SPARC_PORTAL_AWS_SECRET = os.environ.get("SPARC_PORTAL_USER_SECRET")

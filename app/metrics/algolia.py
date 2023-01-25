@@ -30,3 +30,4 @@ def get_all_dataset_ids(client):
   object_ids = numpy.array([getattr(hit, 'objectID', '-1') for hit in hits])
   filter_invalid_ids = object_ids >= 0
   return object_ids[filter_invalid_ids]
+  

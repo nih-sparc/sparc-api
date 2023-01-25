@@ -13,7 +13,7 @@ class RandomDatasetSelector(object):
         now = datetime.datetime.now()
         # If a request is received in a window of time that is shorter than the time delta just return the same id, otherwise update the id
         if (now - self.last_used_time) < datetime.timedelta(days=timeDeltaDays) and self.random_id != -1:
-          return self.random_id
+            return self.random_id
         # reset the list of ids if we have iterated through all of them already
         if len(self.available_dataset_ids) == 0:
             self.available_dataset_ids = self.get_all_dataset_ids()

@@ -9,7 +9,7 @@ class RandomDatasetSelector(object):
         self.random_id = -1
 
     def get_random_dataset_id(self, timeDeltaHours):
-        timeDeltaDays = timeDeltaHours / 24
+        timeDeltaDays = float(timeDeltaHours) / 24
         now = datetime.datetime.now()
         # If a request is received in a window of time that is shorter than the time delta just return the same id, otherwise update the id
         if (now - self.last_used_time) < datetime.timedelta(days=timeDeltaDays) and self.random_id != -1:

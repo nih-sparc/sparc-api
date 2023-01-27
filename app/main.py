@@ -6,6 +6,7 @@ from app.metrics.contentful import init_cf_client, get_funded_projects_count
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
+from scripts.random_dataset_selector import RandomDatasetSelector
 
 import botocore
 import boto3
@@ -51,6 +52,7 @@ CORS(app)
 
 ma = Marshmallow(app)
 email_sender = EmailSender()
+random_dataset_selector = RandomDatasetSelector()
 
 ps = None
 s3 = boto3.client(
@@ -735,6 +737,13 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
+@app.route("/get_random_dataset", methods=["GET"])
+def get_random_dataset():
+  deltaInHours = request.args.get('deltaInHours') or 8
+  limitedDatasetIds = request.args.get('limitedDatasetIds') or ""
+  limitedDatasetIdsArray = [int(x) for x in limitedDatasetIds.split(',')] if len(limitedDatasetIds) > 0 else []
+  random_id = random_dataset_selector.get_random_dataset_id(deltaInHours, limitedDatasetIdsArray)
+  return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, random_id)).json()
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):

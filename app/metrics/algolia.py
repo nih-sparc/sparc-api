@@ -1,5 +1,4 @@
 import logging
-
 from algoliasearch.search_client import SearchClient
 from app.config import Config
 
@@ -21,3 +20,12 @@ def get_dataset_count(client):
     index = client.init_index(INDEX)
     res = index.search("")
     return res["nbHits"]
+
+def get_all_dataset_ids(client):
+  index = client.init_index(INDEX)
+  object_ids = []
+  for record in index.browse_objects():
+    if record['objectID'] is not None:
+      object_ids.append(record['objectID'])
+  return object_ids
+  

@@ -740,7 +740,9 @@ def datasets_by_project_id(project_id):
 @app.route("/get_random_dataset", methods=["GET"])
 def get_random_dataset():
   deltaInHours = request.args.get('deltaInHours') or 8
-  random_id = random_dataset_selector.get_random_dataset_id(deltaInHours)
+  limitedDatasetIds = request.args.get('limitedDatasetIds') or ""
+  limitedDatasetIdsArray = [int(x) for x in limitedDatasetIds.split(',')] if len(limitedDatasetIds) > 0 else []
+  random_id = random_dataset_selector.get_random_dataset_id(deltaInHours, limitedDatasetIdsArray)
   return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, random_id)).json()
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])

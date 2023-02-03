@@ -214,7 +214,7 @@ def set_random_dataset_id():
       available_dataset_ids_array = str(table_state["available_dataset_ids"]).split(',')
       random_index = random.randint(0, len(available_dataset_ids_array)-1)
       table_state["random_id"] = available_dataset_ids_array.pop(random_index)
-      table_state["last_used_time"] = now
+      table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
       table_state["available_dataset_ids"] = available_dataset_ids_array
       randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
     except Exception as e:

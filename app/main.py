@@ -202,7 +202,7 @@ def set_random_dataset_id():
       time_delta_in_days = float(time_delta_in_hours) / 24
       now = datetime.now()
       # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
-      if (now - last_used_time) < datetime.timedelta(days=time_delta_in_days) and random_id != -1 and limited_ids_were_set is False:
+      if (now - last_used_time) < timedelta(days=time_delta_in_days) and random_id != -1 and limited_ids_were_set is False:
           return random_id
       # reset the list of ids if we have iterated through all of them already or if the limited available ids list was just set
       if len(table_state["available_dataset_ids"]) == 0 or limited_ids_were_set is True:

@@ -31,4 +31,6 @@ def get_funded_projects_count(client):
 
 def get_homepage_response(client):
   response = client.entry(Config.CTF_HOMEPAGE_ID)
+  print("homepage response = ", response)
+  print("get_homepage_reponse returns ", response.fields)
   return response.fields

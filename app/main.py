@@ -2,17 +2,17 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_client, get_funded_projects_count
-from app.metrics.algolia import get_dataset_count, init_algolia_client
+from app.metrics.contentful import init_cf_client, get_funded_projects_count, get_homepage_response
+from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
-from scripts.random_dataset_selector import RandomDatasetSelector
 
 import botocore
 import boto3
 import json
 import logging
 import requests
+import random
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from botocore.exceptions import ClientError
@@ -33,7 +33,7 @@ from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
-from app.dbtable import MapTable, ScaffoldTable
+from app.dbtable import MapTable, ScaffoldTable, RandomDatasetSelectorTable
 from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results, \
     reform_related_terms
 from app.serializer import ContactRequestSchema
@@ -52,7 +52,6 @@ CORS(app)
 
 ma = Marshmallow(app)
 email_sender = EmailSender()
-random_dataset_selector = RandomDatasetSelector()
 
 ps = None
 s3 = boto3.client(
@@ -76,6 +75,10 @@ try:
 except AttributeError:
     scaffoldtable = None
 
+try:
+    randomDatasetSelectorTable = RandomDatasetSelectorTable(Config.DATABASE_URL)
+except AttributeError:
+    randomDatasetSelectorTable = None
 
 class Biolucida(object):
     _token = ''
@@ -132,6 +135,7 @@ def connect_to_pennsieve():
 
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
+random_dataset_scheduler = BackgroundScheduler()
 
 # Run monthly stats email schedule on production
 if Config.DEPLOY_ENV == 'production':
@@ -182,6 +186,71 @@ def get_metrics():
         logging.info('Starting scheduler for metrics acquisition')
         metrics_scheduler.start()
 
+@app.before_first_request
+def set_random_dataset_id():
+    logging.info('Setting random dataset selector state info')
+    table_state = get_random_dataset_selector_table_state()   
+    try:
+      cf_homepage_response = get_homepage_response(contentful)
+      limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
+      if (limited_ids_were_set):
+        table_state = get_random_dataset_selector_table_state()   
+
+      last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
+      random_id = int(table_state["random_id"])
+      time_delta_in_hours = cf_homepage_response.timeDelta
+      time_delta_in_days = float(time_delta_in_hours) / 24
+      now = datetime.now()
+      # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
+      if (now - last_used_time) < datetime.timedelta(days=time_delta_in_days) and random_id != -1 and limited_ids_were_set is False:
+          return random_id
+      # reset the list of ids if we have iterated through all of them already or if the limited available ids list was just set
+      if len(table_state["available_dataset_ids"]) == 0 or limited_ids_were_set is True:
+          if (len(table_state["limited_available_ids"]) > 0):
+            table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
+          else:
+            table_state["available_dataset_ids"] = get_all_dataset_ids()
+
+      available_dataset_ids_array = str(table_state["available_dataset_ids"]).split(',')
+      random_index = random.randint(0, len(available_dataset_ids_array)-1)
+      table_state["random_id"] = available_dataset_ids_array.pop(random_index)
+      table_state["last_used_time"] = now
+      table_state["available_dataset_ids"] = available_dataset_ids_array
+      randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
+    except Exception as e:
+      print('Error while connecting to Contentful: ', e)
+
+    if not random_dataset_scheduler.running:
+        logging.info('Starting scheduler for random dataset acquisition')
+        random_dataset_scheduler.start()
+
+def set_limited_dataset_ids(table_state, contentful_state):
+  persisted_limited_available_ids = str(table_state["limited_available_ids"]).split(',')
+  updated_limited_available_ids = contentful_state.featuredDatasets
+
+  # If setting to the same values (regardless of order and duplicates) then do nothing
+  if (set(persisted_limited_available_ids) == set(updated_limited_available_ids)):
+    return False
+  else:
+    table_state["limited_available_ids"] = updated_limited_available_ids
+    randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
+    return True
+
+def get_all_dataset_ids():
+  return get_all_dataset_ids(algolia)
+
+def get_random_dataset_selector_table_state():
+  current_state = randomDatasetSelectorTable.pullState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME)
+  if current_state is None:
+    default_data = {
+      'last_used_time': datetime.now(),
+      'available_dataset_ids': [],
+      # limited_available_ids are used if a subset of ids is to be used for random selection as opposed to all id's
+      'limited_available_ids': [],
+      'random_id': -1,
+    }
+    current_state = randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(default_data), True)
+  return json.loads(current_state)
 
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
@@ -189,6 +258,8 @@ viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days
 # Gathers all the required metrics, once every three hours
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
+# Sets the random dataset id, once every 4 hours
+random_dataset_scheduler.add_job(func=set_random_dataset_id, trigger='interval', hours=4)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -739,10 +810,7 @@ def datasets_by_project_id(project_id):
 
 @app.route("/get_random_dataset", methods=["GET"])
 def get_random_dataset():
-  deltaInHours = request.args.get('deltaInHours') or 8
-  limitedDatasetIds = request.args.get('limitedDatasetIds') or ""
-  limitedDatasetIdsArray = [int(x) for x in limitedDatasetIds.split(',')] if len(limitedDatasetIds) > 0 else []
-  random_id = random_dataset_selector.get_random_dataset_id(deltaInHours, limitedDatasetIdsArray)
+  random_id = get_random_dataset_selector_table_state()["random_id"]
   return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, random_id)).json()
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])

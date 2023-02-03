@@ -198,7 +198,7 @@ def set_random_dataset_id():
 
       last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
       random_id = int(table_state["random_id"])
-      time_delta_in_hours = cf_homepage_response.timeDelta
+      time_delta_in_hours = cf_homepage_response['time_delta']
       time_delta_in_days = float(time_delta_in_hours) / 24
       now = datetime.now()
       # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
@@ -227,7 +227,7 @@ def set_random_dataset_id():
 def set_limited_dataset_ids(table_state, contentful_state):
   print('Contentful state = ', contentful_state)
   persisted_limited_available_ids = str(table_state["limited_available_ids"]).split(',')
-  updated_limited_available_ids = contentful_state.featuredDatasets
+  updated_limited_available_ids = contentful_state['featured_datasets']
 
   # If setting to the same values (regardless of order and duplicates) then do nothing
   if (set(persisted_limited_available_ids) == set(updated_limited_available_ids)):

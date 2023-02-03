@@ -243,7 +243,7 @@ def get_random_dataset_selector_table_state():
   current_state = randomDatasetSelectorTable.pullState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME)
   if current_state is None:
     default_data = {
-      'last_used_time': datetime.now(),
+      'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
       'available_dataset_ids': [],
       # limited_available_ids are used if a subset of ids is to be used for random selection as opposed to all id's
       'limited_available_ids': [],

@@ -191,7 +191,7 @@ def set_random_dataset_id():
     logging.info('Setting random dataset selector state info')
     table_state = get_random_dataset_selector_table_state()   
     try:
-      cf_homepage_response = get_homepage_response(contentful)
+      cf_homepage_response = json.loads(get_homepage_response(contentful))
       limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
       if (limited_ids_were_set):
         table_state = get_random_dataset_selector_table_state()   

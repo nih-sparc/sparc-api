@@ -210,7 +210,7 @@ def set_random_dataset_id():
       print("TABLE STATE RANDOM INT ID = ", int(table_state["random_id"]))
       random_id = int(table_state["random_id"])
       print("RANDOM_ID = ", random_id)
-      time_delta_in_hours = cf_homepage_response['time_delta']
+      time_delta_in_hours = 0.00417#cf_homepage_response['time_delta']
       time_delta_in_days = float(time_delta_in_hours) / 24
       now = datetime.now()
       # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id

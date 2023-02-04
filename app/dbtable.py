@@ -35,26 +35,26 @@ class Table:
 
   #push the state into the database and return an unique id
   def pushState(self, input, commit = False):
-    id = uuid.uuid4().hex[:8]
-    #get a new key in the rare case of duplication
-    while self._session.query(self._state).filter_by(uuid=id).first() is not None:
-        id = uuid.uuid4().hex[:8]
-    newState = self._state(uuid=id, data=input)
-    self._session.add(newState)
-    if commit:
-        self._session.commit()
-    return id
+      id = uuid.uuid4().hex[:8]
+      #get a new key in the rare case of duplication
+      while self._session.query(self._state).filter_by(uuid=id).first() is not None:
+          id = uuid.uuid4().hex[:8]
+      newState = self._state(uuid=id, data=input)
+      self._session.add(newState)
+      if commit:
+          self._session.commit()
+      return id
   
   #update the state with the given id, or push a new state with that id if none is found
   def updateState(self, id, input, commit = False):
-    if (self._session.query(self._state).filter_by(uuid=id).first() is None):
-      newState = self._state(uuid=id, data=input)
-      self._session.add(newState)
-    else:
-      self._session.query(self._state).filter_by(uuid=id).update({ 'data': input }, synchronize_session=False)
-    if commit:
-      self._session.commit()
-    return input
+      if (self._session.query(self._state).filter_by(uuid=id).first() is None):
+          newState = self._state(uuid=id, data=input)
+          self._session.add(newState)
+      else:
+          self._session.query(self._state).filter_by(uuid=id).update({ 'data': input }, synchronize_session=False)
+      if commit:
+          self._session.commit()
+      return input
 
   def pullState(self, id):
     result = self._session.query(self._state).filter_by(uuid=id).first()

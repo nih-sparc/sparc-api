@@ -191,73 +191,73 @@ def set_random_dataset_id():
     logging.info('Setting random dataset selector state info')
     table_state = get_random_dataset_selector_table_state()   
     try:
-      cf_homepage_response = get_homepage_response(contentful)
-      limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
-      if (limited_ids_were_set):
-        table_state = get_random_dataset_selector_table_state()   
+        cf_homepage_response = get_homepage_response(contentful)
+        limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
+        if (limited_ids_were_set):
+            table_state = get_random_dataset_selector_table_state()   
 
-      last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
-      random_id = int(table_state["random_id"])
-      try:
-        time_delta_in_hours = cf_homepage_response['time_delta']
-      except Exception:
-        time_delta_in_hours = 8
-      
-      time_delta_in_days = float(time_delta_in_hours) / 24
-      now = datetime.now()
-      # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
-      if (now - last_used_time) < timedelta(days=time_delta_in_days) and random_id != -1 and limited_ids_were_set is False:
-          return random_id
-      # reset the list of ids if we have iterated through all of them already or if the limited available ids list was just set
-      if len(table_state["available_dataset_ids"]) == 0 or limited_ids_were_set is True:
-          if (len(table_state["limited_available_ids"]) > 0):
-            table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
-          else:
-            table_state["available_dataset_ids"] = get_all_ids()
+        last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
+        random_id = int(table_state["random_id"])
+        try:
+            time_delta_in_hours = cf_homepage_response['time_delta']
+        except Exception:
+            time_delta_in_hours = 8
+        
+        time_delta_in_days = float(time_delta_in_hours) / 24
+        now = datetime.now()
+        # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
+        if (now - last_used_time) < timedelta(days=time_delta_in_days) and random_id != -1 and limited_ids_were_set is False:
+            return random_id
+        # reset the list of ids if we have iterated through all of them already or if the limited available ids list was just set
+        if len(table_state["available_dataset_ids"]) == 0 or limited_ids_were_set is True:
+            if (len(table_state["limited_available_ids"]) > 0):
+                table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
+            else:
+                table_state["available_dataset_ids"] = get_all_ids()
 
-      available_dataset_ids_array = table_state["available_dataset_ids"]
-      random_index = random.randint(0, len(available_dataset_ids_array)-1)
-      table_state["random_id"] = available_dataset_ids_array.pop(random_index)
-      table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
-      table_state["available_dataset_ids"] = available_dataset_ids_array
-      randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
+        available_dataset_ids_array = table_state["available_dataset_ids"]
+        random_index = random.randint(0, len(available_dataset_ids_array)-1)
+        table_state["random_id"] = available_dataset_ids_array.pop(random_index)
+        table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
+        table_state["available_dataset_ids"] = available_dataset_ids_array
+        randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
     except Exception as e:
-      print('Error while setting random id: ', e)
+        print('Error while setting random id: ', e)
 
     if not random_dataset_scheduler.running:
         logging.info('Starting scheduler for random dataset acquisition')
         random_dataset_scheduler.start()
 
 def set_limited_dataset_ids(table_state, contentful_state):
-  persisted_limited_available_ids = table_state["limited_available_ids"]
-  try:
-    updated_limited_available_ids = contentful_state['featured_datasets']
-  except Exception:
-    updated_limited_available_ids = []
+    persisted_limited_available_ids = table_state["limited_available_ids"]
+    try:
+        updated_limited_available_ids = contentful_state['featured_datasets']
+    except Exception:
+        updated_limited_available_ids = []
 
-  # If setting to the same values (regardless of order and duplicates) then do nothing
-  if (set(persisted_limited_available_ids) == set(updated_limited_available_ids)):
-    return False
-  else:
-    table_state["limited_available_ids"] = updated_limited_available_ids
-    randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
-    return True
+    # If setting to the same values (regardless of order and duplicates) then do nothing
+    if (set(persisted_limited_available_ids) == set(updated_limited_available_ids)):
+        return False
+    else:
+        table_state["limited_available_ids"] = updated_limited_available_ids
+        randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
+        return True
 
 def get_all_ids():
-  return get_all_dataset_ids(algolia)
+    return get_all_dataset_ids(algolia)
 
 def get_random_dataset_selector_table_state():
-  current_state = randomDatasetSelectorTable.pullState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME)
-  if current_state is None:
-    default_data = {
-      'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
-      'available_dataset_ids': [],
-      # limited_available_ids are used if a subset of ids is to be used for random selection as opposed to all id's
-      'limited_available_ids': [],
-      'random_id': -1,
-    }
-    current_state = randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(default_data), True)
-  return json.loads(current_state)
+    current_state = randomDatasetSelectorTable.pullState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME)
+    if current_state is None:
+        default_data = {
+          'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
+          'available_dataset_ids': [],
+          # limited_available_ids are used if a subset of ids is to be used for random selection as opposed to all id's
+          'limited_available_ids': [],
+          'random_id': -1,
+        }
+        current_state = randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(default_data), True)
+    return json.loads(current_state)
 
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
@@ -265,7 +265,7 @@ viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days
 # Gathers all the required metrics, once every three hours
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
-# Sets the random dataset id, once every 4 hours
+# Sets the random dataset id, once every 2 hours
 random_dataset_scheduler.add_job(func=set_random_dataset_id, trigger='interval', hours=2)
 
 def shutdown_schedulers():
@@ -817,8 +817,12 @@ def datasets_by_project_id(project_id):
 
 @app.route("/get_random_dataset", methods=["GET"])
 def get_random_dataset():
-  random_id = get_random_dataset_selector_table_state()["random_id"]
-  return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, random_id)).json()
+    random_id = get_random_dataset_selector_table_state()["random_id"]
+    if random_id == -1:
+        # In case there was an error while setting the id, just return a default dataset so the homepage does not break
+        default_id = 32
+        return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, default_id)).json()
+    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, random_id)).json()
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):

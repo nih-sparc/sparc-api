@@ -222,10 +222,10 @@ def set_featured_dataset_id():
         table_state["available_dataset_ids"] = available_dataset_ids_array
         featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
     except Exception as e:
-        print('Error while setting random id: ', e)
+        print('Error while setting featured dataset id: ', e)
 
     if not featured_dataset_id_scheduler.running:
-        logging.info('Starting scheduler for random dataset acquisition')
+        logging.info('Starting scheduler for featured dataset id acquisition')
         featured_dataset_id_scheduler.start()
 
 def set_limited_dataset_ids(table_state, contentful_state):
@@ -252,7 +252,7 @@ def get_featured_dataset_id_table_state():
         default_data = {
           'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
           'available_dataset_ids': [],
-          # limited_available_ids are used if a subset of ids is to be used for random selection as opposed to all id's
+          # limited_available_ids are used if a subset of ids is to be used for featured dataset id selection as opposed to all id's
           'limited_available_ids': [],
           'featured_dataset_id': -1,
         }

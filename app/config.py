@@ -37,7 +37,7 @@ class Config(object):
     SCI_CRUNCH_HOST = os.environ.get("SCICRUNCH_HOST", "https://scicrunch.org/api/1/elastic/SPARC_PortalDatasets_pr")
     MAPSTATE_TABLENAME = os.environ.get("MAPSTATE_TABLENAME", "mapstates")
     SCAFFOLDSTATE_TABLENAME = os.environ.get("SCAFFOLDSTATE_TABLENAME", "scaffoldstates")
-    FEATURED_DATASET_ID_SELECTOR_TABLENAME = os.environ.get("FEATURED_DATASET_ID_SELECTOR_TABLENAME", "random_dataset_selector_state")
+    FEATURED_DATASET_ID_SELECTOR_TABLENAME = os.environ.get("FEATURED_DATASET_ID_SELECTOR_TABLENAME", "featured_dataset_selector_state")
     WRIKE_TOKEN = os.environ.get("WRIKE_TOKEN")
     DRC_FEEDBACK_FOLDER_ID = os.environ.get("DRC_FEEDBACK_FOLDER_ID", "IEADBYQEI4MM37FH")
     DRC_WRIKE_CUSTOM_STATUS_ID = os.environ.get("DRC_WRIKE_CUSTOM_STATUS_ID", "IEADBYQEJMBJODZU")

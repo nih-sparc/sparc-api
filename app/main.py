@@ -65,8 +65,6 @@ biolucida_lock = Lock()
 
 osparc_data = {}
 
-reset = True
-
 try:
     maptable = MapTable(Config.DATABASE_URL)
 except AttributeError:
@@ -190,16 +188,14 @@ def get_metrics():
 
 @app.before_first_request
 def set_random_dataset_id():
-    if reset:
-      default_data = {
-        'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
-        'available_dataset_ids': [],
-        # limited_available_ids are used if a subset of ids is to be used for random selection as opposed to all id's
-        'limited_available_ids': [],
-        'random_id': -1,
-      }
-      randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(default_data), True)
-      reset = False
+    default_data = {
+      'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
+      'available_dataset_ids': [],
+      # limited_available_ids are used if a subset of ids is to be used for random selection as opposed to all id's
+      'limited_available_ids': [],
+      'random_id': -1,
+    }
+    randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(default_data), True)
 
     logging.info('Setting random dataset selector state info')
     table_state = get_random_dataset_selector_table_state()   

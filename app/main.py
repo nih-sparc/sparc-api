@@ -191,7 +191,7 @@ def set_random_dataset_id():
     logging.info('Setting random dataset selector state info')
     table_state = get_random_dataset_selector_table_state()   
     try:
-      cf_homepage_response = json.loads(get_homepage_response(contentful))
+      cf_homepage_response = get_homepage_response(contentful)
       limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
       if (limited_ids_were_set):
         table_state = get_random_dataset_selector_table_state()   
@@ -227,7 +227,11 @@ def set_random_dataset_id():
 def set_limited_dataset_ids(table_state, contentful_state):
   print('Contentful state = ', contentful_state)
   persisted_limited_available_ids = str(table_state["limited_available_ids"]).split(',')
-  updated_limited_available_ids = contentful_state['featured_datasets']
+  print('Contentful state[featured_dataset] = ', contentful_state['featured_datasets'])
+  print('Contentful state[featured_dataset] items() = ', contentful_state['featured_datasets'].items())
+  print('Contentful state[featured_dataset] values() = ', contentful_state['featured_datasets'].values())
+  updated_limited_available_ids = contentful_state['featured_datasets'].values()
+  print('Contentful state resolved correctly')
 
   # If setting to the same values (regardless of order and duplicates) then do nothing
   if (set(persisted_limited_available_ids) == set(updated_limited_available_ids)):

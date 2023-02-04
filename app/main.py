@@ -197,11 +197,12 @@ def set_random_dataset_id():
         table_state = get_random_dataset_selector_table_state()   
 
       last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
-      print("TABLE STATE RANDOM ID = ", table_state["random_id"])
-      print("TABLE STATE RANDOM INT ID = ", int(table_state["random_id"]))
       random_id = int(table_state["random_id"])
-      print("RANDOM_ID = ", random_id)
-      time_delta_in_hours = 0.00417#cf_homepage_response['time_delta']
+      try:
+        time_delta_in_hours = cf_homepage_response['time_delta']
+      except Exception:
+        time_delta_in_hours = 8
+      
       time_delta_in_days = float(time_delta_in_hours) / 24
       now = datetime.now()
       # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
@@ -215,15 +216,13 @@ def set_random_dataset_id():
             table_state["available_dataset_ids"] = get_all_ids()
 
       available_dataset_ids_array = table_state["available_dataset_ids"]
-      print('available_dataset_ids_array = ', table_state["available_dataset_ids"])
       random_index = random.randint(0, len(available_dataset_ids_array)-1)
       table_state["random_id"] = available_dataset_ids_array.pop(random_index)
-      print('table_state["random_id"] = ', table_state["random_id"])
       table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
       table_state["available_dataset_ids"] = available_dataset_ids_array
       randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
     except Exception as e:
-      print('Error while connecting to Contentful: ', e)
+      print('Error while setting random id: ', e)
 
     if not random_dataset_scheduler.running:
         logging.info('Starting scheduler for random dataset acquisition')
@@ -235,9 +234,6 @@ def set_limited_dataset_ids(table_state, contentful_state):
     updated_limited_available_ids = contentful_state['featured_datasets']
   except Exception:
     updated_limited_available_ids = []
-  
-  print("updated_limited_available_ids = ", updated_limited_available_ids)
-  print("persisted_limited_available_ids = ", persisted_limited_available_ids)
 
   # If setting to the same values (regardless of order and duplicates) then do nothing
   if (set(persisted_limited_available_ids) == set(updated_limited_available_ids)):
@@ -270,7 +266,7 @@ viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
 # Sets the random dataset id, once every 4 hours
-random_dataset_scheduler.add_job(func=set_random_dataset_id, trigger='interval', hours=0.0003)
+random_dataset_scheduler.add_job(func=set_random_dataset_id, trigger='interval', hours=2)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')

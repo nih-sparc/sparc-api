@@ -227,10 +227,8 @@ def set_random_dataset_id():
 def set_limited_dataset_ids(table_state, contentful_state):
   print('Contentful state = ', contentful_state)
   persisted_limited_available_ids = str(table_state["limited_available_ids"]).split(',')
-  print('Contentful state[featured_dataset] = ', contentful_state['featured_datasets'])
-  print('Contentful state[featured_dataset] items() = ', contentful_state['featured_datasets'].items())
-  print('Contentful state[featured_dataset] values() = ', contentful_state['featured_datasets'].values())
-  updated_limited_available_ids = contentful_state['featured_datasets'].values()
+  print('Contentful state[featured_dataset][0] = ', contentful_state['featured_datasets'][0])
+  updated_limited_available_ids = contentful_state['featured_datasets']
   print('Contentful state resolved correctly')
 
   # If setting to the same values (regardless of order and duplicates) then do nothing

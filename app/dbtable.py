@@ -19,8 +19,8 @@ class ScaffoldState(base):
     uuid = Column(String, primary_key=True, unique=True)
     data = Column(JSONB)
 
-class RandomDatasetSelectorState(base):  
-    __tablename__ = Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME
+class FeaturedDatasetIdSelectorState(base):  
+    __tablename__ = Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME
     uuid = Column(String, primary_key=True, unique=True)
     data = Column(JSONB)
 
@@ -71,6 +71,6 @@ class ScaffoldTable(Table):
     def __init__(self, databaseURL):
         Table.__init__(self, databaseURL, ScaffoldState)
 
-class RandomDatasetSelectorTable(Table):
+class FeaturedDatasetIdSelectorTable(Table):
     def __init__(self, databaseURL):
-        Table.__init__(self, databaseURL, RandomDatasetSelectorState)
+        Table.__init__(self, databaseURL, FeaturedDatasetIdSelectorState)

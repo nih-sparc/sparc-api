@@ -33,7 +33,7 @@ from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
-from app.dbtable import MapTable, ScaffoldTable, RandomDatasetSelectorTable
+from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
 from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results, \
     reform_related_terms
 from app.serializer import ContactRequestSchema
@@ -76,9 +76,9 @@ except AttributeError:
     scaffoldtable = None
 
 try:
-    randomDatasetSelectorTable = RandomDatasetSelectorTable(Config.DATABASE_URL)
+    featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(Config.DATABASE_URL)
 except AttributeError:
-    randomDatasetSelectorTable = None
+    featuredDatasetIdSelectorTable = None
 
 class Biolucida(object):
     _token = ''
@@ -135,7 +135,7 @@ def connect_to_pennsieve():
 
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
-random_dataset_scheduler = BackgroundScheduler()
+featured_dataset_id_scheduler = BackgroundScheduler()
 
 # Run monthly stats email schedule on production
 if Config.DEPLOY_ENV == 'production':
@@ -187,17 +187,17 @@ def get_metrics():
         metrics_scheduler.start()
 
 @app.before_first_request
-def set_random_dataset_id():
-    logging.info('Setting random dataset selector state info')
-    table_state = get_random_dataset_selector_table_state()   
+def set_featured_dataset_id():
+    logging.info('Setting featured dataset id selector state info')
+    table_state = get_featured_dataset_id_table_state()   
     try:
         cf_homepage_response = get_homepage_response(contentful)
         limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
         if (limited_ids_were_set):
-            table_state = get_random_dataset_selector_table_state()   
+            table_state = get_featured_dataset_id_table_state()   
 
         last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
-        random_id = int(table_state["random_id"])
+        featured_dataset_id = int(table_state["featured_dataset_id"])
         try:
             time_delta_in_hours = cf_homepage_response['time_delta']
         except Exception:
@@ -206,8 +206,8 @@ def set_random_dataset_id():
         time_delta_in_days = float(time_delta_in_hours) / 24
         now = datetime.now()
         # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
-        if (now - last_used_time) < timedelta(days=time_delta_in_days) and random_id != -1 and limited_ids_were_set is False:
-            return random_id
+        if (now - last_used_time) < timedelta(days=time_delta_in_days) and featured_dataset_id != -1 and limited_ids_were_set is False:
+            return featured_dataset_id
         # reset the list of ids if we have iterated through all of them already or if the limited available ids list was just set
         if len(table_state["available_dataset_ids"]) == 0 or limited_ids_were_set is True:
             if (len(table_state["limited_available_ids"]) > 0):
@@ -217,16 +217,16 @@ def set_random_dataset_id():
 
         available_dataset_ids_array = table_state["available_dataset_ids"]
         random_index = random.randint(0, len(available_dataset_ids_array)-1)
-        table_state["random_id"] = available_dataset_ids_array.pop(random_index)
+        table_state["featured_dataset_id"] = available_dataset_ids_array.pop(random_index)
         table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
         table_state["available_dataset_ids"] = available_dataset_ids_array
-        randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
+        featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
     except Exception as e:
         print('Error while setting random id: ', e)
 
-    if not random_dataset_scheduler.running:
+    if not featured_dataset_id_scheduler.running:
         logging.info('Starting scheduler for random dataset acquisition')
-        random_dataset_scheduler.start()
+        featured_dataset_id_scheduler.start()
 
 def set_limited_dataset_ids(table_state, contentful_state):
     persisted_limited_available_ids = table_state["limited_available_ids"]
@@ -240,23 +240,23 @@ def set_limited_dataset_ids(table_state, contentful_state):
         return False
     else:
         table_state["limited_available_ids"] = updated_limited_available_ids
-        randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
+        featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
         return True
 
 def get_all_ids():
     return get_all_dataset_ids(algolia)
 
-def get_random_dataset_selector_table_state():
-    current_state = randomDatasetSelectorTable.pullState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME)
+def get_featured_dataset_id_table_state():
+    current_state = featuredDatasetIdSelectorTable.pullState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME)
     if current_state is None:
         default_data = {
           'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
           'available_dataset_ids': [],
           # limited_available_ids are used if a subset of ids is to be used for random selection as opposed to all id's
           'limited_available_ids': [],
-          'random_id': -1,
+          'featured_dataset_id': -1,
         }
-        current_state = randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(default_data), True)
+        current_state = featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
     return json.loads(current_state)
 
 # Gets oSPARC viewers before the first request after startup and then once a day.
@@ -265,8 +265,8 @@ viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days
 # Gathers all the required metrics, once every three hours
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
-# Sets the random dataset id, once every 2 hours
-random_dataset_scheduler.add_job(func=set_random_dataset_id, trigger='interval', hours=2)
+# Sets the featured dataset id, once every 2 hours
+featured_dataset_id_scheduler.add_job(func=set_featured_dataset_id, trigger='interval', hours=2)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -815,14 +815,14 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
-@app.route("/get_random_dataset", methods=["GET"])
-def get_random_dataset():
-    random_id = get_random_dataset_selector_table_state()["random_id"]
-    if random_id == -1:
+@app.route("/get_featured_dataset", methods=["GET"])
+def get_featured_dataset():
+    featured_dataset_id = get_featured_dataset_id_table_state()["featured_dataset_id"]
+    if featured_dataset_id == -1:
         # In case there was an error while setting the id, just return a default dataset so the homepage does not break
         default_id = 32
         return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, default_id)).json()
-    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, random_id)).json()
+    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):

@@ -270,7 +270,7 @@ viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
 # Sets the random dataset id, once every 4 hours
-random_dataset_scheduler.add_job(func=set_random_dataset_id, trigger='interval', hours=4)
+random_dataset_scheduler.add_job(func=set_random_dataset_id, trigger='interval', hours=0.0003)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')

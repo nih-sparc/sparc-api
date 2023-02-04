@@ -239,7 +239,7 @@ def set_random_dataset_id():
         random_dataset_scheduler.start()
 
 def set_limited_dataset_ids(table_state, contentful_state):
-  persisted_limited_available_ids = str(table_state["limited_available_ids"]).split(',')
+  persisted_limited_available_ids = table_state["limited_available_ids"]
   try:
     updated_limited_available_ids = contentful_state['featured_datasets']
   except Exception:

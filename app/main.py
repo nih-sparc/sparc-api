@@ -231,7 +231,7 @@ def set_random_dataset_id():
 
 def set_limited_dataset_ids(table_state, contentful_state):
   persisted_limited_available_ids = str(table_state["limited_available_ids"]).split(',')
-  updated_limited_available_ids = contentful_state['featured_datasets']
+  updated_limited_available_ids = contentful_state['featured_datasets'] or []
 
   # If setting to the same values (regardless of order and duplicates) then do nothing
   if (set(persisted_limited_available_ids) == set(updated_limited_available_ids)):

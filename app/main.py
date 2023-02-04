@@ -223,8 +223,8 @@ def set_random_dataset_id():
           else:
             table_state["available_dataset_ids"] = get_all_ids()
 
-      available_dataset_ids_array = str(table_state["available_dataset_ids"]).split(',')
-      print('available_dataset_ids_array = ', str(table_state["available_dataset_ids"]).split(','))
+      available_dataset_ids_array = table_state["available_dataset_ids"].items()
+      print('available_dataset_ids_array = ', table_state["available_dataset_ids"].items())
       random_index = random.randint(0, len(available_dataset_ids_array)-1)
       table_state["random_id"] = available_dataset_ids_array.pop(random_index)
       print('table_state["random_id"] = ', table_state["random_id"])

@@ -221,7 +221,7 @@ def set_random_dataset_id():
           if (len(table_state["limited_available_ids"]) > 0):
             table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
           else:
-            table_state["available_dataset_ids"] = get_all_dataset_ids()
+            table_state["available_dataset_ids"] = get_all_ids()
 
       available_dataset_ids_array = str(table_state["available_dataset_ids"]).split(',')
       print('available_dataset_ids_array = ', str(table_state["available_dataset_ids"]).split(','))
@@ -256,7 +256,7 @@ def set_limited_dataset_ids(table_state, contentful_state):
     randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)
     return True
 
-def get_all_dataset_ids():
+def get_all_ids():
   return get_all_dataset_ids(algolia)
 
 def get_random_dataset_selector_table_state():

@@ -215,8 +215,10 @@ def set_random_dataset_id():
             table_state["available_dataset_ids"] = get_all_dataset_ids()
 
       available_dataset_ids_array = str(table_state["available_dataset_ids"]).split(',')
+      print('available_dataset_ids_array = ', str(table_state["available_dataset_ids"]).split(','))
       random_index = random.randint(0, len(available_dataset_ids_array)-1)
       table_state["random_id"] = available_dataset_ids_array.pop(random_index)
+      print('table_state["random_id"] = ', table_state["random_id"])
       table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
       table_state["available_dataset_ids"] = available_dataset_ids_array
       randomDatasetSelectorTable.updateState(Config.RANDOM_DATASET_SELECTOR_STATE_TABLENAME, json.dumps(table_state), True)

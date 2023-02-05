@@ -5,8 +5,9 @@ def update_event_entries():
     all_event_entries = get_all_entries("event")
     now = datetime.now()
     for entry in all_event_entries:
-      title = entry.fields()
-      #start_date = entry.fields()['start_date']
-      #version = entry.sys
-      #print("For {}: Start date = {}, Version = {}", title, start_date, version)
-      print("Title = ", title)
+      if entry.fields() is not None:
+        title = entry.fields()['title']
+        #start_date = entry.fields()['start_date']
+        #version = entry.sys
+        #print("For {}: Start date = {}, Version = {}", title, start_date, version)
+        print("Title = ", title)

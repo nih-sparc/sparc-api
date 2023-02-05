@@ -144,10 +144,10 @@ if Config.DEPLOY_ENV == 'production':
 # Run update contentful entries scheduler on staging so that it updates all the entries, not just published ones
 if Config.DEPLOY_ENV == 'development':
     update_contentful_event_entries_scheduler = BackgroundScheduler()
-    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'interval', days=1)
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()
+    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'interval', days=1)
 
 @app.before_first_request
 def get_osparc_file_viewers():

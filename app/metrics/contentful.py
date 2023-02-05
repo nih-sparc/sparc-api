@@ -56,5 +56,5 @@ def get_all_entries(content_type):
     query['skip'] = i * 10
     page_response = client.entries(query)
     for item in page_response.items:
-      all_entries.append(item())
+      all_entries.append(item)
   return all_entries

@@ -4,6 +4,8 @@ from app.config import Config
 
 import contentful
 
+import contentful_management
+
 #CDA is used for reading content, while CMA is used for updating content
 CDA_API_HOST = Config.CTF_CDA_API_HOST
 CMA_API_HOST = Config.CTF_CMA_API_HOST
@@ -27,10 +29,8 @@ def init_cf_cda_client():
 
 def init_cf_cma_client():
     try:
-        client = contentful.Client(
-            SPACE_ID,
-            CMA_ACCESS_TOKEN,
-            api_url=CMA_API_HOST
+        client = contentful_management.Client(
+            CMA_ACCESS_TOKEN
         )
         return client
         
@@ -44,17 +44,20 @@ def get_funded_projects_count(client):
     })
     return response.total
 
-def get_all_entries(content_type):
+def get_all_entries(content_type_id):
   client = init_cf_cma_client()
-  all_entries = []
+  content_type = client.content_types(SPACE_ID, 'master').find(content_type_id)
+  return content_type.entries().all()
+
+  #all_entries = []
   # max limit contentful provides is 1000
-  query = { 'limit': '1000', 'skip': 0, "content_type": content_type }
-  total_entries = client.entries({
-    "content_type": content_type
-  }).total
-  for i in range(int(total_entries / 1000) + 1):
-    query['skip'] = i * 1000
-    page_response = client.entries(query)
-    for item in page_response.items:
-      all_entries.append(item)
-  return all_entries
+  #query = { 'limit': '1000', 'skip': 0, "content_type": content_type }
+  #total_entries = client.entries({
+  #  "content_type": content_type
+  #}).total
+  #for i in range(int(total_entries / 1000) + 1):
+  #  query['skip'] = i * 1000
+  #  page_response = client.entries(query)
+  #  for item in page_response.items:
+  #    all_entries.append(item)
+  #return all_entries

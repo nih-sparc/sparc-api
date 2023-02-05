@@ -6,9 +6,15 @@ def update_event_entries():
     now = datetime.now()
     for entry in all_event_entries:
       fields_dict = entry.fields()
-      if 'title' in fields_dict:
+      sys_dict = entry.sys
+      if 'title' in fields_dict and 'start_date' in fields_dict and 'version' in sys_dict:
         title = fields_dict['title']
+        start_date = fields_dict['start_date']
+        version = sys_dict['version']
+
         #start_date = entry.fields()['start_date']
         #version = entry.sys
         #print("For {}: Start date = {}, Version = {}", title, start_date, version)
         print("Title = ", title)
+        print("Start Date = ", start_date)
+        print("Version = ", version)

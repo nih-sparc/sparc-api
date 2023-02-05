@@ -10,7 +10,8 @@ def update_event_entries():
       if 'title' in fields_dict and 'start_date' in fields_dict and 'version' in sys_dict:
         title = fields_dict['title']
         start_date = fields_dict['start_date']
-        timeFromEventInSeconds = (start_date - now).total_seconds()
+        start_date_datetime = datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S.%f')
+        timeFromEventInSeconds = (start_date_datetime - now).total_seconds()
         timeFromEventInDays = timeFromEventInSeconds / 86400
         version = sys_dict['version']
         if 'Test Event' in title:

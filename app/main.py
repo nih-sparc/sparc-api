@@ -133,6 +133,7 @@ def connect_to_pennsieve():
 
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
+update_contentful_event_entries_scheduler = BackgroundScheduler()
 
 # Run monthly stats email schedule on production
 if Config.DEPLOY_ENV == 'production':
@@ -142,8 +143,9 @@ if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
 
 # Run update contentful entries scheduler on staging so that it updates all the entries, not just published ones
-if Config.DEPLOY_ENV == 'development':
-    update_contentful_event_entries_scheduler = BackgroundScheduler()
+@app.before_first_request
+def update_contentful_events():
+  if Config.DEPLOY_ENV == 'development':
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()

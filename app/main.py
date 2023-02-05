@@ -2,7 +2,7 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_client, get_funded_projects_count
+from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_all_entries
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
@@ -156,7 +156,7 @@ def get_osparc_file_viewers():
 usage_metrics = {}
 google_analytics = init_ga_reporting()
 algolia = init_algolia_client()
-contentful = init_cf_client()
+contentful = init_cf_cda_client()
 
 
 @app.before_first_request
@@ -204,6 +204,9 @@ atexit.register(shutdown_schedulers)
 
 @app.route("/health")
 def health():
+    all_entries = get_all_entries("event")
+    for entry in all_entries:
+      print("Entry title = ", entry.fields.title)
     return json.dumps({"status": "healthy"})
 
 

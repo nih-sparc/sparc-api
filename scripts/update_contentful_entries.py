@@ -7,5 +7,5 @@ def update_event_entries():
     for entry in all_event_entries:
       title = entry.fields()['title']
       start_date = entry.fields()['start_date']
-      version = entry['sys']['version']
+      version = entry.sys['version']
       print("For {}: Start date = {}, Version = {}", title, start_date, version)

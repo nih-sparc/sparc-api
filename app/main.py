@@ -206,7 +206,7 @@ atexit.register(shutdown_schedulers)
 def health():
     all_entries = get_all_entries("event")
     for entry in all_entries:
-      print("Entry title = ", entry.fields())
+      print("Entry title = ", entry.fields()['title'])
     return json.dumps({"status": "healthy"})
 
 

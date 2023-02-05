@@ -48,12 +48,12 @@ def get_all_entries(content_type):
   client = init_cf_cda_client()
   all_entries = []
   # max limit contentful provides is 1000
-  query = { 'limit': '10', 'skip': 0, "content_type": content_type }
+  query = { 'limit': '1000', 'skip': 0, "content_type": content_type }
   total_entries = client.entries({
     "content_type": content_type
   }).total
-  for i in range(int(total_entries / 10) + 1):
-    query['skip'] = i * 10
+  for i in range(int(total_entries / 1000) + 1):
+    query['skip'] = i * 1000
     page_response = client.entries(query)
     for item in page_response.items:
       all_entries.append(item)

@@ -45,16 +45,14 @@ def get_funded_projects_count(client):
     return response.total
 
 def get_all_entries(content_type):
-  print("About to initialize client")
   client = init_cf_cda_client()
-  print("Client initialized")
   all_entries = []
   # max limit contentful provides is 1000
   query = { 'limit': '10', 'skip': 0, "content_type": content_type }
   total_entries = client.entries({
     "content_type": content_type
   }).total
-  for i in range((total_entries / 10) + 1):
+  for i in range(int(total_entries / 10) + 1):
     query['skip'] = i * 10
     page_response = client.entries(query)
     for item in page_response.items:

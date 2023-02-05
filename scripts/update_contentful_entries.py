@@ -8,12 +8,12 @@ def update_event_entries():
       fields_dict = entry.fields()
       sys_dict = entry.sys
       if 'title' in fields_dict and 'start_date' in fields_dict and 'version' in sys_dict:
-        if ('Test Event' in title):
-          entry.fields()['title'] = 'Updated Title'
-          entry.save()
         title = fields_dict['title']
         start_date = fields_dict['start_date']
         version = sys_dict['version']
+        if 'Test Event' in title:
+          entry.title = 'Updated Title'
+          entry.save()
 
         #start_date = entry.fields()['start_date']
         #version = entry.sys

@@ -2,7 +2,8 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_all_entries
+from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count
+from scripts.update_contentful_entries import update_event_entries
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
@@ -140,6 +141,14 @@ if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler.start()
     monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
 
+# Run update contentful entries scheduler on staging so that it updates all the entries, not just published ones
+if Config.DEPLOY_ENV == 'development':
+    update_contentful_event_entries_scheduler = BackgroundScheduler()
+    if not update_contentful_event_entries_scheduler.running:
+        logging.info('Starting scheduler for updating contentful event entries')
+        update_contentful_event_entries_scheduler.start()
+    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'interval', days=1)
+
 @app.before_first_request
 def get_osparc_file_viewers():
     logging.info('Getting oSPARC viewers')
@@ -197,6 +206,9 @@ def shutdown_schedulers():
     logging.info('Stopping scheduler for metrics acquisition')
     if metrics_scheduler.running:
         metrics_scheduler.shutdown()
+    logging.info('Stopping scheduler for updating contentful entries')
+    if update_contentful_event_entries_scheduler.running:
+        update_contentful_event_entries_scheduler.shutdown()
 
 
 atexit.register(shutdown_schedulers)
@@ -204,9 +216,6 @@ atexit.register(shutdown_schedulers)
 
 @app.route("/health")
 def health():
-    all_entries = get_all_entries("event")
-    for entry in all_entries:
-      print("Entry title = ", entry.fields()['title'])
     return json.dumps({"status": "healthy"})
 
 

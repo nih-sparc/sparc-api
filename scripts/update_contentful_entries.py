@@ -2,7 +2,7 @@ from app.metrics.contentful import get_all_entries
 from datetime import datetime, timezone
 
 def update_event_entries():
-  print("UPDATE RAN!!!!!!!!!!!")
+    print("UPDATE RAN!!!!!!!!!!!")
     all_event_entries = get_all_entries("event")
     now = datetime.now()
     need_to_update = False

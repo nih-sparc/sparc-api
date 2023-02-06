@@ -1,5 +1,5 @@
 from app.metrics.contentful import init_cf_cma_client, get_all_entries
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def update_event_entries():
     all_event_entries = get_all_entries("event")
@@ -10,7 +10,8 @@ def update_event_entries():
       if 'title' in fields_dict and 'start_date' in fields_dict and 'version' in sys_dict:
         title = fields_dict['title']
         start_date = fields_dict['start_date']
-        start_date_datetime = datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S.%f')
+        #convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
+        start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
         timeFromEventInSeconds = (start_date_datetime - now).total_seconds()
         timeFromEventInDays = timeFromEventInSeconds / 86400
         version = sys_dict['version']

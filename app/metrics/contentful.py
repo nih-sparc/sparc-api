@@ -28,3 +28,7 @@ def get_funded_projects_count(client):
         "content_type": "sparcAward"
     })
     return response.total
+
+def get_homepage_response(client):
+  response = client.entry(Config.CTF_HOMEPAGE_ID)
+  return response.fields()

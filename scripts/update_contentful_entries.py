@@ -21,3 +21,5 @@ def update_event_entries():
           upcoming_sort_order = time_from_event_in_days
         entry.upcoming_sort_order = upcoming_sort_order
         entry.save()
+      else:
+        print("Entry = ", entry)

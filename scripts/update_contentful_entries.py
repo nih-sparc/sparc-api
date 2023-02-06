@@ -22,4 +22,4 @@ def update_event_entries():
         entry.upcoming_sort_order = upcoming_sort_order
         entry.save()
       else:
-        print("Entry = ", entry)
+        print("Entry = ", entry.fields())

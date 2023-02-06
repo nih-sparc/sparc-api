@@ -1,5 +1,5 @@
-from app.metrics.contentful import init_cf_cma_client, get_all_entries
-from datetime import datetime, timedelta, timezone
+from app.metrics.contentful import get_all_entries
+from datetime import datetime, timezone
 
 def update_event_entries():
     all_event_entries = get_all_entries("event")

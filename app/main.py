@@ -147,7 +147,7 @@ if Config.DEPLOY_ENV == 'development':
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()
-    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'interval', days=1, start_date=datetime.now)
+    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'interval', days=1, start_date=datetime.now())
 
 @app.before_first_request
 def get_osparc_file_viewers():

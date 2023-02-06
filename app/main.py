@@ -143,8 +143,6 @@ if Config.DEPLOY_ENV == 'production':
 
 # Run update contentful entries scheduler on staging so that it updates all the entries, not just published ones
 if Config.DEPLOY_ENV == 'development':
-    # Update the entries on initial deploy and then once a day
-    update_event_entries()
     update_contentful_event_entries_scheduler = BackgroundScheduler()
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')

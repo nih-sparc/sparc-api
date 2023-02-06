@@ -6,7 +6,7 @@ def update_event_entries():
     now = datetime.now()
     for entry in all_event_entries:
       fields_dict = entry.fields()
-      if 'title' in fields_dict and 'start_date' in fields_dict:
+      if 'upcoming_sort_order' in fields_dict and 'start_date' in fields_dict:
         start_date = fields_dict['start_date']
         #convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
         start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')

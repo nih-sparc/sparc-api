@@ -823,12 +823,12 @@ def get_featured_dataset():
     print("DB STATE = ", get_featured_dataset_id_table_state())
     featured_dataset_id = get_featured_dataset_id_table_state()["featured_dataset_id"]
     print("NEW DB STATE = ", get_featured_dataset_id_table_state())
-    delete_featured_dataset_state()
-    #if featured_dataset_id == -1:
-    #    # In case there was an error while setting the id, just return a default dataset so the homepage does not break
-    #    default_id = 32
-    #    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, default_id)).json()
-    #return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
+    #delete_featured_dataset_state()
+    if featured_dataset_id == -1:
+        # In case there was an error while setting the id, just return a default dataset so the homepage does not break
+        default_id = 32
+        return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, default_id)).json()
+    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):

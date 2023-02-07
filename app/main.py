@@ -259,9 +259,6 @@ def get_featured_dataset_id_table_state():
         current_state = featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
     return json.loads(current_state)
 
-def delete_featured_dataset_state():
-    featuredDatasetIdSelectorTable.deleteTable(featuredDatasetIdSelectorTable)
-
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 

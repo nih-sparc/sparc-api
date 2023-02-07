@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import Column, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base  
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import sessionmaker
 import uuid
 
@@ -53,7 +54,10 @@ class Table:
       else:
           self._session.query(self._state).filter_by(uuid=id).update({ 'data': input }, synchronize_session=False)
       if commit:
-          self._session.commit()
+          try:
+            self._session.commit()
+          except InvalidRequestError:
+            self._session.rollback()
       return input
 
   def pullState(self, id):

@@ -817,7 +817,9 @@ def datasets_by_project_id(project_id):
 
 @app.route("/get_featured_dataset", methods=["GET"])
 def get_featured_dataset():
+    print("DB STATE = ", get_featured_dataset_id_table_state())
     featured_dataset_id = get_featured_dataset_id_table_state()["featured_dataset_id"]
+    print("NEW DB STATE = ", get_featured_dataset_id_table_state())
     if featured_dataset_id == -1:
         # In case there was an error while setting the id, just return a default dataset so the homepage does not break
         default_id = 32

@@ -33,6 +33,7 @@ class Table:
         Session = sessionmaker(db)
         self._session = Session()
         self._state = state
+        self._db = db
 
   #push the state into the database and return an unique id
   def pushState(self, input, commit = False):
@@ -72,6 +73,11 @@ class Table:
         return result.data
     else:
         return None
+    
+  def deleteTable(self, table):
+      if table is not None:
+        print(f'Deleting {table} table')
+        base.metadata.drop_all(self._db, [table], checkfirst=True)
 
 class MapTable(Table):
     def __init__(self, databaseURL):

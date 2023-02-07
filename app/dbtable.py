@@ -33,7 +33,6 @@ class Table:
         Session = sessionmaker(db)
         self._session = Session()
         self._state = state
-        self._db = db
 
   #push the state into the database and return an unique id
   def pushState(self, input, commit = False):

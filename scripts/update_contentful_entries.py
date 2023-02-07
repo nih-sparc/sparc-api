@@ -19,10 +19,10 @@ def update_event_entries():
                 upcoming_sort_order = 1/time_from_event_in_days
             if time_from_event_in_days < 0:
                 upcoming_sort_order = time_from_event_in_days
-            hasPreexistingChanges = entry.isUpdated()
+            hasPreexistingChanges = entry.isUpdated
             entry.upcoming_sort_order = upcoming_sort_order
             entry.save()
             # In order for prod to be correct we must publish changes. However do not publish changes for an event that has existing changes
-            if not hasPreexistingChanges and entry.isPublished():
+            if not hasPreexistingChanges and entry.isPublished:
                 print("Entry published!")
                 entry.publish()

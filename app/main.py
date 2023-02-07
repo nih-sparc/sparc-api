@@ -259,6 +259,9 @@ def get_featured_dataset_id_table_state():
         current_state = featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
     return json.loads(current_state)
 
+def delete_featured_dataset_state():
+    featuredDatasetIdSelectorTable.deleteTable(featuredDatasetIdSelectorTable)
+
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 
@@ -820,11 +823,12 @@ def get_featured_dataset():
     print("DB STATE = ", get_featured_dataset_id_table_state())
     featured_dataset_id = get_featured_dataset_id_table_state()["featured_dataset_id"]
     print("NEW DB STATE = ", get_featured_dataset_id_table_state())
-    if featured_dataset_id == -1:
-        # In case there was an error while setting the id, just return a default dataset so the homepage does not break
-        default_id = 32
-        return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, default_id)).json()
-    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
+    delete_featured_dataset_state()
+    #if featured_dataset_id == -1:
+    #    # In case there was an error while setting the id, just return a default dataset so the homepage does not break
+    #    default_id = 32
+    #    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, default_id)).json()
+    #return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):

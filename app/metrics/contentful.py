@@ -44,6 +44,10 @@ def get_funded_projects_count(client):
     })
     return response.total
 
+def get_homepage_response(client):
+  response = client.entry(Config.CTF_HOMEPAGE_ID)
+  return response.fields()
+
 def get_all_entries(content_type_id):
   client = init_cf_cma_client()
   content_type = client.content_types(SPACE_ID, 'master').find(content_type_id)

@@ -256,8 +256,7 @@ def get_featured_dataset_id_table_state():
           'limited_available_ids': [],
           'featured_dataset_id': -1,
         }
-        print("DWEFAULT_DATA_BEING_USED")
-        #current_state = featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
+        current_state = featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
     return json.loads(current_state)
 
 # Gets oSPARC viewers before the first request after startup and then once a day.

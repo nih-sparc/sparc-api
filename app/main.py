@@ -16,9 +16,6 @@ import requests
 import random
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.combining import OrTrigger
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.date import DateTrigger
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
 from flask import Flask, abort, jsonify, request
@@ -155,8 +152,7 @@ if Config.DEPLOY_ENV == 'development':
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()
     # Update the contentful entries on deploy and then daily at 4 AM EST
-    trigger = OrTrigger([DateTrigger(), CronTrigger(hour='4', timezone='US/Eastern')])
-    update_contentful_event_entries_scheduler.add_job(update_event_entries, trigger)
+    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'cron', hour=4, timezone='US/Eastern')
 
 @app.before_first_request
 def get_osparc_file_viewers():

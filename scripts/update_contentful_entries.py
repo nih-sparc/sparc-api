@@ -24,4 +24,5 @@ def update_event_entries():
             entry.save()
             # In order for prod to be correct we must publish changes. However do not publish changes for an event that has existing changes
             if not hasPreexistingChanges and entry.isPublished():
+                print("Entry published!")
                 entry.publish()

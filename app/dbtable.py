@@ -57,7 +57,6 @@ class Table:
           try:
             self._session.commit()
           except InvalidRequestError:
-            print("UPDATE STATE THREW EXCEPTION")
             self._session.rollback()
       return input
 
@@ -65,7 +64,6 @@ class Table:
     try:
         result = self._session.query(self._state).filter_by(uuid=id).first()
     except InvalidRequestError:
-        print("PULL STATE THREW EXCEPTION")
         self._session.rollback()
     if result:
         return result.data

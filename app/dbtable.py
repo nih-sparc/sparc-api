@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import Column, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base  
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 import uuid
 
@@ -42,7 +43,10 @@ class Table:
       newState = self._state(uuid=id, data=input)
       self._session.add(newState)
       if commit:
-          self._session.commit()
+          try:
+              self._session.commit()
+          except SQLAlchemyError:
+              self._session.rollback()
       return id
   
   #update the state with the given id, or push a new state with that id if none is found
@@ -53,11 +57,17 @@ class Table:
       else:
           self._session.query(self._state).filter_by(uuid=id).update({ 'data': input }, synchronize_session=False)
       if commit:
-          self._session.commit()
+          try:
+              self._session.commit()
+          except SQLAlchemyError:
+              self._session.rollback()
       return input
 
   def pullState(self, id):
-    result = self._session.query(self._state).filter_by(uuid=id).first()
+    try:
+        result = self._session.query(self._state).filter_by(uuid=id).first()
+    except SQLAlchemyError:
+        self._session.rollback()
     if result:
         return result.data
     else:

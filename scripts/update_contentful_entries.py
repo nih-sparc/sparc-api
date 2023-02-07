@@ -23,6 +23,6 @@ def update_event_entries():
             entry.upcoming_sort_order = upcoming_sort_order
             entry.save()
             # In order for prod to be correct we must publish changes. However do not publish changes for an event that has existing changes
-            if not hasPreexistingChanges and entry.is_published:
+            if entry.is_published:
                 print("Entry published!")
                 entry.publish()

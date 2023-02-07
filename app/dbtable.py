@@ -61,7 +61,10 @@ class Table:
       return input
 
   def pullState(self, id):
-    result = self._session.query(self._state).filter_by(uuid=id).first()
+    try:
+        result = self._session.query(self._state).filter_by(uuid=id).first()
+    except InvalidRequestError:
+        self._session.rollback()
     if result:
         return result.data
     else:

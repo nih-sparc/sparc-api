@@ -66,8 +66,8 @@ def update_entry_using_json_response(content_type, id, version, data):
         'Authorization': 'Bearer ' + Config.CTF_CMA_ACCESS_TOKEN,
         'Content-Type': 'application/vnd.contentful.management.v1+json',
         'Accept': 'application/json',
-        'X-Contentful-Content-Type': content_type,
-        'X-Contentful-Version': version
+        'X-Contentful-Content-Type': str(content_type),
+        'X-Contentful-Version': str(version)
     }
     return requests.put(
         headers=hed,

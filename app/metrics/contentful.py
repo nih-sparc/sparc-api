@@ -3,7 +3,6 @@ from app.config import Config
 import contentful
 import contentful_management
 import requests
-import json
 
 #CDA is used for reading content, while CMA is used for updating content
 CDA_API_HOST = Config.CTF_CDA_API_HOST
@@ -57,7 +56,7 @@ def get_all_published_entries(content_type_id):
     # https://www.contentful.com/developers/docs/references/content-management-api/#/reference/entries/published-entries-collection/get-all-published-entries-of-a-space/console/python
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
     response = requests.get(url)
-    return response.json()
+    return response.json()['items']
 
 # Since get_all_published_entries has to use direct HTTP endpoint its response is in a different format than when using the client to get_all_entries
 # Therefore, in order to update an entry with that kind of response we must use this method instead of the client SDK update method

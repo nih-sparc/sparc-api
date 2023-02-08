@@ -1,5 +1,6 @@
-from app.metrics.contentful import get_all_entries
+from app.metrics.contentful import get_all_entries, get_all_published_entries
 from datetime import datetime, timezone
+from app.config import Config
 
 def update_event_entries():
     all_event_entries = get_all_entries("event")
@@ -7,6 +8,7 @@ def update_event_entries():
     for entry in all_event_entries:
         fields_dict = entry.fields()
         if 'start_date' in fields_dict and 'upcoming_sort_order' in fields_dict:
+            published_state = get_all_published_entries("event")
             start_date = fields_dict['start_date']
             #convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
             start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')

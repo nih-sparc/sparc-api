@@ -1,10 +1,8 @@
 import logging
-
 from app.config import Config
-
 import contentful
-
 import contentful_management
+import requests
 
 #CDA is used for reading content, while CMA is used for updating content
 CDA_API_HOST = Config.CTF_CDA_API_HOST
@@ -52,3 +50,10 @@ def get_all_entries(content_type_id):
   client = init_cf_cma_client()
   content_type = client.content_types(SPACE_ID, 'master').find(content_type_id)
   return content_type.entries().all()
+
+def get_all_published_entries(content_type_id):
+    url = '{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
+    response = requests.request("GET", url)
+    print("RESPONSE = ", response)
+    return response.items
+    

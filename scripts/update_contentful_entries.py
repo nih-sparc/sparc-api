@@ -1,7 +1,7 @@
 from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response
 from datetime import datetime, timezone
 
-async def update_event_entries():
+def update_event_entries():
     all_event_entries = get_all_entries("event")
     all_published_event_entries = get_all_published_entries("event")
     # Create dict with id's as the key so we do not have to iterate through each time we publish an entry
@@ -36,13 +36,17 @@ async def update_event_entries():
                     'fields': published_fields_state,
                     'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                 }
-                await update_entry_using_json_response('event', entry_id, updated_state)
+                updated_entry = update_entry_using_json_response('event', entry_id, updated_state)
+                print(f"ENTRY UPDATED = {updated_entry}")
                 entry.save()
+                print(f"SAVE CALLED")
                 entry.publish()
                 print(f"{original_fields_dict['title']} Published!")
             if entry_has_pre_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there
+                print(f"UPDATING ENTRY")
                 entry.update(original_fields_dict)  
+                print(f"SAVING ENTRY")
                 entry.save()
                 print(f"{original_fields_dict['title']} Updated back to pre-existing of {original_fields_dict}!")
 

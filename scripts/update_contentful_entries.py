@@ -34,7 +34,7 @@ def update_event_entries():
                 entry_id = entry.sys['id']
                 # if entry has changes that are not yet published then we want to publish only the already published state
                 published_fields_state = published_event_id_to_fields_mapping[entry_id]['fields']
-                published_fields_state['upcomingSortOrder'] = upcoming_sort_order
+                published_fields_state['upcomingSortOrder']['en-US'] = upcoming_sort_order
                 if entry_id == '69F1dOYJ3sqsL8pI55KTrk':
                   print(f"Original State = {original_fields_dict}")
                   print(f"Published State = {published_fields_state}")

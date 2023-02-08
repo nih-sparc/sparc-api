@@ -60,7 +60,9 @@ def get_all_published_entries(content_type_id):
 
 # Since get_all_published_entries has to use direct HTTP endpoint its response is in a different format than when using the client to get_all_entries
 # Therefore, in order to update an entry with that kind of response we must use this method instead of the client SDK update method
-def update_entry_using_json_response(content_type, id, version, data):
+def update_entry_using_json_response(content_type, id, data):
+    version = get_entry_version(id)
+
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}'
     hed = {
         'Authorization': 'Bearer ' + Config.CTF_CMA_ACCESS_TOKEN,
@@ -74,3 +76,8 @@ def update_entry_using_json_response(content_type, id, version, data):
         url=url,
         json=data
     )
+
+def get_entry_version(id):
+    client = init_cf_cma_client()
+    entry = client.entries(Config.CTF_SPACE_ID, 'master').find(id)
+    return entry.sys['version']

@@ -3,6 +3,7 @@ from app.config import Config
 import contentful
 import contentful_management
 import requests
+import json
 
 #CDA is used for reading content, while CMA is used for updating content
 CDA_API_HOST = Config.CTF_CDA_API_HOST
@@ -54,6 +55,4 @@ def get_all_entries(content_type_id):
 def get_all_published_entries(content_type_id):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
     response = requests.get(url)
-    json_response = response.json()
-    return json_response['items']
-    
+    return json.loads(response)['items']

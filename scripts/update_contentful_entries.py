@@ -1,5 +1,6 @@
 from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response
 from datetime import datetime, timezone
+import asyncio
 
 def update_event_entries():
     all_event_entries = get_all_entries("event")
@@ -36,9 +37,8 @@ def update_event_entries():
                     'fields': published_fields_state,
                     'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                 }
-                updated_entry = update_entry_using_json_response('event', entry_id, updated_state)
-                print(f"ENTRY UPDATED = {updated_entry}")
-                entry.publish()
+                update_entry_task = asyncio.create_task(update_entry_using_json_response('event', entry_id, updated_state))
+                update_entry_task.add_done_callback(entry.publish())
                 print(f"{original_fields_dict['title']} Published!")
             if entry_has_pre_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there

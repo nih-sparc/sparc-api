@@ -53,7 +53,25 @@ def get_all_entries(content_type_id):
   return content_type.entries().all()
 
 def get_all_published_entries(content_type_id):
+    # client SDK currently has no corresponding method for getting all published so we have to access directly via an http GET request
+    # https://www.contentful.com/developers/docs/references/content-management-api/#/reference/entries/published-entries-collection/get-all-published-entries-of-a-space/console/python
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
     response = requests.get(url)
-    print(f"RESPONSE = {json.loads(response)}")
     return response.json()
+
+# Since get_all_published_entries has to use direct HTTP endpoint its response is in a different format than when using the client to get_all_entries
+# Therefore, in order to update an entry with that kind of response we must use this method instead of the client SDK update method
+def update_entry_using_json_response(content_type, id, version, data):
+    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}'
+    hed = {
+        'Authorization': 'Bearer ' + Config.CTF_CMA_ACCESS_TOKEN,
+        'Content-Type': 'application/vnd.contentful.management.v1+json',
+        'Accept': 'application/json',
+        'X-Contentful-Content-Type': content_type,
+        'X-Contentful-Version': version
+    }
+    return requests.put(
+        headers=hed,
+        url=url,
+        json=data
+    )

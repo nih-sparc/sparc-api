@@ -55,4 +55,4 @@ def get_all_entries(content_type_id):
 def get_all_published_entries(content_type_id):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
     response = requests.get(url)
-    return json.loads(response.json())['items']
+    return json.loads(response["items"].read())

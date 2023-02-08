@@ -38,7 +38,7 @@ def update_event_entries():
                 # update and publish it with the values that were already published (in addition to the updated sort order)
                 #entry.update(published_fields_state)
                 #entry.save()
-                entry.publish()
+                #entry.publish()
                 print(f"{original_fields_dict['title']} Published!")
             if entry_has_pre_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there

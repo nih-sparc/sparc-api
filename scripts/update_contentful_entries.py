@@ -43,7 +43,8 @@ def update_event_entries():
                       'fields': published_fields_state,
                       'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                   }
-                  update_entry_using_json_response('event', entry_id, published_version, updated_state)
+                  temp = update_entry_using_json_response('event', entry_id, published_version, updated_state)
+                  print(f"TEMP RESPONSE = ", temp.json())
                   entry.save()
                 #entry.update(published_fields_state)
                 #entry.save()

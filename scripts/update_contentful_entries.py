@@ -7,13 +7,13 @@ def update_event_entries():
     # Create dict with id's as the key so we do not have to iterate through each time we publish an entry
     published_event_id_to_fields_mapping = {}
     for published_event in all_published_event_entries:
-        published_event_id = published_event['sys'].id
+        published_event_id = published_event['sys']['id']
         published_event_id_to_fields_mapping[published_event_id] = published_event['fields']
     now = datetime.now()
     for entry in all_event_entries:
-        fields_dict = entry.fields()
-        if 'start_date' in fields_dict and 'upcoming_sort_order' in fields_dict and entry.sys.id:
-            start_date = fields_dict['start_date']
+        original_fields_dict = entry.fields()
+        if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry.sys.id:
+            start_date = original_fields_dict['start_date']
             # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
             start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
             time_from_event_in_seconds = (start_date_datetime - now).total_seconds()
@@ -25,7 +25,7 @@ def update_event_entries():
                 upcoming_sort_order = 1/time_from_event_in_days
             if time_from_event_in_days < 0:
                 upcoming_sort_order = time_from_event_in_days
-            fields_dict['upcomingSortOrder'] = upcoming_sort_order
+            original_fields_dict['upcomingSortOrder'] = upcoming_sort_order
             entry_has_pre_existing_changes = entry.is_updated
             if entry.is_published:
                 # if entry has changes that are not yet published then we want to publish only the already published state
@@ -35,12 +35,12 @@ def update_event_entries():
                 entry.update(published_fields_state)
                 entry.save()
                 entry.publish()
-                print(f"{fields_dict['title']} Published!")
+                print(f"{original_fields_dict['title']} Published!")
             if entry_has_pre_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there
-                entry.update(fields_dict)  
+                entry.update(original_fields_dict)  
                 entry.save()
-                print(f"{fields_dict['title']} Updated back to pre-existing and saved!")
+                print(f"{original_fields_dict['title']} Updated back to pre-existing and saved!")
                 
             #entry.upcoming_sort_order = upcoming_sort_order
             #entry.save()

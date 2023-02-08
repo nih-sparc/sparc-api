@@ -9,6 +9,8 @@ def update_event_entries():
     published_event_id_to_fields_mapping = {}
     for published_event in all_published_event_entries:
         published_event_id = published_event['sys']['id']
+        if published_event_id == '69F1dOYJ3sqsL8pI55KTrk':
+            print(f"PUBLISHED EVENT = {published_event}")
         published_event_id_to_fields_mapping[published_event_id] = published_event
     now = datetime.now()
     for entry in all_event_entries:

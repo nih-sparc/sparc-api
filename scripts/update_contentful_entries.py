@@ -44,6 +44,7 @@ def update_event_entries():
                       'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                   }
                   update_entry_using_json_response('event', entry_id, published_version, updated_state)
+                  entry.save()
                 #entry.update(published_fields_state)
                 #entry.save()
                 #entry.publish()

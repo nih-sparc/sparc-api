@@ -38,8 +38,6 @@ def update_event_entries():
                 }
                 updated_entry = update_entry_using_json_response('event', entry_id, updated_state)
                 print(f"ENTRY UPDATED = {updated_entry}")
-                entry.save()
-                print(f"SAVE CALLED")
                 entry.publish()
                 print(f"{original_fields_dict['title']} Published!")
             if entry_has_pre_existing_changes:

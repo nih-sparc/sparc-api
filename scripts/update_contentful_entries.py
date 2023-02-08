@@ -12,7 +12,7 @@ def update_event_entries():
     now = datetime.now()
     for entry in all_event_entries:
         original_fields_dict = entry.fields()
-        if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry.sys.id:
+        if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry.sys['id']:
             start_date = original_fields_dict['start_date']
             # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
             start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
@@ -28,8 +28,9 @@ def update_event_entries():
             original_fields_dict['upcomingSortOrder'] = upcoming_sort_order
             entry_has_pre_existing_changes = entry.is_updated
             if entry.is_published:
+                entry_id = entry.sys['id']
                 # if entry has changes that are not yet published then we want to publish only the already published state
-                published_fields_state = published_event_id_to_fields_mapping[entry.sys.id]
+                published_fields_state = published_event_id_to_fields_mapping[entry_id]
                 published_fields_state['upcomingSortOrder'] = upcoming_sort_order
                 # update and publish it with the values that were already published (in addition to the updated sort order)
                 entry.update(published_fields_state)

@@ -1,6 +1,5 @@
 from app.metrics.contentful import get_all_entries, get_all_published_entries
 from datetime import datetime, timezone
-from app.config import Config
 
 def update_event_entries():
     all_event_entries = get_all_entries("event")

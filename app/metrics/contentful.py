@@ -52,8 +52,8 @@ def get_all_entries(content_type_id):
   return content_type.entries().all()
 
 def get_all_published_entries(content_type_id):
-    url = '{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
-    response = requests.request("GET", url)
+    url = f'{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
+    response = requests.get(url)
     print("RESPONSE = ", response)
     return response.items
     

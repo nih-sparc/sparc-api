@@ -11,6 +11,7 @@ async def update_event_entries():
         published_event_id = published_event['sys']['id']
         published_event_id_to_fields_mapping[published_event_id] = published_event
     now = datetime.now()
+    print("NOW = ", now)
     for entry in all_event_entries:
         original_fields_dict = entry.fields()
         if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry.sys['id']:

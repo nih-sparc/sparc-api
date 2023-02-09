@@ -72,12 +72,12 @@ async def update_entry_using_json_response(content_type, id, data):
         'X-Contentful-Content-Type': str(content_type),
         'X-Contentful-Version': str(version)
     }
-    task = asyncio.create_task(requests.put(
+    await requests.put(
         headers=hed,
         url=url,
         json=data
-    ))
-    await task
+    )
+    return
 
 def get_entry_version(id):
     client = init_cf_cma_client()

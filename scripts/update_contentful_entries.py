@@ -37,7 +37,9 @@ async def update_event_entries():
                     'fields': published_fields_state,
                     'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                 }
+                print("ABOUT TO RUN UPDATE")
                 asyncio.run(update_entry_using_json_response('event', entry_id, updated_state))
+                print("UPDATE RAN")
                 print(f"{original_fields_dict['title']} Published!")
             if entry_has_pre_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there

@@ -48,7 +48,7 @@ def update_event_entries():
                   print(f"UPDATED ENTRY = {updated_entry}")
                 client_entry = get_client_entry(entry_id)
                 if entry_id == '69F1dOYJ3sqsL8pI55KTrk':
-                  print(f"NEW ENTRY FIELDS = {entry.fields()}")
+                  print(f"NEW ENTRY FIELDS = {client_entry.fields()}")
                 client_entry.publish()
                 print(f"{original_fields_dict['title']} Published!")
             if entry_had_existing_changes:

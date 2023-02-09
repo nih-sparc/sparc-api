@@ -36,13 +36,13 @@ def update_event_entries():
                     'fields': published_fields_state,
                     'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                 }
-                if (entry_id == '69F1dOYJ3sqsL8pI55KTrk')
+                if entry_id == '69F1dOYJ3sqsL8pI55KTrk':
                   print(f"OLD ENTRY FIELDS = {original_fields_dict}")
                 updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
-                if (entry_id == '69F1dOYJ3sqsL8pI55KTrk')
+                if entry_id == '69F1dOYJ3sqsL8pI55KTrk':
                   print(f"UPDATED ENTRY = {updated_entry}")
                 entry = get_entry(entry_id)
-                if (entry_id == '69F1dOYJ3sqsL8pI55KTrk')
+                if entry_id == '69F1dOYJ3sqsL8pI55KTrk':
                   print(f"NEW ENTRY FIELDS = {entry.fields()}")
                 entry.publish()
                 print(f"{original_fields_dict['title']} Published!")

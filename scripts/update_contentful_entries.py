@@ -41,6 +41,7 @@ def update_event_entries():
                 }
                 updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
                 publish_entry(entry_id, updated_entry['sys']['version'])
+                print(f"{original_fields_dict['title']}")
             if entry_had_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there
                 original_state = {

@@ -151,7 +151,7 @@ if Config.DEPLOY_ENV == 'development':
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()
-    # Update the contentful entries on deploy and then daily at 4 AM EST
+    # Update the contentful entries on deploy and then daily at 2 AM EST
     update_contentful_event_entries_scheduler.add_job(update_event_entries, 'date')
 
 @app.before_first_request

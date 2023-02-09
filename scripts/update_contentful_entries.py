@@ -21,8 +21,9 @@ def update_event_entries():
             entry_is_published = False 
             if 'publishedAt' in entry['sys']:
                 entry_is_published = True
-                entry_updated_at = datetime.strptime(datetime.fromisoformat(entry['sys']['updatedAt']).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
-                entry_published_at = datetime.strptime(datetime.fromisoformat(entry['sys']['publishedAt']).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
+                # convert UTC time strings into datetime objects
+                entry_updated_at = datetime.strptime(entry['sys']['updatedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                entry_published_at = datetime.strptime(entry['sys']['publishedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 if entry_updated_at - entry_published_at > 0:
                     entry_had_existing_changes = True
             

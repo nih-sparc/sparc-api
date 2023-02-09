@@ -17,7 +17,7 @@ def update_event_entries():
             client_entry = get_client_entry(entry_id)
             #entry_had_existing_changes = entry_is_updated(entry)
             entry_had_existing_changes = client_entry.is_updated
-            if entry_id == "2uumvOZ3blED0zQ0Vb65LS":
+            if entry_id not in published_event_id_to_fields_mapping:
                 print(f"Draft entry = {entry}")
             entry_is_published = client_entry.is_published
             start_date = original_fields_dict['startDate']['en-US']

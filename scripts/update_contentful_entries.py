@@ -38,7 +38,6 @@ def update_event_entries():
                 }
                 print("ABOUT TO RUN UPDATE")
                 updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
-                print(f"UPDATE RAN WITH RESPONSE = {response.json()}")
                 print("ABOUT TO CALL SAVE")
                 print("SAVE CALLED")
                 entry = get_entry(entry_id)

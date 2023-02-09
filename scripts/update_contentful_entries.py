@@ -14,9 +14,6 @@ def update_event_entries():
         original_metadata_dict = entry['metadata']
         if 'startDate' in original_fields_dict and 'upcomingSortOrder' in original_fields_dict and entry['sys']['id']:
             entry_id = entry['sys']['id']
-            #client_entry = get_client_entry(entry_id)
-            #entry_is_published = client_entry.is_published
-            #entry_had_existing_changes = client_entry.is_updated
             entry_had_existing_changes = False
             entry_is_published = False 
             if 'publishedAt' in entry['sys']:
@@ -49,14 +46,13 @@ def update_event_entries():
                     'fields': published_fields_state,
                     'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                 }
-                #updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
-                #publish_entry(entry_id, updated_entry['sys']['version'])
+                updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
+                publish_entry(entry_id, updated_entry['sys']['version'])
             # after publishing, update it again with the pre-existing changes that were already there. Or if it is a draft then just update it in order to set the sort order
             if entry_had_existing_changes or not entry_is_published:
-                print(f"{original_fields_dict['title']} had existing changes")
                 original_state = {
                     'fields': original_fields_dict,
                     'metadata': original_metadata_dict
                 }
-                #update_entry_using_json_response('event', entry_id, original_state).json()
+                update_entry_using_json_response('event', entry_id, original_state).json()
     print("UPDATE COMPLETE!")

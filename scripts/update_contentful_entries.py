@@ -14,7 +14,7 @@ def update_event_entries():
         original_fields_dict = entry['fields']
         original_metadata_dict = entry['metadata']
         if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry['sys']['id']:
-            entry_id = entry.sys['id']
+            entry_id = entry['sys']['id']
             client_entry = get_client_entry(entry_id)
             entry_had_existing_changes = client_entry.is_updated
             entry_is_published = client_entry.is_published

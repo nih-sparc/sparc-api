@@ -79,3 +79,15 @@ def update_entry_using_json_response(content_type, id, data):
         url=url,
         json=data
     )
+
+def publish_entry(id, version):
+    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}/published'
+    hed = {
+        'Authorization': 'Bearer ' + Config.CTF_CMA_ACCESS_TOKEN,
+        'X-Contentful-Version': str(version)
+    }
+    
+    return requests.put(
+        headers=hed,
+        url=url
+    )

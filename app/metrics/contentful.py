@@ -60,10 +60,15 @@ def get_client_entry(id):
     client = init_cf_cma_client()
     return client.entries(Config.CTF_SPACE_ID, 'master').find(id)
 
+def get_entry(id):
+  url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}?access_token={Config.CTF_CMA_ACCESS_TOKEN}'
+    response = requests.get(url=url)
+    return response.json()
+
 # Since get_all_published_entries has to use direct HTTP endpoint its response is in a different format than when using the client to get_all_entries
 # Therefore, in order to update an entry with that kind of response we must use this method instead of the client SDK update method
 def update_entry_using_json_response(content_type, id, data):
-    version = get_client_entry(id).sys['version']
+    version = get_entry(id)['sys']['version']
 
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}'
     hed = {

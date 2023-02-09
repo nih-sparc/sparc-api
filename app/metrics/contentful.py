@@ -92,7 +92,3 @@ def publish_entry(id, version):
         headers=hed,
         url=url
     )
-
-#def entry_is_updated(entry):
-#    return 
-

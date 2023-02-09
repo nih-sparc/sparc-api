@@ -1,7 +1,7 @@
 from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response
 from datetime import datetime, timezone
 
-async def update_event_entries():
+def update_event_entries():
     all_event_entries = get_all_entries("event")
     all_published_event_entries = get_all_published_entries("event")
     # Create dict with id's as the key so we do not have to iterate through each time we publish an entry

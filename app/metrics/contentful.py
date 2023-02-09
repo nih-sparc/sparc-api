@@ -3,6 +3,7 @@ from app.config import Config
 import contentful
 import contentful_management
 import requests
+import asyncio
 
 #CDA is used for reading content, while CMA is used for updating content
 CDA_API_HOST = Config.CTF_CDA_API_HOST
@@ -71,11 +72,12 @@ async def update_entry_using_json_response(content_type, id, data):
         'X-Contentful-Content-Type': str(content_type),
         'X-Contentful-Version': str(version)
     }
-    return requests.put(
+    task = asyncio.create_task(requests.put(
         headers=hed,
         url=url,
         json=data
-    )
+    ))
+    await task
 
 def get_entry_version(id):
     client = init_cf_cma_client()

@@ -2,7 +2,7 @@ from app.metrics.contentful import get_all_entries, get_all_published_entries, u
 from datetime import datetime, timezone
 import asyncio
 
-def update_event_entries():
+async def update_event_entries():
     all_event_entries = get_all_entries("event")
     all_published_event_entries = get_all_published_entries("event")
     # Create dict with id's as the key so we do not have to iterate through each time we publish an entry
@@ -39,6 +39,7 @@ def update_event_entries():
                 }
                 update_entry_task = asyncio.create_task(update_entry_using_json_response('event', entry_id, updated_state))
                 update_entry_task.add_done_callback(entry.publish())
+                await update_entry_task
                 print(f"{original_fields_dict['title']} Published!")
             if entry_has_pre_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there

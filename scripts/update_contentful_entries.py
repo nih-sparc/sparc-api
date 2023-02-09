@@ -39,13 +39,14 @@ def update_event_entries():
                     'fields': published_fields_state,
                     'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                 }
-                updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
-                publish_entry(entry_id, updated_entry['sys']['version'])
+                #updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
+                #publish_entry(entry_id, updated_entry['sys']['version'])
             if entry_had_existing_changes:
+                print(f"{original_fields_dict['title']} had existing changes")
                 # after publishing, save it again with the pre-existing changes that were already there
                 original_state = {
                     'fields': original_fields_dict,
                     'metadata': original_metadata_dict
                 }
-                update_entry_using_json_response('event', entry_id, original_state).json()
+                #update_entry_using_json_response('event', entry_id, original_state).json()
     print("UPDATE COMPLETE!")

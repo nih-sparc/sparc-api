@@ -1,6 +1,5 @@
 from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response
 from datetime import datetime, timezone
-import asyncio
 
 async def update_event_entries():
     all_event_entries = get_all_entries("event")

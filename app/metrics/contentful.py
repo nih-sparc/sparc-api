@@ -3,7 +3,6 @@ from app.config import Config
 import contentful
 import contentful_management
 import requests
-import asyncio
 
 #CDA is used for reading content, while CMA is used for updating content
 CDA_API_HOST = Config.CTF_CDA_API_HOST

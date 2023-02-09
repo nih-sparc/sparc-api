@@ -15,9 +15,12 @@ def update_event_entries():
         if 'startDate' in original_fields_dict and 'upcomingSortOrder' in original_fields_dict and entry['sys']['id']:
             entry_id = entry['sys']['id']
             client_entry = get_client_entry(entry_id)
+            #entry_had_existing_changes = entry_is_updated(entry)
             entry_had_existing_changes = client_entry.is_updated
             if entry_id == "6jTaWeILQyXg6e8cNwVujM":
-                print(f"ENTRY HAS EXISTING CHANGES = {entry_had_existing_changes}")
+                print(f"Updated entry = {entry}")
+            if entry_id == "cfZahAKcq6SO4Sv2r77X9":
+                print(f"Un-updated entry = {entry}")
             entry_is_published = client_entry.is_published
             start_date = original_fields_dict['startDate']['en-US']
 

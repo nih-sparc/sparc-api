@@ -1,4 +1,4 @@
-from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response, get_client_entry
+from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response, get_client_entry, publish_entry
 from datetime import datetime, timezone
 
 def update_event_entries():
@@ -33,20 +33,21 @@ def update_event_entries():
             original_fields_dict['upcomingSortOrder']['en-US'] = upcoming_sort_order
             if entry_is_published:
                 # if entry has changes that are not yet published then we want to publish only the already published state
+                if entry_id == '69F1dOYJ3sqsL8pI55KTrk':
+                  print(f"response = {published_event_id_to_fields_mapping[entry_id]}")
                 published_fields_state = published_event_id_to_fields_mapping[entry_id]['fields']
                 published_fields_state['upcomingSortOrder']['en-US'] = upcoming_sort_order
                 updated_state = {
                     'fields': published_fields_state,
                     'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                 }
-                update_entry_using_json_response('event', entry_id, updated_state).json()
-                client_entry = get_client_entry(entry_id)
-                client_entry.publish()
+                #updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
+                #publish_entry(entry_id, updated_entry['sys']['version'])
             if entry_had_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there
                 original_state = {
                     'fields': original_fields_dict,
                     'metadata': original_metadata_dict
                 }
-                update_entry_using_json_response('event', entry_id, original_state).json()
+                #update_entry_using_json_response('event', entry_id, original_state).json()
 

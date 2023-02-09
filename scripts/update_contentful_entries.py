@@ -24,7 +24,7 @@ def update_event_entries():
                 # convert UTC time strings into datetime objects
                 entry_updated_at = datetime.strptime(entry['sys']['updatedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
                 entry_published_at = datetime.strptime(entry['sys']['publishedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                if entry_updated_at - entry_published_at > 0:
+                if (entry_updated_at - entry_published_at).total_seconds() > 0:
                     entry_had_existing_changes = True
             
             start_date = original_fields_dict['startDate']['en-US']

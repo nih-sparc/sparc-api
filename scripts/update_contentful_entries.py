@@ -1,4 +1,4 @@
-from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response, get_entry
+from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response, get_client_entry
 from datetime import datetime, timezone
 
 def update_event_entries():
@@ -11,9 +11,15 @@ def update_event_entries():
         published_event_id_to_fields_mapping[published_event_id] = published_event
     now = datetime.now()
     for entry in all_event_entries:
-        original_fields_dict = entry.fields()
-        if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry.sys['id']:
-            start_date = original_fields_dict['start_date']
+        original_fields_dict = entry['fields']
+        original_metadata_dict = entry['metadata']
+        if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry['sys']['id']:
+            entry_id = entry.sys['id']
+            client_entry = get_client_entry(entry_id)
+            entry_had_existing_changes = client_entry.is_updated
+            entry_is_published = client_entry.is_published
+            start_date = original_fields_dict['start_date']['en-US']
+
             # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
             start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
             time_from_event_in_seconds = (start_date_datetime - now).total_seconds()
@@ -25,10 +31,9 @@ def update_event_entries():
                 upcoming_sort_order = 1/time_from_event_in_days
             if time_from_event_in_days < 0:
                 upcoming_sort_order = time_from_event_in_days
-            original_fields_dict['upcoming_sort_order'] = upcoming_sort_order
-            entry_has_pre_existing_changes = entry.is_updated
-            if entry.is_published:
-                entry_id = entry.sys['id']
+            original_fields_dict['upcoming_sort_order']['en-US'] = upcoming_sort_order
+
+            if entry_is_published:
                 # if entry has changes that are not yet published then we want to publish only the already published state
                 published_fields_state = published_event_id_to_fields_mapping[entry_id]['fields']
                 published_fields_state['upcomingSortOrder']['en-US'] = upcoming_sort_order
@@ -46,11 +51,14 @@ def update_event_entries():
                   print(f"NEW ENTRY FIELDS = {entry.fields()}")
                 entry.publish()
                 print(f"{original_fields_dict['title']} Published!")
-            if entry_has_pre_existing_changes:
+            if entry_had_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there
-                print(f"UPDATING ENTRY")
-                entry.update(original_fields_dict)  
-                print(f"SAVING ENTRY")
-                entry.save()
-                print(f"{original_fields_dict['title']} Updated back to pre-existing of {original_fields_dict}!")
+                print(f"UPDATING ENTRY BACK TO ORIGINAL")
+                original_state = {
+                    'fields': original_fields_dict,
+                    'metadata': original_metadata_dict
+                }
+                original_entry = update_entry_using_json_response('event', entry_id, original_state).json()
+                #entry.update(original_fields_dict) 
+                print(f"{original_fields_dict['title']} Updated back to pre-existing of {original_entry}!")
 

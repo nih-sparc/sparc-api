@@ -13,12 +13,12 @@ def update_event_entries():
     for entry in all_event_entries:
         original_fields_dict = entry['fields']
         original_metadata_dict = entry['metadata']
-        if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry['sys']['id']:
+        if 'startDate' in original_fields_dict and 'upcomingSortOrder' in original_fields_dict and entry['sys']['id']:
             entry_id = entry['sys']['id']
             client_entry = get_client_entry(entry_id)
             entry_had_existing_changes = client_entry.is_updated
             entry_is_published = client_entry.is_published
-            start_date = original_fields_dict['start_date']['en-US']
+            start_date = original_fields_dict['startDate']['en-US']
 
             # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
             start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
@@ -31,7 +31,7 @@ def update_event_entries():
                 upcoming_sort_order = 1/time_from_event_in_days
             if time_from_event_in_days < 0:
                 upcoming_sort_order = time_from_event_in_days
-            original_fields_dict['upcoming_sort_order']['en-US'] = upcoming_sort_order
+            original_fields_dict['upcomingSortOrder']['en-US'] = upcoming_sort_order
 
             if entry_is_published:
                 # if entry has changes that are not yet published then we want to publish only the already published state

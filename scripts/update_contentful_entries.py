@@ -1,4 +1,4 @@
-from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response, get_client_entry, publish_entry
+from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response, publish_entry
 from datetime import datetime, timezone
 
 def update_event_entries():
@@ -14,12 +14,18 @@ def update_event_entries():
         original_metadata_dict = entry['metadata']
         if 'startDate' in original_fields_dict and 'upcomingSortOrder' in original_fields_dict and entry['sys']['id']:
             entry_id = entry['sys']['id']
-            client_entry = get_client_entry(entry_id)
-            #entry_had_existing_changes = entry_is_updated(entry)
-            entry_had_existing_changes = client_entry.is_updated
-            if entry_id not in published_event_id_to_fields_mapping:
-                print(f"Draft entry = {entry}")
-            entry_is_published = client_entry.is_published
+            #client_entry = get_client_entry(entry_id)
+            #entry_is_published = client_entry.is_published
+            #entry_had_existing_changes = client_entry.is_updated
+            entry_had_existing_changes = False
+            entry_is_published = False 
+            if 'publishedAt' in entry['sys']:
+                entry_is_published = True
+                entry_updated_at = datetime.strptime(datetime.fromisoformat(entry['sys']['updatedAt']).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
+                entry_published_at = datetime.strptime(datetime.fromisoformat(entry['sys']['publishedAt']).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
+                if entry_updated_at - entry_published_at > 0:
+                    entry_had_existing_changes = True
+            
             start_date = original_fields_dict['startDate']['en-US']
 
             # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
@@ -44,9 +50,9 @@ def update_event_entries():
                 }
                 #updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
                 #publish_entry(entry_id, updated_entry['sys']['version'])
-            if entry_had_existing_changes:
+            # after publishing, update it again with the pre-existing changes that were already there. Or if it is a draft then just update it in order to set the sort order
+            if entry_had_existing_changes or not entry_is_published:
                 print(f"{original_fields_dict['title']} had existing changes")
-                # after publishing, save it again with the pre-existing changes that were already there
                 original_state = {
                     'fields': original_fields_dict,
                     'metadata': original_metadata_dict

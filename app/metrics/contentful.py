@@ -71,7 +71,7 @@ async def update_entry_using_json_response(content_type, id, data):
         'X-Contentful-Content-Type': str(content_type),
         'X-Contentful-Version': str(version)
     }
-    return await requests.put(
+    return requests.put(
         headers=hed,
         url=url,
         json=data

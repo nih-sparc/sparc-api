@@ -50,20 +50,15 @@ def get_all_entries(content_type_id):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
     response = requests.get(url=url)
     return response.json()['items']
-  #client = init_cf_cma_client()
-  #content_type = client.content_types(SPACE_ID, 'master').find(content_type_id)
-  #return content_type.entries().all()
-
-def get_client_entry(id):
-    client = init_cf_cma_client()
-    return client.entries(Config.CTF_SPACE_ID, 'master').find(id)
-
+    
 def get_all_published_entries(content_type_id):
-    # client SDK currently has no corresponding method for getting all published so we have to access directly via an http GET request
-    # https://www.contentful.com/developers/docs/references/content-management-api/#/reference/entries/published-entries-collection/get-all-published-entries-of-a-space/console/python
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
     response = requests.get(url)
     return response.json()['items']
+    
+def get_client_entry(id):
+    client = init_cf_cma_client()
+    return client.entries(Config.CTF_SPACE_ID, 'master').find(id)
 
 # Since get_all_published_entries has to use direct HTTP endpoint its response is in a different format than when using the client to get_all_entries
 # Therefore, in order to update an entry with that kind of response we must use this method instead of the client SDK update method

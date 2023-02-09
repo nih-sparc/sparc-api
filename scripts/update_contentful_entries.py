@@ -55,4 +55,3 @@ def update_event_entries():
                     'metadata': original_metadata_dict
                 }
                 update_entry_using_json_response('event', entry_id, original_state).json()
-    print("UPDATE COMPLETE!")

@@ -46,10 +46,10 @@ def update_event_entries():
                 updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
                 if entry_id == '69F1dOYJ3sqsL8pI55KTrk':
                   print(f"UPDATED ENTRY = {updated_entry}")
-                entry = get_entry(entry_id)
+                client_entry = get_client_entry(entry_id)
                 if entry_id == '69F1dOYJ3sqsL8pI55KTrk':
                   print(f"NEW ENTRY FIELDS = {entry.fields()}")
-                entry.publish()
+                client_entry.publish()
                 print(f"{original_fields_dict['title']} Published!")
             if entry_had_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there

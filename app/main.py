@@ -145,14 +145,14 @@ if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler.start()
     monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
 
-# Run update contentful entries scheduler on staging so that it updates all the entries, not just published ones
+# Only need to run the update contentful entries scheduler on one environment, so dev was chosen to keep prod more responsive
 if Config.DEPLOY_ENV == 'development':
     update_contentful_event_entries_scheduler = BackgroundScheduler()
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()
     # Update the contentful entries on deploy and then daily at 2 AM EST
-    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'date')
+    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'cron', hour=2, timezone='US/Eastern')
 
 @app.before_first_request
 def get_osparc_file_viewers():

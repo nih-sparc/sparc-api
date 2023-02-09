@@ -50,7 +50,7 @@ def get_all_entries(content_type_id):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
     response = requests.get(url=url)
     return response.json()['items']
-    
+
 def get_all_published_entries(content_type_id):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
     response = requests.get(url)
@@ -61,7 +61,7 @@ def get_client_entry(id):
     return client.entries(Config.CTF_SPACE_ID, 'master').find(id)
 
 def get_entry(id):
-  url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}?access_token={Config.CTF_CMA_ACCESS_TOKEN}'
+    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}?access_token={Config.CTF_CMA_ACCESS_TOKEN}'
     response = requests.get(url=url)
     return response.json()
 

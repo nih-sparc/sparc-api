@@ -10,7 +10,6 @@ def update_event_entries():
         published_event_id = published_event['sys']['id']
         published_event_id_to_fields_mapping[published_event_id] = published_event
     now = datetime.now()
-    print("NOW = ", now)
     for entry in all_event_entries:
         original_fields_dict = entry.fields()
         if 'start_date' in original_fields_dict and 'upcoming_sort_order' in original_fields_dict and entry.sys['id']:
@@ -41,8 +40,8 @@ def update_event_entries():
                 response = update_entry_using_json_response('event', entry_id, updated_state)
                 print(f"UPDATE RAN WITH RESPONSE = {response.json()}")
                 print("ABOUT TO CALL SAVE")
-                #entry.save()
-                #entry.publish()
+                print("SAVE CALLED")
+                entry.publish()
                 print(f"{original_fields_dict['title']} Published!")
             if entry_has_pre_existing_changes:
                 # after publishing, save it again with the pre-existing changes that were already there

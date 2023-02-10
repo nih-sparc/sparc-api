@@ -202,6 +202,13 @@ def set_featured_dataset_id():
     table_state = get_featured_dataset_id_table_state()   
     try:
         cf_homepage_response = get_homepage_response(contentful)
+        # clear the contentful featured dataset list if the date to clear is set so that we revert back to random selection of all datasets
+        date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
+        if date_to_clear_datasets is not None:
+            print(f"DATE = {date_to_clear_datasets}")
+        else:
+            print("DATE IS NONE")
+            #clearDate = start_date_datetime = datetime.strptime(datetime.fromisoformat(date_to_clear_datasets).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
         limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
         if (limited_ids_were_set):
             table_state = get_featured_dataset_id_table_state()   
@@ -231,13 +238,6 @@ def set_featured_dataset_id():
         table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
         table_state["available_dataset_ids"] = available_dataset_ids_array
         featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
-        # clear the contentful featured dataset list if the date to clear is set so that we revert back to random selection of all datasets
-        date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
-        if date_to_clear_datasets is not None:
-            print(f"DATE = {date_to_clear_datasets}")
-        else:
-            print("DATE IS NONE")
-            #clearDate = start_date_datetime = datetime.strptime(datetime.fromisoformat(date_to_clear_datasets).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
     except Exception as e:
         print('Error while setting featured dataset id: ', e)
 

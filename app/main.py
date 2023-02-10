@@ -204,7 +204,8 @@ def set_featured_dataset_id():
         cf_homepage_response = get_homepage_response(contentful)
         # clear the contentful featured dataset list if the date to clear is set so that we revert back to random selection of all datasets
         if 'date_to_clear_featured_datasets' in cf_homepage_response:
-            date_to_clear_datasets = datetime.strptime(cf_homepage_response['date_to_clear_featured_datasets'], '%Y-%m-%d %H:%M:%S')
+            #date_to_clear_datasets = datetime.strptime(cf_homepage_response['date_to_clear_featured_datasets'], '%Y-%m-%d %H:%M:%S')
+            date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
             if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
                 print("CLEAR DATASETS")
         else:

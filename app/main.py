@@ -137,6 +137,7 @@ def connect_to_pennsieve():
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
 featured_dataset_id_scheduler = BackgroundScheduler()
+update_contentful_event_entries_scheduler = BackgroundScheduler()
 
 # Run monthly stats email schedule on production
 if Config.DEPLOY_ENV == 'production':
@@ -147,7 +148,6 @@ if Config.DEPLOY_ENV == 'production':
 
 # Only need to run the update contentful entries scheduler on one environment, so dev was chosen to keep prod more responsive
 if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
-    update_contentful_event_entries_scheduler = BackgroundScheduler()
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()
@@ -198,6 +198,7 @@ def get_metrics():
 
 @app.before_first_request
 def set_featured_dataset_id():
+    print("SETTING FEATURED DATASET")
     logging.info('Setting featured dataset id selector state info')
     table_state = get_featured_dataset_id_table_state()   
     try:

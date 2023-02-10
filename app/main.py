@@ -204,12 +204,11 @@ def set_featured_dataset_id():
         cf_homepage_response = get_homepage_response(contentful)
         # clear the contentful featured dataset list if the date to clear is set so that we revert back to random selection of all datasets
         print(f"RESPONSE = {cf_homepage_response}")
-        print(f"DATE TO CLEAR = {cf_homepage_response['date_to_clear_featured_datasets']}")
-        date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets'] or None
-        if date_to_clear_datasets is not None:
+        if 'date_to_clear_featured_datasets' in date_to_clear_datasets:
+            date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
             print(f"DATE = {date_to_clear_datasets}")
         else:
-            print("DATE IS NONE")
+            print("DATE NOT PRESENT")
             #clearDate = start_date_datetime = datetime.strptime(datetime.fromisoformat(date_to_clear_datasets).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
         limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
         if (limited_ids_were_set):

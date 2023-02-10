@@ -146,7 +146,7 @@ if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
 
 # Only need to run the update contentful entries scheduler on one environment, so dev was chosen to keep prod more responsive
-if Config.DEPLOY_ENV == 'development':
+if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
     update_contentful_event_entries_scheduler = BackgroundScheduler()
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')
@@ -231,6 +231,13 @@ def set_featured_dataset_id():
         table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
         table_state["available_dataset_ids"] = available_dataset_ids_array
         featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
+        # clear the contentful featured dataset list if the date to clear is set so that we revert back to random selection of all datasets
+        date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
+        if date_to_clear_datasets is not None:
+            print(f"DATE = {date_to_clear_datasets}")
+        else:
+            print("DATE IS NONE")
+            #clearDate = start_date_datetime = datetime.strptime(datetime.fromisoformat(date_to_clear_datasets).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
     except Exception as e:
         print('Error while setting featured dataset id: ', e)
 

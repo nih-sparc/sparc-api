@@ -198,7 +198,6 @@ def get_metrics():
 
 @app.before_first_request
 def set_featured_dataset_id():
-    print("SETTING FEATURED DATASET")
     logging.info('Setting featured dataset id selector state info')
     table_state = get_featured_dataset_id_table_state()   
     try:
@@ -284,8 +283,7 @@ viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
 # Sets the featured dataset id, once every 2 hours
-#featured_dataset_id_scheduler.add_job(func=set_featured_dataset_id, trigger='interval', hours=2)
-featured_dataset_id_scheduler.add_job(func=set_featured_dataset_id, trigger='date')
+featured_dataset_id_scheduler.add_job(func=set_featured_dataset_id, trigger='interval', hours=2)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')

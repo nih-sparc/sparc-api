@@ -208,6 +208,8 @@ def set_featured_dataset_id():
             date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
             if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
                 print("CLEAR DATASETS")
+            else:
+                print('DO NOT CLEAR!')
         else:
             print("DATE NOT PRESENT")
             #clearDate = start_date_datetime = datetime.strptime(datetime.fromisoformat(date_to_clear_datasets).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')

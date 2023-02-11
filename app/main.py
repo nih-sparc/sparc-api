@@ -7,7 +7,7 @@ from scripts.update_contentful_entries import update_event_entries
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
-from scripts.update_featured_dataset_id import set_featured_dataset_id
+from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
 
 import botocore
 import boto3

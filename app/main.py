@@ -2,7 +2,7 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_cda_client_entry, get_cma_entry, update_entry_using_json_response, publish_entry
+from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_cda_client_entry, get_cma_entry, update_entry_using_json_response, publish_entry, get_cma_published_entry
 from scripts.update_contentful_entries import update_event_entries
 from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
@@ -208,22 +208,23 @@ def set_featured_dataset_id():
             if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
                 # Clear featured datasets and re-publish homepage (while retaining any existing changes that were already there but not yet published)
                 # must use CMA to update contentful entries
-                homepage_cma_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
-                if 'featuredDatasets' in homepage_cma_entry['fields']:
-                  homepage_cma_entry['fields']['featuredDatasets']['en-US'] = []
-                homepage_cma_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
-                updated_state = {
-                    'fields': homepage_cma_entry['fields'],
-                    'metadata': homepage_cma_entry['metadata']
+                homepage_cma_original_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
+                homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
+                if 'featuredDatasets' in homepage_cma_published_entry['fields']:
+                    homepage_cma_published_entry['fields']['featuredDatasets']['en-US'] = []
+                homepage_cma_published_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
+                updated_published_state = {
+                    'fields': homepage_cma_published_entry['fields'],
+                    'metadata': homepage_cma_published_entry['metadata']
                 }
-                updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_state).json()
+                updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_published_state).json()
                 publish_entry(Config.CTF_HOMEPAGE_ID, updated_entry['sys']['version'])
-                print(f"PUBLISHED = {updated_entry}")
-            else:
-                print('DO NOT CLEAR!')
-        else:
-            print("DATE NOT PRESENT")
-            #clearDate = start_date_datetime = datetime.strptime(datetime.fromisoformat(date_to_clear_datasets).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
+                # update back to original state in case there were existing changes made
+                original_state = {
+                    'fields': homepage_cma_original_entry['fields'],
+                    'metadata': homepage_cma_original_entry['metadata']
+                }
+                update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
         limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
         if (limited_ids_were_set):
             table_state = get_featured_dataset_id_table_state()   

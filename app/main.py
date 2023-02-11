@@ -201,46 +201,11 @@ def set_featured_dataset_id():
     logging.info('Setting featured dataset id selector state info')
     table_state = get_featured_dataset_id_table_state()   
     try:
-        print("1")
-        # we can update the table state independently for each environment since dev and prod have seperate DB's
-        cf_homepage_response = get_cda_client_entry(Config.CTF_HOMEPAGE_ID).fields()
-        limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
-        if (limited_ids_were_set):
-            table_state = get_featured_dataset_id_table_state()   
-
-        last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
-        featured_dataset_id = int(table_state["featured_dataset_id"])
-        try:
-            time_delta_in_hours = cf_homepage_response['time_delta']
-        except Exception:
-            time_delta_in_hours = 8
-        print("2")
-        time_delta_in_days = float(time_delta_in_hours) / 24
-        now = datetime.now()
-        # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
-        if (now - last_used_time) < timedelta(days=time_delta_in_days) and featured_dataset_id != -1 and limited_ids_were_set is False:
-            return featured_dataset_id
-        # reset the list of ids if we have iterated through all of them already or if the limited available ids list was just set
-        if len(table_state["available_dataset_ids"]) == 0 or limited_ids_were_set is True:
-            if (len(table_state["limited_available_ids"]) > 0):
-                table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
-            else:
-                table_state["available_dataset_ids"] = get_all_ids()
-        print("3")
-        available_dataset_ids_array = table_state["available_dataset_ids"]
-        random_index = random.randint(0, len(available_dataset_ids_array)-1)
-        table_state["featured_dataset_id"] = available_dataset_ids_array.pop(random_index)
-        table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
-        table_state["available_dataset_ids"] = available_dataset_ids_array
-        featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
-
         # only use the prod environemnt to clear featured datasets data in contentful. If we handled updating contentful via both dev and prod,
         # we might run into concurrency issues when updating the homepage
         #if Config.DEPLOY_ENV == 'production':
-        print("4")
         homepage_cma_staging_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
         homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
-        print(f"TRUE?FALSE = {'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']}")
         if 'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']:
           date_to_clear_datasets = homepage_cma_published_entry['fields']['dateToClearFeaturedDatasets']['en-US']
           print("DATE = ", homepage_cma_published_entry['fields']['dateToClearFeaturedDatasets']['en-US'])
@@ -271,6 +236,35 @@ def set_featured_dataset_id():
                         'metadata': homepage_cma_staging_entry['metadata']
                     }
                     update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
+        # we can update the table state independently for each environment since dev and prod have seperate DB's
+        cf_homepage_response = get_cda_client_entry(Config.CTF_HOMEPAGE_ID).fields()
+        limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
+        if (limited_ids_were_set):
+            table_state = get_featured_dataset_id_table_state()   
+
+        last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
+        featured_dataset_id = int(table_state["featured_dataset_id"])
+        try:
+            time_delta_in_hours = cf_homepage_response['time_delta']
+        except Exception:
+            time_delta_in_hours = 8
+        time_delta_in_days = float(time_delta_in_hours) / 24
+        now = datetime.now()
+        # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
+        if (now - last_used_time) < timedelta(days=time_delta_in_days) and featured_dataset_id != -1 and limited_ids_were_set is False:
+            return featured_dataset_id
+        # reset the list of ids if we have iterated through all of them already or if the limited available ids list was just set
+        if len(table_state["available_dataset_ids"]) == 0 or limited_ids_were_set is True:
+            if (len(table_state["limited_available_ids"]) > 0):
+                table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
+            else:
+                table_state["available_dataset_ids"] = get_all_ids()
+        available_dataset_ids_array = table_state["available_dataset_ids"]
+        random_index = random.randint(0, len(available_dataset_ids_array)-1)
+        table_state["featured_dataset_id"] = available_dataset_ids_array.pop(random_index)
+        table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
+        table_state["available_dataset_ids"] = available_dataset_ids_array
+        featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
     except Exception as e:
         print('Error while setting featured dataset id: ', e)
 

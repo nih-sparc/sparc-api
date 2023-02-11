@@ -56,6 +56,11 @@ def get_all_published_entries(content_type_id):
     response = requests.get(url)
     return response.json()['items']
 
+def get_cma_published_entry(id):
+    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries/{id}?access_token={Config.CTF_CMA_ACCESS_TOKEN}'
+    response = requests.get(url)
+    return response.json()
+
 def get_cma_entry(id):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}?access_token={Config.CTF_CMA_ACCESS_TOKEN}'
     response = requests.get(url=url)

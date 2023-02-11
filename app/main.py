@@ -209,7 +209,9 @@ def set_featured_dataset_id():
         homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
         if 'date_to_clear_featured_datasets' in homepage_cma_published_entry['fields']:
           date_to_clear_datasets = homepage_cma_published_entry['fields']['date_to_clear_featured_datasets']
+          print("DATE TO CLEAR SET")
           if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
+              print("CLEARING!")
               # Clear featured datasets/date and re-publish homepage
               if 'featuredDatasets' in homepage_cma_published_entry['fields']:
                   homepage_cma_published_entry['fields']['featuredDatasets']['en-US'] = []
@@ -219,6 +221,7 @@ def set_featured_dataset_id():
                   homepage_cma_staging_entry['fields']['featuredDatasets']['en-US'] = []
               if 'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']:
                   homepage_cma_staging_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
+              print("CLEARED!")    
               updated_published_state = {
                   'fields': homepage_cma_published_entry['fields'],
                   'metadata': homepage_cma_published_entry['metadata']

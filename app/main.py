@@ -211,7 +211,9 @@ def set_featured_dataset_id():
                 homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
                 if 'featuredDatasets' in homepage_cma_published_entry['fields']:
                     homepage_cma_published_entry['fields']['featuredDatasets']['en-US'] = []
+                    homepage_cma_original_entry['fields']['featuredDatasets']['en-US'] = []
                 homepage_cma_published_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
+                homepage_cma_original_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
                 updated_published_state = {
                     'fields': homepage_cma_published_entry['fields'],
                     'metadata': homepage_cma_published_entry['metadata']

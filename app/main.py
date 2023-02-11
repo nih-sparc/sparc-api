@@ -201,6 +201,7 @@ def set_featured_dataset_id():
     logging.info('Setting featured dataset id selector state info')
     table_state = get_featured_dataset_id_table_state()   
     try:
+        print("1")
         # we can update the table state independently for each environment since dev and prod have seperate DB's
         cf_homepage_response = get_cda_client_entry(Config.CTF_HOMEPAGE_ID).fields()
         limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
@@ -213,7 +214,7 @@ def set_featured_dataset_id():
             time_delta_in_hours = cf_homepage_response['time_delta']
         except Exception:
             time_delta_in_hours = 8
-        
+        print("2")
         time_delta_in_days = float(time_delta_in_hours) / 24
         now = datetime.now()
         # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
@@ -225,7 +226,7 @@ def set_featured_dataset_id():
                 table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
             else:
                 table_state["available_dataset_ids"] = get_all_ids()
-
+        print("3")
         available_dataset_ids_array = table_state["available_dataset_ids"]
         random_index = random.randint(0, len(available_dataset_ids_array)-1)
         table_state["featured_dataset_id"] = available_dataset_ids_array.pop(random_index)
@@ -236,6 +237,7 @@ def set_featured_dataset_id():
         # only use the prod environemnt to clear featured datasets data in contentful. If we handled updating contentful via both dev and prod,
         # we might run into concurrency issues when updating the homepage
         #if Config.DEPLOY_ENV == 'production':
+        print("4")
         homepage_cma_staging_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
         homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
         print(f"TRUE?FALSE = {'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']}")

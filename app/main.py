@@ -210,7 +210,7 @@ def set_featured_dataset_id():
                 # must use CMA to update contentful entries
                 homepage_cma_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
                 homepage_cma_entry['fields']['featuredDatasets']['en-US'] = []
-                homepage_cma_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = ""
+                homepage_cma_entry['fields']['dateToClearFeaturedDatasets'] = None
                 updated_state = {
                     'fields': homepage_cma_entry['fields'],
                     'metadata': homepage_cma_entry['metadata']

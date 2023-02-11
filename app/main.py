@@ -234,38 +234,38 @@ def set_featured_dataset_id():
         featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
         # only use the prod environemnt to clear featured datasets data in contentful. If we handled updating contentful via both dev and prod,
         # we might run into concurrency issues when updating the homepage
-        if Config.DEPLOY_ENV == 'production':
-            homepage_cma_staging_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
-            homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
-            if 'date_to_clear_featured_datasets' in homepage_cma_published_entry['fields']:
-              date_to_clear_datasets = homepage_cma_published_entry['fields']['date_to_clear_featured_datasets']
-              if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
-                  # Clear featured datasets/date and re-publish homepage
-                  if 'featuredDatasets' in homepage_cma_published_entry['fields']:
-                      homepage_cma_published_entry['fields']['featuredDatasets']['en-US'] = []
-                  homepage_cma_published_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
-                  # set the staging state as well so that staging reflects prod
-                  if 'featuredDatasets' in homepage_cma_staging_entry['fields']:
-                      homepage_cma_staging_entry['fields']['featuredDatasets']['en-US'] = []
-                  if 'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']:
-                      homepage_cma_staging_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
-                  updated_published_state = {
-                      'fields': homepage_cma_published_entry['fields'],
-                      'metadata': homepage_cma_published_entry['metadata']
-                  }
-                  updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_published_state).json()
-                  publish_entry(Config.CTF_HOMEPAGE_ID, updated_entry['sys']['version'])
-                  if 'publishedAt' in homepage_cma_staging_entry['sys']:
-                    # convert UTC time strings into datetime objects
-                    homepage_staging_updated_at = datetime.strptime(homepage_cma_staging_entry['sys']['updatedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    homepage_staging_published_at = datetime.strptime(homepage_cma_staging_entry['sys']['publishedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                    if (homepage_staging_updated_at - homepage_staging_published_at).total_seconds() > 0:
-                        # update back to original state if there were existing changes
-                        original_state = {
-                            'fields': homepage_cma_staging_entry['fields'],
-                            'metadata': homepage_cma_staging_entry['metadata']
-                        }
-                        update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
+        #if Config.DEPLOY_ENV == 'production':
+        homepage_cma_staging_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
+        homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
+        if 'date_to_clear_featured_datasets' in homepage_cma_published_entry['fields']:
+          date_to_clear_datasets = homepage_cma_published_entry['fields']['date_to_clear_featured_datasets']
+          if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
+              # Clear featured datasets/date and re-publish homepage
+              if 'featuredDatasets' in homepage_cma_published_entry['fields']:
+                  homepage_cma_published_entry['fields']['featuredDatasets']['en-US'] = []
+              homepage_cma_published_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
+              # set the staging state as well so that staging reflects prod
+              if 'featuredDatasets' in homepage_cma_staging_entry['fields']:
+                  homepage_cma_staging_entry['fields']['featuredDatasets']['en-US'] = []
+              if 'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']:
+                  homepage_cma_staging_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
+              updated_published_state = {
+                  'fields': homepage_cma_published_entry['fields'],
+                  'metadata': homepage_cma_published_entry['metadata']
+              }
+              updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_published_state).json()
+              publish_entry(Config.CTF_HOMEPAGE_ID, updated_entry['sys']['version'])
+              if 'publishedAt' in homepage_cma_staging_entry['sys']:
+                # convert UTC time strings into datetime objects
+                homepage_staging_updated_at = datetime.strptime(homepage_cma_staging_entry['sys']['updatedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                homepage_staging_published_at = datetime.strptime(homepage_cma_staging_entry['sys']['publishedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                if (homepage_staging_updated_at - homepage_staging_published_at).total_seconds() > 0:
+                    # update back to original state if there were existing changes
+                    original_state = {
+                        'fields': homepage_cma_staging_entry['fields'],
+                        'metadata': homepage_cma_staging_entry['metadata']
+                    }
+                    update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
     except Exception as e:
         print('Error while setting featured dataset id: ', e)
 

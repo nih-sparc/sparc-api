@@ -44,6 +44,7 @@ def get_funded_projects_count(client):
 
 def get_homepage_response(client):
   response = client.entry(Config.CTF_HOMEPAGE_ID)
+  print("RESPONSE = ", response)
   return response.fields()
 
 def get_all_entries(content_type_id):

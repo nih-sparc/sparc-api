@@ -208,7 +208,7 @@ def set_featured_dataset_id():
             date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
             if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
                 # Clear featured datasets and re-publish homepage (while retaining any existing changes that were already there but not yet published)
-                print("HOME PAGE RESPONSE = ", cf_homepage_response)
+                print("CLEAR")
             else:
                 print('DO NOT CLEAR!')
         else:

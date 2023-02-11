@@ -69,7 +69,7 @@ def set_featured_dataset_id(featuredDatasetIdSelectorTable):
             if (len(table_state["limited_available_ids"]) > 0):
                 table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
             else:
-                table_state["available_dataset_ids"] = get_all_ids()
+                table_state["available_dataset_ids"] = get_all_dataset_ids()
         available_dataset_ids_array = table_state["available_dataset_ids"]
         random_index = random.randint(0, len(available_dataset_ids_array)-1)
         table_state["featured_dataset_id"] = available_dataset_ids_array.pop(random_index)
@@ -93,9 +93,6 @@ def set_limited_dataset_ids(table, table_state, contentful_state):
         table_state["limited_available_ids"] = updated_limited_available_ids
         table.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
         return True
-
-def get_all_ids():
-    return get_all_dataset_ids()
 
 def get_featured_dataset_id_table_state(table):
     current_state = table.pullState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME)

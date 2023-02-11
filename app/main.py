@@ -206,8 +206,7 @@ def set_featured_dataset_id():
         if 'date_to_clear_featured_datasets' in cf_homepage_response:
             date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
             if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
-                # Clear featured datasets and re-publish homepage (while retaining any existing changes that were already there but not yet published)
-                # must use CMA to update contentful entries
+                # Clear featured datasets and re-publish homepage using CMA
                 homepage_cma_original_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
                 homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
                 if 'featuredDatasets' in homepage_cma_published_entry['fields']:
@@ -219,12 +218,17 @@ def set_featured_dataset_id():
                 }
                 updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_published_state).json()
                 publish_entry(Config.CTF_HOMEPAGE_ID, updated_entry['sys']['version'])
-                # update back to original state in case there were existing changes made
-                original_state = {
-                    'fields': homepage_cma_original_entry['fields'],
-                    'metadata': homepage_cma_original_entry['metadata']
-                }
-                update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
+                if 'publishedAt' in homepage_cma_original_entry['sys']:
+                    # convert UTC time strings into datetime objects
+                    homepage_originally_updated_at = datetime.strptime(homepage_cma_original_entry['sys']['updatedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    homepage_originally_published_at = datetime.strptime(homepage_cma_original_entry['sys']['publishedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                    if (homepage_originally_updated_at - homepage_originally_published_at).total_seconds() > 0:
+                        # update back to original state if there were existing changes made
+                        original_state = {
+                            'fields': homepage_cma_original_entry['fields'],
+                            'metadata': homepage_cma_original_entry['metadata']
+                        }
+                        update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
         limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
         if (limited_ids_were_set):
             table_state = get_featured_dataset_id_table_state()   

@@ -209,8 +209,9 @@ def set_featured_dataset_id():
                 # Clear featured datasets and re-publish homepage (while retaining any existing changes that were already there but not yet published)
                 # must use CMA to update contentful entries
                 homepage_cma_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
-                homepage_cma_entry['fields']['featuredDatasets']['en-US'] = []
-                homepage_cma_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = {}
+                if 'featuredDatasets' in homepage_cma_entry['fields']:
+                  homepage_cma_entry['fields']['featuredDatasets']['en-US'] = []
+                homepage_cma_entry['fields']['dateToClearFeaturedDatasets']['en-US'] = None
                 updated_state = {
                     'fields': homepage_cma_entry['fields'],
                     'metadata': homepage_cma_entry['metadata']

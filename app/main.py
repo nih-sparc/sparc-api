@@ -238,9 +238,10 @@ def set_featured_dataset_id():
         #if Config.DEPLOY_ENV == 'production':
         homepage_cma_staging_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
         homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
+        print(f"TRUE?FALSE = {'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']}")
         if 'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']:
           date_to_clear_datasets = homepage_cma_published_entry['fields']['dateToClearFeaturedDatasets']['en-US']
-          print("DATE = ", date_to_clear_datasets)
+          print("DATE = ", homepage_cma_published_entry['fields']['dateToClearFeaturedDatasets']['en-US'])
           if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
               # Clear featured datasets/date and re-publish homepage
               if 'featuredDatasets' in homepage_cma_published_entry['fields']:

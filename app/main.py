@@ -2,7 +2,7 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_homepage_response
+from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_cda_client_entry, get_cma_entry
 from scripts.update_contentful_entries import update_event_entries
 from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
@@ -201,14 +201,15 @@ def set_featured_dataset_id():
     logging.info('Setting featured dataset id selector state info')
     table_state = get_featured_dataset_id_table_state()   
     try:
-        cf_homepage_response = get_homepage_response(contentful)
+        cf_homepage_response = get_cda_client_entry(Config.CTF_HOMEPAGE_ID).fields()
         # clear the contentful featured dataset list if the date to clear is set so that we revert back to random selection of all datasets
         if 'date_to_clear_featured_datasets' in cf_homepage_response:
-            #date_to_clear_datasets = datetime.strptime(cf_homepage_response['date_to_clear_featured_datasets'], '%Y-%m-%d %H:%M:%S')
             date_to_clear_datasets = cf_homepage_response['date_to_clear_featured_datasets']
             if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
                 # Clear featured datasets and re-publish homepage (while retaining any existing changes that were already there but not yet published)
-                print("CLEAR")
+                # must use CMA to update contentful entries
+                homepage_cma_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
+                print("HOME PAGE = ", homepage_cma_entry)
             else:
                 print('DO NOT CLEAR!')
         else:

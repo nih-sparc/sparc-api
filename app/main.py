@@ -210,7 +210,7 @@ viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
 # Update the featured dataset id on deploy and then every hour
-featured_dataset_id_trigger = OrTrigger([DateTrigger(), IntervalTrigger(hours=2)])
+featured_dataset_id_trigger = OrTrigger([DateTrigger(), IntervalTrigger(hours=1)])
 featured_dataset_id_scheduler.add_job(lambda: set_featured_dataset_id(featuredDatasetIdSelectorTable), featured_dataset_id_trigger)
 
 def shutdown_schedulers():

@@ -235,6 +235,7 @@ def set_featured_dataset_id():
         # only use the prod environemnt to clear featured datasets data in contentful. If we handled updating contentful via both dev and prod,
         # we might run into concurrency issues when updating the homepage
         #if Config.DEPLOY_ENV == 'production':
+        print("UPDATING ENTRY!")
         homepage_cma_staging_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
         homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
         if 'date_to_clear_featured_datasets' in homepage_cma_published_entry['fields']:
@@ -255,6 +256,7 @@ def set_featured_dataset_id():
               }
               updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_published_state).json()
               publish_entry(Config.CTF_HOMEPAGE_ID, updated_entry['sys']['version'])
+              print("PUBLISHED ENTRY = ", updated_entry)
               if 'publishedAt' in homepage_cma_staging_entry['sys']:
                 # convert UTC time strings into datetime objects
                 homepage_staging_updated_at = datetime.strptime(homepage_cma_staging_entry['sys']['updatedAt'], '%Y-%m-%dT%H:%M:%S.%fZ')
@@ -266,6 +268,7 @@ def set_featured_dataset_id():
                         'metadata': homepage_cma_staging_entry['metadata']
                     }
                     update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
+                    print("UPDATED ENTRY BACK TO OG!")
     except Exception as e:
         print('Error while setting featured dataset id: ', e)
 

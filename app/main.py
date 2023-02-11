@@ -206,8 +206,11 @@ def set_featured_dataset_id():
         #if Config.DEPLOY_ENV == 'production':
         print("UPDATING ENTRY!")
         homepage_cma_staging_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
+        print("GOT STAGING ENTRY!")
         homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
+        print("GOT PROD ENTRY!")
         if 'date_to_clear_featured_datasets' in homepage_cma_published_entry['fields']:
+          print("GETTING DATE TO CLEAR!")
           date_to_clear_datasets = homepage_cma_published_entry['fields']['date_to_clear_featured_datasets']
           print("DATE TO CLEAR SET")
           if (date_to_clear_datasets - datetime.now()).total_seconds() <= 0:
@@ -242,6 +245,7 @@ def set_featured_dataset_id():
                     update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
                     print("UPDATED ENTRY BACK TO OG!")
         # we can update the table state independently for each environment since dev and prod have seperate DB's
+        print("DONT WITH CLEARING STUFF!")
         cf_homepage_response = get_cda_client_entry(Config.CTF_HOMEPAGE_ID).fields()
         limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
         if (limited_ids_were_set):

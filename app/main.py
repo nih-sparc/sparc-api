@@ -2,7 +2,7 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_cda_client_entry, get_cma_entry
+from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_cda_client_entry, get_cma_entry, update_entry_using_json_response, publish_entry
 from scripts.update_contentful_entries import update_event_entries
 from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
@@ -209,7 +209,14 @@ def set_featured_dataset_id():
                 # Clear featured datasets and re-publish homepage (while retaining any existing changes that were already there but not yet published)
                 # must use CMA to update contentful entries
                 homepage_cma_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
-                print("HOME PAGE = ", homepage_cma_entry)
+                homepage_cma_entry['fields']['featuredDatasets']['en-US'] = []
+                updated_state = {
+                    'fields': homepage_cma_entry['fields'],
+                    'metadata': homepage_cma_entry['metadata']
+                }
+                updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_state).json()
+                publish_entry(Config.CTF_HOMEPAGE_ID, updated_entry['sys']['version'])
+                print(f"PUBLISHED = {updated_entry}")
             else:
                 print('DO NOT CLEAR!')
         else:

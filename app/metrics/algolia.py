@@ -21,7 +21,8 @@ def get_dataset_count(client):
     res = index.search("")
     return res["nbHits"]
 
-def get_all_dataset_ids(client):
+def get_all_dataset_ids():
+  client = init_algolia_client()
   index = client.init_index(INDEX)
   object_ids = []
   for record in index.browse_objects():

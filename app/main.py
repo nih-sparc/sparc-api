@@ -2,20 +2,23 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_homepage_response
+from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count
 from scripts.update_contentful_entries import update_event_entries
-from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids
+from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
+from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
 
 import botocore
 import boto3
 import json
 import logging
 import requests
-import random
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.combining import OrTrigger
+from apscheduler.triggers.date import DateTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
 from flask import Flask, abort, jsonify, request
@@ -137,6 +140,11 @@ def connect_to_pennsieve():
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
 featured_dataset_id_scheduler = BackgroundScheduler()
+update_contentful_event_entries_scheduler = BackgroundScheduler()
+
+if not featured_dataset_id_scheduler.running:
+    logging.info('Starting scheduler for featured dataset id acquisition')
+    featured_dataset_id_scheduler.start()
 
 # Run monthly stats email schedule on production
 if Config.DEPLOY_ENV == 'production':
@@ -146,12 +154,11 @@ if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
 
 # Only need to run the update contentful entries scheduler on one environment, so dev was chosen to keep prod more responsive
-if Config.DEPLOY_ENV == 'development':
-    update_contentful_event_entries_scheduler = BackgroundScheduler()
+if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
     if not update_contentful_event_entries_scheduler.running:
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()
-    # Update the contentful entries on deploy and then daily at 2 AM EST
+    # Update the contentful entries daily at 2 AM EST
     update_contentful_event_entries_scheduler.add_job(update_event_entries, 'cron', hour=2, timezone='US/Eastern')
 
 @app.before_first_request
@@ -196,87 +203,15 @@ def get_metrics():
         logging.info('Starting scheduler for metrics acquisition')
         metrics_scheduler.start()
 
-@app.before_first_request
-def set_featured_dataset_id():
-    logging.info('Setting featured dataset id selector state info')
-    table_state = get_featured_dataset_id_table_state()   
-    try:
-        cf_homepage_response = get_homepage_response(contentful)
-        limited_ids_were_set = set_limited_dataset_ids(table_state, cf_homepage_response)
-        if (limited_ids_were_set):
-            table_state = get_featured_dataset_id_table_state()   
-
-        last_used_time = datetime.strptime(table_state["last_used_time"], '%Y-%m-%d %H:%M:%S.%f')
-        featured_dataset_id = int(table_state["featured_dataset_id"])
-        try:
-            time_delta_in_hours = cf_homepage_response['time_delta']
-        except Exception:
-            time_delta_in_hours = 8
-        
-        time_delta_in_days = float(time_delta_in_hours) / 24
-        now = datetime.now()
-        # If running in a window of time that is shorter than the time delta set in contentful and the limited available ids was not just set then return the same id, otherwise update the id
-        if (now - last_used_time) < timedelta(days=time_delta_in_days) and featured_dataset_id != -1 and limited_ids_were_set is False:
-            return featured_dataset_id
-        # reset the list of ids if we have iterated through all of them already or if the limited available ids list was just set
-        if len(table_state["available_dataset_ids"]) == 0 or limited_ids_were_set is True:
-            if (len(table_state["limited_available_ids"]) > 0):
-                table_state["available_dataset_ids"] = table_state["limited_available_ids"].copy()
-            else:
-                table_state["available_dataset_ids"] = get_all_ids()
-
-        available_dataset_ids_array = table_state["available_dataset_ids"]
-        random_index = random.randint(0, len(available_dataset_ids_array)-1)
-        table_state["featured_dataset_id"] = available_dataset_ids_array.pop(random_index)
-        table_state["last_used_time"] = now.strftime('%Y-%m-%d %H:%M:%S.%f')
-        table_state["available_dataset_ids"] = available_dataset_ids_array
-        featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
-    except Exception as e:
-        print('Error while setting featured dataset id: ', e)
-
-    if not featured_dataset_id_scheduler.running:
-        logging.info('Starting scheduler for featured dataset id acquisition')
-        featured_dataset_id_scheduler.start()
-
-def set_limited_dataset_ids(table_state, contentful_state):
-    persisted_limited_available_ids = table_state["limited_available_ids"]
-    try:
-        updated_limited_available_ids = contentful_state['featured_datasets']
-    except Exception:
-        updated_limited_available_ids = []
-
-    # If setting to the same values (regardless of order and duplicates) then do nothing
-    if (set(persisted_limited_available_ids) == set(updated_limited_available_ids)):
-        return False
-    else:
-        table_state["limited_available_ids"] = updated_limited_available_ids
-        featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(table_state), True)
-        return True
-
-def get_all_ids():
-    return get_all_dataset_ids(algolia)
-
-def get_featured_dataset_id_table_state():
-    current_state = featuredDatasetIdSelectorTable.pullState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME)
-    if current_state is None:
-        default_data = {
-          'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
-          'available_dataset_ids': [],
-          # limited_available_ids are used if a subset of ids is to be used for featured dataset id selection as opposed to all id's
-          'limited_available_ids': [],
-          'featured_dataset_id': -1,
-        }
-        current_state = featuredDatasetIdSelectorTable.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
-    return json.loads(current_state)
-
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 
 # Gathers all the required metrics, once every three hours
 metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 
-# Sets the featured dataset id, once every 2 hours
-featured_dataset_id_scheduler.add_job(func=set_featured_dataset_id, trigger='interval', hours=2)
+# Update the featured dataset id on deploy and then every hour
+featured_dataset_id_trigger = OrTrigger([DateTrigger(), IntervalTrigger(hours=1)])
+featured_dataset_id_scheduler.add_job(lambda: set_featured_dataset_id(featuredDatasetIdSelectorTable), featured_dataset_id_trigger)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -288,6 +223,9 @@ def shutdown_schedulers():
     logging.info('Stopping scheduler for updating contentful entries')
     if update_contentful_event_entries_scheduler.running:
         update_contentful_event_entries_scheduler.shutdown()
+    logging.info('Stopping scheduler for updating featured dataset id')
+    if featured_dataset_id_scheduler.running:
+        featured_dataset_id_scheduler.shutdown()
 
 
 atexit.register(shutdown_schedulers)
@@ -830,7 +768,7 @@ def datasets_by_project_id(project_id):
 
 @app.route("/get_featured_dataset", methods=["GET"])
 def get_featured_dataset():
-    featured_dataset_id = get_featured_dataset_id_table_state()["featured_dataset_id"]
+    featured_dataset_id = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)["featured_dataset_id"]
     if featured_dataset_id == -1:
         # In case there was an error while setting the id, just return a default dataset so the homepage does not break
         default_id = 32

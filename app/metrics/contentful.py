@@ -42,9 +42,9 @@ def get_funded_projects_count(client):
     })
     return response.total
 
-def get_homepage_response(client):
-  response = client.entry(Config.CTF_HOMEPAGE_ID)
-  return response.fields()
+def get_cda_client_entry(id):
+  client = init_cf_cda_client()
+  return client.entry(id)
 
 def get_all_entries(content_type_id):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
@@ -56,7 +56,12 @@ def get_all_published_entries(content_type_id):
     response = requests.get(url)
     return response.json()['items']
 
-def get_entry(id):
+def get_cma_published_entry(id):
+    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries/{id}?access_token={Config.CTF_CMA_ACCESS_TOKEN}'
+    response = requests.get(url)
+    return response.json()
+
+def get_cma_entry(id):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}?access_token={Config.CTF_CMA_ACCESS_TOKEN}'
     response = requests.get(url=url)
     return response.json()
@@ -64,7 +69,7 @@ def get_entry(id):
 # Since get_all_published_entries has to use direct HTTP endpoint its response is in a different format than when using the client to get_all_entries
 # Therefore, in order to update an entry with that kind of response we must use this method instead of the client SDK update method
 def update_entry_using_json_response(content_type, id, data):
-    version = get_entry(id)['sys']['version']
+    version = get_cma_entry(id)['sys']['version']
 
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}'
     hed = {

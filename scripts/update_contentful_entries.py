@@ -46,7 +46,7 @@ def update_event_entries():
                     'fields': published_fields_state,
                     'metadata': published_event_id_to_fields_mapping[entry_id]['metadata']
                 }
-                updated_entry = update_entry_using_json_response('event', entry_id, updated_state).json()
+                updated_entry = update_entry_using_json_response('event', entry_id, updated_state)
                 publish_entry(entry_id, updated_entry['sys']['version'])
             # after publishing, update it again with the pre-existing changes that were already there. Or if it is a draft then just update it in order to set the sort order
             if entry_had_existing_changes or not entry_is_published:
@@ -54,4 +54,4 @@ def update_event_entries():
                     'fields': original_fields_dict,
                     'metadata': original_metadata_dict
                 }
-                update_entry_using_json_response('event', entry_id, original_state).json()
+                update_entry_using_json_response('event', entry_id, original_state)

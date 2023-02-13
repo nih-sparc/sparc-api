@@ -9,9 +9,9 @@ import random
 
 def set_featured_dataset_id(featuredDatasetIdSelectorTable):
     try:
-        # only use the prod environment to clear featured datasets data in contentful. If we handled updating contentful via both dev and prod,
+        # only use the dev server to clear featured datasets data in contentful. If we handled updating contentful via both dev and prod,
         # we might run into concurrency issues when updating the homepage
-        if Config.DEPLOY_ENV == 'production':
+        if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
             homepage_cma_staging_entry = get_cma_entry(Config.CTF_HOMEPAGE_ID)
             homepage_cma_published_entry = get_cma_published_entry(Config.CTF_HOMEPAGE_ID)
             if 'dateToClearFeaturedDatasets' in homepage_cma_published_entry['fields']:

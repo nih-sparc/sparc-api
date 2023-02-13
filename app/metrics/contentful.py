@@ -80,11 +80,12 @@ def update_entry_using_json_response(content_type, id, data):
         'X-Contentful-Version': str(version)
     }
     
-    return requests.put(
+    response = requests.put(
         headers=hed,
         url=url,
         json=data
     )
+    return response.json()
 
 def publish_entry(id, version):
     url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries/{id}/published'
@@ -93,7 +94,8 @@ def publish_entry(id, version):
         'X-Contentful-Version': str(version)
     }
     
-    return requests.put(
+    response = requests.put(
         headers=hed,
         url=url
     )
+    return response.json()

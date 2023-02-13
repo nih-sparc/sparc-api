@@ -8,8 +8,6 @@ import logging
 import random
 
 def set_featured_dataset_id(featuredDatasetIdSelectorTable):
-    logging.info('Setting featured dataset id selector state info')
-    table_state = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)   
     try:
         # only use the prod environment to clear featured datasets data in contentful. If we handled updating contentful via both dev and prod,
         # we might run into concurrency issues when updating the homepage
@@ -34,7 +32,7 @@ def set_featured_dataset_id(featuredDatasetIdSelectorTable):
                           'fields': homepage_cma_published_entry['fields'],
                           'metadata': homepage_cma_published_entry['metadata']
                       }
-                      updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_published_state).json()
+                      updated_entry = update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, updated_published_state)
                       publish_entry(Config.CTF_HOMEPAGE_ID, updated_entry['sys']['version'])
                       if 'publishedAt' in homepage_cma_staging_entry['sys']:
                         # convert UTC time strings into datetime objects
@@ -46,8 +44,12 @@ def set_featured_dataset_id(featuredDatasetIdSelectorTable):
                                 'fields': homepage_cma_staging_entry['fields'],
                                 'metadata': homepage_cma_staging_entry['metadata']
                             }
-                            update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state).json()
+                            update_entry_using_json_response('homepage', Config.CTF_HOMEPAGE_ID, original_state)
         # we can update the table state independently for each environment since dev and prod have seperate DB's
+        logging.info('Setting featured dataset id selector state info')
+        if featuredDatasetIdSelectorTable is None:
+            return
+        table_state = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)   
         cf_homepage_response = get_cda_client_entry(Config.CTF_HOMEPAGE_ID).fields()
         limited_ids_were_set = set_limited_dataset_ids(featuredDatasetIdSelectorTable, table_state, cf_homepage_response)
         if (limited_ids_were_set):
@@ -95,14 +97,17 @@ def set_limited_dataset_ids(table, table_state, contentful_state):
         return True
 
 def get_featured_dataset_id_table_state(table):
+    default_data = {
+      'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
+      'available_dataset_ids': [],
+      # limited_available_ids are used if a subset of ids is to be used for featured dataset id selection as opposed to all id's
+      'limited_available_ids': [],
+      'featured_dataset_id': -1,
+    }
+    if table is None:
+        return default_data
+    
     current_state = table.pullState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME)
     if current_state is None:
-        default_data = {
-          'last_used_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
-          'available_dataset_ids': [],
-          # limited_available_ids are used if a subset of ids is to be used for featured dataset id selection as opposed to all id's
-          'limited_available_ids': [],
-          'featured_dataset_id': -1,
-        }
         current_state = table.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
     return json.loads(current_state)

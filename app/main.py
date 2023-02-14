@@ -250,10 +250,10 @@ def contact():
 
     return json.dumps({"status": "sent"})
 
-def create_s3_presigned_url(key, content_type, expiration):
+def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
     response = s3.generate_presigned_url(
         "get_object",
-        Params={"Bucket": Config.S3_BUCKET_NAME, "Key": key, "RequestPayer": "requester", "ResponseContentType": content_type},
+        Params={"Bucket": s3BucketName, "Key": key, "RequestPayer": "requester", "ResponseContentType": content_type},
         ExpiresIn=expiration,
     )
 
@@ -264,9 +264,10 @@ def create_s3_presigned_url(key, content_type, expiration):
 @app.route("/download")
 def create_presigned_url(expiration=3600):
     key = request.args.get("key")
+    s3BucketName = request.args.get("s3BucketName") or Config.S3_BUCKET_NAME
     content_type = request.args.get("contentType") or "application/octet-stream"
 
-    return create_s3_presigned_url(key, content_type, expiration)
+    return create_s3_presigned_url(s3BucketName, key, content_type, expiration)
 
 
 @app.route("/thumbnail/neurolucida")

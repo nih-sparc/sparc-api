@@ -63,7 +63,7 @@ class Config(object):
     OSPARC_API_KEY = os.environ.get("OSPARC_API_KEY")
     OSPARC_API_SECRET = os.environ.get("OSPARC_API_SECRET")
     DIRECT_DOWNLOAD_LIMIT = int(os.environ.get("DIRECT_DOWNLOAD_LIMIT", "20971520"))
-    # S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"
+    S3_BUCKET_NAME = "pennsieve-prod-discover-publish-use1"
     NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")
     SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://scicrunch.org/api/1/elastic/Interlex_pr")
     SCI_CRUNCH_SCIGRAPH_HOST = os.environ.get("SCI_CRUNCH_SCIGRAPH_HOST", "https://scicrunch.org/api/1/sparc-scigraph")

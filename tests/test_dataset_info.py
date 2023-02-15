@@ -177,8 +177,8 @@ def test_doi_plot_annotation_dataset_search_version_1(client):
 def test_doi_plot_annotation_dataset_search_version_2(client):
     # Test case for physiological data visualisation
     # This test is bound to fail at time due to the changing DOI.
-    # This DOI belongs to dataset 141
-    doi = "10.26275/9qws-u3px"
+    # This DOI belongs to dataset 212
+    doi = "10.26275/lok5-wje6"
     start = timer()
     r = client.get('/dataset_info/using_doi', query_string={'doi': doi})
     end = timer()
@@ -188,15 +188,14 @@ def test_doi_plot_annotation_dataset_search_version_2(client):
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    assert "Test case for physiological data visualisation" == result['name']
+    assert "Sympathetic nerve stimulation of mouse and rabbit hearts" == result['name']
     # print_search_result(result)
     assert PLOT_FILE in result
 
 
 def test_title_plot_annotation_dataset_search(client):
     print()
-    title = "Test case for physiological data visualisation"
-    # title = "High resolution manometry"
+    title = "Sympathetic nerve stimulation of mouse and rabbit hearts"
     start = timer()
     r = client.get('/dataset_info/using_title', query_string={'title': title})
     end = timer()
@@ -205,7 +204,7 @@ def test_title_plot_annotation_dataset_search(client):
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    assert "Test case for physiological data visualisation" == result['name']
+    assert "Sympathetic nerve stimulation of mouse and rabbit hearts" == result['name']
 
     assert PLOT_FILE in result
     assert len(result[PLOT_FILE])
@@ -223,9 +222,9 @@ def test_title_plot_annotation_dataset_search(client):
 
 
 def test_object_identifier_dataset_search(client):
-    #Dataset 141
+    #Dataset 212
     print()
-    identifier = "package:ea813c23-e110-46ba-815f-d134b955a8b5"
+    identifier = "package:b5f9e5d7-7e09-4855-a923-a966454967d7"
     start = timer()
     r = client.get('/dataset_info/using_object_identifier', query_string={'identifier': identifier})
     end = timer()
@@ -234,7 +233,7 @@ def test_object_identifier_dataset_search(client):
     assert 'result' in response
     assert len(response['result']) == 1
     result = response['result'][0]
-    assert "Test case for physiological data visualisation" == result['name']
+    assert "Sympathetic nerve stimulation of mouse and rabbit hearts" == result['name']
 
     assert PLOT_FILE in result
     assert len(result[PLOT_FILE])

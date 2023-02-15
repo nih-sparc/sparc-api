@@ -264,7 +264,7 @@ def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
 @app.route("/download")
 def create_presigned_url(expiration=3600):
     key = request.args.get("key")
-    s3BucketName = request.args.get("s3BucketName")
+    s3BucketName = request.args.get("s3BucketName") or Config.S3_BUCKET_NAME
     content_type = request.args.get("contentType") or "application/octet-stream"
 
     return create_s3_presigned_url(s3BucketName, key, content_type, expiration)
@@ -295,10 +295,10 @@ def extract_thumbnail_from_xml_file():
     query_args = request.args
     if 'path' not in query_args:
         return abort(400, description=f"Query arguments are not valid.")
-    if 's3BucketName' not in query_args:
-        return abort(400, description=f"Query arguments must include 's3BucketName'.")
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
 
-    s3BucketName = query_args.get("s3BucketName")
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
     path = query_args['path']
     resource = None
     start_tag_found = False
@@ -354,10 +354,10 @@ def extract_thumbnail_from_xml_file():
 def url_exists(path):
 
     query_args = request.args
-    if 's3BucketName' not in query_args:
-        return abort(400, description=f"Query arguments must include 's3BucketName'.")
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
 
-    s3BucketName = query_args.get("s3BucketName")
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
 
     try:
         head_response = s3.head_object(
@@ -403,10 +403,10 @@ def get_discover_path():
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
     query_args = request.args
-    if 's3BucketName' not in query_args:
-        return abort(400, description=f"Query arguments must include 's3BucketName'.")
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
 
-    s3BucketName = query_args.get("s3BucketName")
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
 
     try:
         head_response = s3.head_object(
@@ -539,12 +539,12 @@ def get_dataset_info_pennsieve_identifier():
 @app.route("/segmentation_info/")
 def get_segmentation_info_from_file():
     query_args = request.args
-    if 's3BucketName' not in query_args:
-        return abort(400, description=f"Query arguments must include 's3BucketName'.")
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
     if 'dataset_path' not in query_args:
         return abort(400, description=f"Query arguments must include 'dataset_path'.")
 
-    s3BucketName = query_args.get("s3BucketName")
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
     dataset_path = query_args.get('dataset_path')
     try:
         response = s3.get_object(
@@ -1230,10 +1230,10 @@ def get_related_terms(query):
 def simulation_ui_file(identifier):
 
     query_args = request.args
-    if 's3BucketName' not in query_args:
-        return abort(400, description=f"Query arguments must include 's3BucketName'.")
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
 
-    s3BucketName = query_args.get("s3BucketName")
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
 
     results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
     results_json = json.loads(results.data)

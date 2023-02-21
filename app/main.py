@@ -13,6 +13,8 @@ import botocore
 import boto3
 import json
 import logging
+import openpyxl
+import pathlib
 import requests
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -24,6 +26,7 @@ from datetime import datetime, timedelta
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
+from io import BytesIO
 from pennsieve import Pennsieve
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
@@ -670,7 +673,7 @@ def inject_template_data(resp):
 
     try:
         response = s3.get_object(
-            Bucket="pennsieve-prod-discover-publish-use1",
+            Bucket=Config.S3_BUCKET_NAME,
             Key="{}/{}/files/template.json".format(id_, version),
             RequestPayer="requester",
         )
@@ -683,7 +686,7 @@ def inject_template_data(resp):
             )
         try:
             response = s3.get_object(
-                Bucket="pennsieve-prod-discover-publish-use1",
+                Bucket=Config.S3_BUCKET_NAME,
                 Key="{}/{}/packages/template.json".format(id_, version),
                 RequestPayer="requester",
             )
@@ -736,6 +739,113 @@ def sim_dataset(id_):
 def get_osparc_data():
     return jsonify(osparc_data)
 
+
+@app.route("/get_video_thumbnails", methods=["POST"])
+def get_video_thumbnails():
+
+    req = request.get_json()
+
+    if req and all(param in req for param in ['paths', 'id', 'version']) and type(req["paths"] is list):
+
+        # Determine distinct parent paths for listing their contents
+        different_parent_paths = set()
+
+        for path in req.get('paths'):
+
+            parent = pathlib.Path(path).parent
+            different_parent_paths.add("files" / parent)
+
+        ret = {}
+        
+        for parent_path in different_parent_paths:
+
+            # List folder contents
+            folder_req = requests.get("{}/datasets/{}/versions/{}/files/browse".format(Config.DISCOVER_API_HOST, req.get("id"), req.get("version")),
+                params={
+                    "path": parent_path
+                }
+            )
+
+            json = folder_req.json()
+
+            parent_path_without_prefix = pathlib.Path(*parent_path.parts[1:])
+
+            def is_manifest(path):
+                pathlib_path = pathlib.Path(path)
+                return pathlib_path.name == 'manifest.xlsx'
+
+            # If there is a manifest.xlsx (excel?!)
+            if any(is_manifest(file.get("path")) for file in json.get("files")):
+
+                # Get the manifest
+                try:
+                    s3_resp = s3.get_object(
+                        Bucket=Config.S3_BUCKET_NAME,
+                        Key="{}/{}/{}/manifest.xlsx".format(req.get("id"), req.get("version"), parent_path),
+                        RequestPayer="requester",
+                    )
+
+                except ClientError as ex:
+                    logging.error("Could not download manifest file in {}".format(parent_path))
+                    continue # Continue to next parent folder
+
+                manifest_data = s3_resp["Body"].read()
+
+                manifest_wb = openpyxl.load_workbook(filename=BytesIO(manifest_data))
+                worksheet = manifest_wb.worksheets[0]
+
+                column_indexes = {}
+
+                # Save relevant column indexes
+                for col in worksheet.iter_cols(max_row=1):
+                    if col[0].value == 'filename':
+                        column_indexes['filename'] = col[0].column
+                    elif col[0].value == 'isSourceOf':
+                        column_indexes['isSourceOf'] = col[0].column
+                    elif col[0].value == 'additional types':
+                        column_indexes['additional types'] = col[0].column
+
+                if all(key in column_indexes for key in ['filename', 'isSourceOf', 'additional types']):
+
+                    for row in worksheet.iter_rows(min_col=column_indexes['filename'], max_col=column_indexes['filename'], min_row=2):
+
+                        file = parent_path_without_prefix / row[0].value
+
+                        if str(file) in req.get("paths"):
+                            # File was requested
+                            source_of = worksheet.cell(row=row[0].row, column=column_indexes['isSourceOf']).value
+
+                            for row2 in worksheet.iter_rows(min_col=column_indexes['filename'], max_col=column_indexes['filename'], min_row=2):
+                                # Try to locate source_of file (potential thumbnail)
+                                if row2[0].value == source_of and 'x.vnd.abi.thumbnail' in worksheet.cell(row=row2[0].row, column=column_indexes['additional types']).value:
+
+                                    ret[str(file)] = parent_path_without_prefix / row2[0].value
+
+                else:
+                    logging.error("Manifest file in {} lacks at least one required column".format(parent_path))
+                    continue
+
+        try:
+            s3_resp = s3.get_object(
+                Bucket=Config.S3_BUCKET_NAME,
+                Key="{}/{}/files/derivative/pig_heart_Layout1_thumbnail.jpeg".format(102, 5),
+                RequestPayer="requester",
+            )
+        except ClientError as ex:
+            logging.error(ex, "Could not download image file")
+            abort(500)
+
+        image_data = s3_resp["Body"].read()
+
+        im = Image.open(BytesIO(image_data))
+
+        for path in req.get("paths"):
+            ret[path] = img_to_base64_str(im)
+
+        return jsonify(ret)
+
+    return abort(400)
+        
 
 @app.route("/project/<project_id>", methods=["GET"])
 def datasets_by_project_id(project_id):

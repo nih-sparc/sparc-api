@@ -3,7 +3,7 @@ import base64
 
 from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count
-from scripts.update_contentful_entries import update_event_entries
+from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
@@ -159,7 +159,7 @@ if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
         logging.info('Starting scheduler for updating contentful event entries')
         update_contentful_event_entries_scheduler.start()
     # Update the contentful entries daily at 2 AM EST
-    update_contentful_event_entries_scheduler.add_job(update_event_entries, 'cron', hour=2, timezone='US/Eastern')
+    update_contentful_event_entries_scheduler.add_job(update_all_events_sort_order, 'cron', hour=2, timezone='US/Eastern')
 
 @app.before_first_request
 def get_osparc_file_viewers():
@@ -1310,3 +1310,19 @@ def search_readme(query):
 @app.route("/metrics", methods=["GET"])
 def metrics():
     return usage_metrics
+
+# Callback endpoint for contentful event created webhook
+@app.route("/event_created", methods=["POST"])
+def event_created():
+    # the webhook secret key is configured with the same value as the cda access token. If the cda access token is updated then we must update this as well.
+    if request.headers.get('event_created_secret_key') != Config.CTF_CDA_ACCESS_TOKEN:
+        abort(403, description="Invalid secret key")
+    else:
+        event = request.get_json()
+        if event:
+            try:
+                update_event_sort_order(event)
+            except:
+                abort(400, description="Invalid event data")
+        else:
+            abort(400, description="Missing event data")

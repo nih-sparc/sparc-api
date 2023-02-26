@@ -1,7 +1,22 @@
 from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response, publish_entry
 from datetime import datetime, timezone
 
-def update_event_entries():
+# The only time we update an individual event entry is when it gets created so we do not have to worry about a published version 
+def update_event_sort_order(event):
+    event_entry_id = event['sys']['id']
+    event_entry_fields = event['fields']
+    event_entry_metadata = event['metadata']
+    if 'startDate' in event_entry_fields and 'upcomingSortOrder' in event_entry_fields:
+        start_date = event_entry_fields['startDate']['en-US']
+        upcoming_sort_order = calculate_sort_order(start_date)
+        event_entry_fields['upcomingSortOrder']['en-US'] = upcoming_sort_order
+        event_state = {
+            'fields': event_entry_fields,
+            'metadata': event_entry_metadata
+        }
+        update_entry_using_json_response('event', event_entry_id, event_state)
+
+def update_all_events_sort_order():
     all_event_entries = get_all_entries("event")
     all_published_event_entries = get_all_published_entries("event")
     # Create dict with id's as the key so we do not have to iterate through each time we publish an entry
@@ -25,18 +40,7 @@ def update_event_entries():
                     entry_had_existing_changes = True
             
             start_date = original_fields_dict['startDate']['en-US']
-
-            # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
-            start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
-            time_from_event_in_seconds = (start_date_datetime - datetime.now()).total_seconds()
-            time_from_event_in_days = time_from_event_in_seconds / 86400
-            # in order to maintain the correct event sorting for upcoming (closet first, followed by closest in the future, followed by closest in the past),
-            # we cannot simply keep track of the time from the event. Instead we take the inverse of the dates in the future so that they are less than the nearest future dates.
-            upcoming_sort_order = 1
-            if time_from_event_in_days > 0:
-                upcoming_sort_order = 1/time_from_event_in_days
-            if time_from_event_in_days < 0:
-                upcoming_sort_order = time_from_event_in_days
+            upcoming_sort_order = calculate_sort_order(start_date)
             original_fields_dict['upcomingSortOrder']['en-US'] = upcoming_sort_order
             if entry_is_published:
                 # if entry has changes that are not yet published then we want to publish only the already published state
@@ -55,3 +59,18 @@ def update_event_entries():
                     'metadata': original_metadata_dict
                 }
                 update_entry_using_json_response('event', entry_id, original_state)
+
+def calculate_sort_order(start_date):
+    # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
+    start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
+    time_from_event_in_seconds = (start_date_datetime - datetime.now()).total_seconds()
+    time_from_event_in_days = time_from_event_in_seconds / 86400
+    # in order to maintain the correct event sorting for upcoming (closet first, followed by closest in the future, followed by closest in the past),
+    # we cannot simply keep track of the time from the event. Instead we take the inverse of the dates in the future so that they are less than the nearest future dates.
+    upcoming_sort_order = 1
+    if time_from_event_in_days > 0:
+        upcoming_sort_order = 1/time_from_event_in_days
+    if time_from_event_in_days < 0:
+        upcoming_sort_order = time_from_event_in_days
+
+    return upcoming_sort_order

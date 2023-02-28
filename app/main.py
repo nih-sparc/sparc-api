@@ -1322,7 +1322,7 @@ def event_updated():
         event = request.get_json()
         if event:
             try:
-                update_event_sort_order(event)
+                return update_event_sort_order(event)
             except:
                 abort(400, description=f'Invalid event data: {event}')
         else:

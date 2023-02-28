@@ -1,7 +1,6 @@
 from app.metrics.contentful import get_all_entries, get_all_published_entries, update_entry_using_json_response, publish_entry
 from datetime import datetime, timezone
 
-# The only time we update an individual event entry is when it gets created so we do not have to worry about a published version 
 def update_event_sort_order(event):
     event_entry_id = event['sys']['id']
     event_entry_fields = event['fields']

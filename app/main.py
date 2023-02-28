@@ -1311,18 +1311,19 @@ def search_readme(query):
 def metrics():
     return usage_metrics
 
-# Callback endpoint for contentful event created webhook
-@app.route("/event_created", methods=["POST"])
-def event_created():
+# Callback endpoint for contentful event updated webhook that gets triggered when an event is updated in Contentful
+@app.route("/event_updated", methods=["POST"])
+def event_updated():
     # the webhook secret key is configured with the same value as the cda access token. If the cda access token is updated then we must update this as well.
-    if request.headers.get('event_created_secret_key') != Config.CTF_CDA_ACCESS_TOKEN:
-        abort(403, description="Invalid secret key")
+    secret_key = request.headers.get('event_updated_secret_key')
+    if secret_key != Config.CTF_CDA_ACCESS_TOKEN:
+        abort(403, description=f'Invalid secret key: {secret_key}')
     else:
         event = request.get_json()
         if event:
             try:
                 update_event_sort_order(event)
             except:
-                abort(400, description="Invalid event data")
+                abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")

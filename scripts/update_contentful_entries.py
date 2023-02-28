@@ -13,7 +13,9 @@ def update_event_sort_order(event):
             'fields': event_entry_fields,
             'metadata': event_entry_metadata
         }
-        update_entry_using_json_response('event', event_entry_id, event_state)
+        return update_entry_using_json_response('event', event_entry_id, event_state)
+    else:
+        return event
 
 def update_all_events_sort_order():
     all_event_entries = get_all_entries("event")

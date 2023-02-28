@@ -1324,6 +1324,6 @@ def event_updated():
             try:
                 update_event_sort_order(event)
             except:
-                abort(400, description="Invalid event data")
+                abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")

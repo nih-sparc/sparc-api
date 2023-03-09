@@ -121,6 +121,8 @@ class MonthlyStats(object):
 
             # filter to only have datsets with downloads
             downloadInfo = [d for d in download_stats if dataset['id'] == d['datasetId']]
+
+            downloadInfo = self.add_dataset_name_to_download_info(dataset, downloadInfo)
             for contributor in dataset['contributors']:
                 orcid_id = contributor['orcid']
 
@@ -132,6 +134,12 @@ class MonthlyStats(object):
                     users[orcid_id]['datasets'] += downloadInfo
 
         return users
+
+    def add_dataset_name_to_download_info(self, dataset, downloadInfo):
+        for i in range(0, len(downloadInfo)):
+            downloadInfo[i]['name'] = dataset['name']
+        return downloadInfo
+
 
     # send email using sendgrid
     def send_email(self, email_address, email_body):

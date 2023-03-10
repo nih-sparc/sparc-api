@@ -295,7 +295,10 @@ def extract_thumbnail_from_xml_file():
     query_args = request.args
     if 'path' not in query_args:
         return abort(400, description=f"Query arguments are not valid.")
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
 
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
     path = query_args['path']
     resource = None
     start_tag_found = False
@@ -306,7 +309,7 @@ def extract_thumbnail_from_xml_file():
     while not start_tag_found or not end_tag_found:
         try:
             response = s3.get_object(
-                Bucket=Config.S3_BUCKET_NAME,
+                Bucket=s3BucketName,
                 Key=path,
                 Range=f"bytes={start_byte}-{end_byte}",
                 RequestPayer="requester"
@@ -349,9 +352,16 @@ def extract_thumbnail_from_xml_file():
 
 @app.route("/exists/<path:path>")
 def url_exists(path):
+
+    query_args = request.args
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
+
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
+
     try:
         head_response = s3.head_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=path,
             RequestPayer="requester"
         )
@@ -392,9 +402,15 @@ def get_discover_path():
 # other required files.
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path):
+    query_args = request.args
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
+
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
+
     try:
         head_response = s3.head_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=path,
             RequestPayer="requester"
         )
@@ -408,7 +424,7 @@ def direct_download_url(path):
         return abort(413, description=f"File too big to download: {content_length}")
 
     response = s3.get_object(
-        Bucket=Config.S3_BUCKET_NAME,
+        Bucket=s3BucketName,
         Key=path,
         RequestPayer="requester"
     )
@@ -522,10 +538,17 @@ def get_dataset_info_pennsieve_identifier():
 
 @app.route("/segmentation_info/")
 def get_segmentation_info_from_file():
-    dataset_path = request.args.get('dataset_path')
+    query_args = request.args
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
+    if 'dataset_path' not in query_args:
+        return abort(400, description=f"Query arguments must include 'dataset_path'.")
+
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
+    dataset_path = query_args.get('dataset_path')
     try:
         response = s3.get_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=dataset_path,
             RequestPayer="requester"
         )
@@ -1205,6 +1228,13 @@ def get_related_terms(query):
 
 @app.route("/simulation_ui_file/<identifier>")
 def simulation_ui_file(identifier):
+
+    query_args = request.args
+    # if 's3BucketName' not in query_args:
+    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
+
+    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
+
     results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
     results_json = json.loads(results.data)
 
@@ -1212,7 +1242,7 @@ def simulation_ui_file(identifier):
         item = results_json["results"][0]
         uri = item["s3uri"]
         path = item["abi-simulation-file"][0]["dataset"]["path"]
-        key = f"{uri}files/{path}".replace(f"s3://{Config.S3_BUCKET_NAME}/", "")
+        key = f"{uri}files/{path}".replace(f"s3://{s3BucketName}/", "")
 
         return jsonify(json.loads(direct_download_url(key)))
     except Exception:

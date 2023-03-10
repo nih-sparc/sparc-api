@@ -143,12 +143,15 @@ class MonthlyStats(object):
 
     # send email using sendgrid
     def send_email(self, email_address, email_body):
-        if not self.debug_mode:
-            email_destination = email_address
-        else:
+        if self.debug_mode:
             email_destination = self.debug_email
-
-        return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
+            return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
+                                                                    email_destination,
+                                                                    'SPARC monthly dataset download summary',
+                                                                    email_body)
+        elif Config.DEPLOY_ENV is 'production':
+            email_destination = email_address
+            return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
                                                                     email_destination,
                                                                     'SPARC monthly dataset download summary',
                                                                     email_body)

@@ -4,11 +4,11 @@ html_start = \
 <table style="border-collapse: collapse; width: 100%;" border="1"> \
 <tbody> \
 <tr> \
-<td style="width: 30%;">Dataset Name</td> \
-<td style="width: 17%;">Dataset ID</td> \
-<td style="width: 17%;">Version</td> \
-<td style="width: 17%;">Origin</td> \
-<td style="width: 17%;">Downloads</td> \
+<td style="width: 60%;">Dataset Name</td> \
+<td style="width: 6%;">ID</td> \
+<td style="width: 10%;">Version</td> \
+<td style="width: 10%;">Origin</td> \
+<td style="width: 14%;">Downloads</td> \
 </tr>'
 
 
@@ -21,11 +21,11 @@ def create_html_template(datasets_download_info):
     html_string = html_start
     for dataset in datasets_download_info:
         html_string += f'<tr> \
-        <td style="width: 32%;">{dataset["name"]}</td> \
-        <td style="width: 17%;">{dataset["datasetId"]}</td> \
-        <td style="width: 17%;">{dataset["version"]}</td> \
-        <td style="width: 17%;">{dataset["origin"]}</td> \
-        <td style="width: 17%;">{dataset["downloads"]}</td> \
+        <td style="width: 60%;">{dataset["name"]}</td> \
+        <td style="width: 6%;">{dataset["datasetId"]}</td> \
+        <td style="width: 10%;">{dataset["version"]}</td> \
+        <td style="width: 10%;">{dataset["origin"]}</td> \
+        <td style="width: 14%;">{dataset["downloads"]}</td> \
         </tr>'
     html_string += html_end
     return html_string

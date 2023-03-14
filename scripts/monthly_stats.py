@@ -121,6 +121,8 @@ class MonthlyStats(object):
 
             # filter to only have datsets with downloads
             downloadInfo = [d for d in download_stats if dataset['id'] == d['datasetId']]
+
+            downloadInfo = self.add_dataset_name_to_download_info(dataset, downloadInfo)
             for contributor in dataset['contributors']:
                 orcid_id = contributor['orcid']
 
@@ -133,14 +135,23 @@ class MonthlyStats(object):
 
         return users
 
+    def add_dataset_name_to_download_info(self, dataset, downloadInfo):
+        for i in range(0, len(downloadInfo)):
+            downloadInfo[i]['name'] = dataset['name']
+        return downloadInfo
+
+
     # send email using sendgrid
     def send_email(self, email_address, email_body):
-        if not self.debug_mode:
-            email_destination = email_address
-        else:
+        if self.debug_mode:
             email_destination = self.debug_email
-
-        return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
+            return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
+                                                                    email_destination,
+                                                                    'SPARC monthly dataset download summary',
+                                                                    email_body)
+        elif Config.DEPLOY_ENV is 'production':
+            email_destination = email_address
+            return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
                                                                     email_destination,
                                                                     'SPARC monthly dataset download summary',
                                                                     email_body)

@@ -108,3 +108,24 @@ def publish_entry(id, version):
         url=url
     )
     return response.json()
+
+
+def get_featured_datasets():
+    url = f'https://{Config.CTF_CDA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries'
+    hed = {
+        'Authorization': 'Bearer ' + Config.CTF_CDA_ACCESS_TOKEN,
+    }
+    q = {
+        'content_type': 'homepage',
+        'select': 'fields.featuredDatasets',
+    }
+
+    response = requests.get(
+        headers=hed,
+        params=q,
+        url=url
+    )
+
+    json_data = response.json()
+
+    return [] if len(json_data['items'][0]) == 0 else json_data['items'][0]['fields']['featuredDatasets']

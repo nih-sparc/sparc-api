@@ -2,7 +2,7 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count
+from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
 from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
@@ -31,7 +31,7 @@ from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
-    create_multiple_doi_query, create_multiple_discoverId_query
+    create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query
 from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
@@ -39,7 +39,7 @@ from xml.etree import ElementTree
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
 from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results, \
-    reform_related_terms
+    reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc import start_simulation as do_start_simulation
@@ -512,6 +512,14 @@ def get_dataset_info_object_identifier():
     return reform_dataset_results(dataset_search(query))
 
 
+@app.route("/dataset_info/anatomy")
+def get_dataset_info_anatomy():
+    identifier = request.args.get('identifier')
+    query = create_anatomy_query(identifier)
+
+    return reform_anatomy_results(dataset_search(query))
+
+
 @app.route("/dataset_info/using_pennsieve_identifier")
 def get_dataset_info_pennsieve_identifier():
     identifier = request.args.get('identifier')
@@ -767,14 +775,21 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
+
+@app.route("/get_featured_datasets_identifiers", methods=["GET"])
+def get_featured_datasets_identifiers():
+    return {'identifiers': get_featured_datasets()}
+
+
 @app.route("/get_featured_dataset", methods=["GET"])
 def get_featured_dataset():
     featured_dataset_id = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)["featured_dataset_id"]
     if featured_dataset_id == -1:
-        # In case there was an error while setting the id, just return a default dataset so the homepage does not break
-        default_id = 32
-        return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, default_id)).json()
+        # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
+        featured_dataset_id = 32
+
     return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
+
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):

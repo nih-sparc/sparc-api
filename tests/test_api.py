@@ -198,3 +198,11 @@ def test_simulation_ui_file(client):
     r = client.get('/simulation_ui_file/135')
     assert r.status_code == 200
     assert r.get_json()['input'][1]['visible'] == 'sm == 1'
+
+
+def test_get_featured_datasets(client):
+    r = client.get('/get_featured_datasets_identifiers')
+    assert r.status_code == 200
+    json = r.get_json()
+    assert 'identifiers' in json
+    assert type(json['identifiers']) == list

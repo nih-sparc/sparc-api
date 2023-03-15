@@ -143,6 +143,24 @@ def test_create_identifier_query(client):
     assert result['title'] == 'Morphometric analysis of the abdominal vagus nerve in rats'
 
 
+def test_create_anatomy_query(client):
+    r = client.get('/dataset_info/anatomy?identifier=90')
+
+    json_data = json.loads(r.data)
+    assert 'result' in json_data
+
+    results = json_data['result']
+    assert len(results) == 1
+
+    result = results[0]
+
+    assert 'anatomy' in result
+    assert 'organ' in result['anatomy']
+    assert len(result['anatomy']['organ']) == 1
+    assert 'curie' in result['anatomy']['organ'][0]
+    assert result['anatomy']['organ'][0]['curie'] == 'UBERON:0001759'
+
+
 def test_response_version(client):
     # Testing with dataset 44
     identifier = "44"

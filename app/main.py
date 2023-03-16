@@ -13,6 +13,7 @@ import botocore
 import boto3
 import json
 import logging
+import re
 import requests
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -391,10 +392,10 @@ def get_discover_path():
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
-def direct_download_url(path):
+def direct_download_url(path, s3_bucket_name=Config.S3_BUCKET_NAME):
     try:
         head_response = s3.head_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3_bucket_name,
             Key=path,
             RequestPayer="requester"
         )
@@ -408,7 +409,7 @@ def direct_download_url(path):
         return abort(413, description=f"File too big to download: {content_length}")
 
     response = s3.get_object(
-        Bucket=Config.S3_BUCKET_NAME,
+        Bucket=s3_bucket_name,
         Key=path,
         RequestPayer="requester"
     )
@@ -1212,9 +1213,10 @@ def simulation_ui_file(identifier):
         item = results_json["results"][0]
         uri = item["s3uri"]
         path = item["abi-simulation-file"][0]["dataset"]["path"]
-        key = f"{uri}files/{path}".replace(f"s3://{Config.S3_BUCKET_NAME}/", "")
+        key = re.sub(r"s3://[^/]*/", "", f"{uri}files/{path}")
+        s3_bucket_name = re.sub(r"s3://|/.*", "", uri)
 
-        return jsonify(json.loads(direct_download_url(key)))
+        return jsonify(json.loads(direct_download_url(key, s3_bucket_name)))
     except Exception:
         abort(404, description="no simulation UI file could be found")
 

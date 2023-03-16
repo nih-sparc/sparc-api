@@ -75,7 +75,10 @@ def create_anatomy_query(identifier):
             }
         },
         "_source": [
-            "anatomy"
+            "anatomy",
+            "item.curie",
+            "organisms"
+
         ]
     }
 

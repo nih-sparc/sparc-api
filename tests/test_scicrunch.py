@@ -159,6 +159,15 @@ def test_create_anatomy_query(client):
     assert len(result['anatomy']['organ']) == 1
     assert 'curie' in result['anatomy']['organ'][0]
     assert result['anatomy']['organ'][0]['curie'] == 'UBERON:0001759'
+    assert 'item' in result
+    assert 'curie' in result['item']
+    assert result['item']['curie'].startswith("DOI:")
+    assert 'organisms' in result
+    assert 'subject' in result['organisms']
+    assert len(result['organisms']['subject']) == 1
+    assert 'species' in result['organisms']['subject'][0]
+    assert 'curie' in result['organisms']['subject'][0]['species']
+    assert result['organisms']['subject'][0]['species']['curie'] == 'NCBITaxon:10116'
 
 
 def test_response_version(client):

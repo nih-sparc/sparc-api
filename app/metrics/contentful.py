@@ -1,8 +1,11 @@
 import logging
-from app.config import Config
 import contentful
 import contentful_management
 import requests
+
+from datetime import datetime, timezone
+
+from app.config import Config
 
 # CDA is used for reading content, while CMA is used for updating content
 CDA_API_HOST = Config.CTF_CDA_API_HOST
@@ -117,7 +120,7 @@ def get_featured_datasets():
     }
     q = {
         'content_type': 'homepage',
-        'select': 'fields.featuredDatasets',
+        'select': 'fields.featuredDatasets,fields.dateToClearFeaturedDatasets',
     }
 
     response = requests.get(
@@ -128,4 +131,15 @@ def get_featured_datasets():
 
     json_data = response.json()
 
-    return [] if len(json_data['items'][0]) == 0 else json_data['items'][0]['fields']['featuredDatasets']
+    featured_datasets = []
+    if len(json_data['items'][0]) == 1:
+        date_to_clear = json_data['items'][0]['fields']['dateToClearFeaturedDatasets']
+        featured_datasets = json_data['items'][0]['fields']['featuredDatasets']
+        if date_to_clear is not None:
+            time_now = datetime.now(timezone.utc)
+            iso_utc_offset = "+00:00"
+            expiration_time = datetime.fromisoformat(date_to_clear.replace('Z', iso_utc_offset))
+            if expiration_time < time_now:
+                featured_datasets = []
+
+    return featured_datasets

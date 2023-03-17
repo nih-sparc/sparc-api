@@ -113,6 +113,14 @@ def publish_entry(id, version):
     return response.json()
 
 
+def _have_featured_datasets(result):
+    if len(result['items'][0]) == 1:
+        featured_data = result['items'][0]
+        return 'featuredDatasets' in featured_data['fields'] and 'dateToClearFeaturedDatasets' in featured_data['fields']
+
+    return False
+
+
 def get_featured_datasets():
     url = f'https://{Config.CTF_CDA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries'
     hed = {
@@ -132,9 +140,10 @@ def get_featured_datasets():
     json_data = response.json()
 
     featured_datasets = []
-    if len(json_data['items'][0]) == 1:
-        date_to_clear = json_data['items'][0]['fields']['dateToClearFeaturedDatasets']
-        featured_datasets = json_data['items'][0]['fields']['featuredDatasets']
+    if _have_featured_datasets(json_data):
+        featured_data = json_data['items'][0]
+        date_to_clear = featured_data['fields']['dateToClearFeaturedDatasets']
+        featured_datasets = featured_data['fields']['featuredDatasets']
         if date_to_clear is not None:
             time_now = datetime.now(timezone.utc)
             iso_utc_offset = "+00:00"

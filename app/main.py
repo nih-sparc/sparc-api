@@ -407,21 +407,20 @@ def direct_download_url(path):
     #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
 
     s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
-
+    
     try:
         head_response = s3.head_object(
             Bucket=s3BucketName,
             Key=path,
             RequestPayer="requester"
         )
+        content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
+        if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
+            return abort(413, description=f"File too big to download: {content_length}")
     except botocore.exceptions.ClientError as err:
         # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
         if err.response["Error"]["Code"] == "404":
             return abort(404, description=f'Provided path was not found on the s3 resource')
-
-    content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
-    if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
-        return abort(413, description=f"File too big to download: {content_length}")
 
     response = s3.get_object(
         Bucket=s3BucketName,

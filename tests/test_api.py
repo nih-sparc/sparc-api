@@ -22,6 +22,14 @@ def test_direct_download_url_small_file(client):
     assert r.status_code == 200
     assert b"proximal colon" in r.data
 
+def test_direct_download_url_new_bucket_file(client):
+    #whil
+    new_s3_file = '307%2F1%2Ffiles%2Fderivative%2Fhuman_body_metadata.json'
+    r = client.get(f"/s3-resource/{new_s3_file}?s3BucketName=prd-sparc-discover-use1")
+
+    assert r.status_code == 200
+    assert b"colon" in r.data
+
 
 def test_direct_download_url_thumbnail(client):
     small_s3_file = '95/1/files/derivative%2FScaffold%2Fthumbnail.png'

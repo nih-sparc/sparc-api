@@ -194,7 +194,13 @@ def test_non_existing_simulation_ui_file(client):
     assert r.status_code == 404
 
 
-def test_simulation_ui_file(client):
+def test_simulation_ui_file_old_s3_bucket(client):
     r = client.get('/simulation_ui_file/135')
     assert r.status_code == 200
-    assert r.get_json()['input'][1]['visible'] == 'sm == 1'
+    assert r.get_json()['simulation']['solvers'][0]['name'] == 'simcore/services/comp/opencor'
+
+
+def test_simulation_ui_file_new_s3_bucket(client):
+    r = client.get('/simulation_ui_file/308')
+    assert r.status_code == 200
+    assert r.get_json()['simulation']['solvers'][0]['name'] == 'simcore/services/comp/kember-cardiac-model'

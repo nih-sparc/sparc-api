@@ -13,6 +13,7 @@ import botocore
 import boto3
 import json
 import logging
+import re
 import requests
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -401,13 +402,11 @@ def get_discover_path():
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
-def direct_download_url(path):
-    query_args = request.args
-    # if 's3BucketName' not in query_args:
-    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
+def direct_download_url(path, bucket_name=Config.S3_BUCKET_NAME):
 
-    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
-    
+    query_args = request.args
+    s3BucketName = query_args.get("s3BucketName") or bucket_name
+
     try:
         head_response = s3.head_object(
             Bucket=s3BucketName,
@@ -1228,12 +1227,6 @@ def get_related_terms(query):
 @app.route("/simulation_ui_file/<identifier>")
 def simulation_ui_file(identifier):
 
-    query_args = request.args
-    # if 's3BucketName' not in query_args:
-    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
-
-    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
-
     results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
     results_json = json.loads(results.data)
 
@@ -1241,9 +1234,10 @@ def simulation_ui_file(identifier):
         item = results_json["results"][0]
         uri = item["s3uri"]
         path = item["abi-simulation-file"][0]["dataset"]["path"]
-        key = f"{uri}files/{path}".replace(f"s3://{s3BucketName}/", "")
+        key = re.sub(r"s3://[^/]*/", "", f"{uri}files/{path}")
+        s3_bucket_name = re.sub(r"s3://|/.*", "", uri)
 
-        return jsonify(json.loads(direct_download_url(key)))
+        return jsonify(json.loads(direct_download_url(key, s3_bucket_name)))
     except Exception:
         abort(404, description="no simulation UI file could be found")
 

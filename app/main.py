@@ -8,6 +8,7 @@ from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
+from app.osparc.services import search_services
 
 import botocore
 import boto3
@@ -42,8 +43,8 @@ from app.scicrunch_process_results import reform_dataset_results, process_result
     reform_related_terms
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
-from app.osparc import start_simulation as do_start_simulation
-from app.osparc import check_simulation as do_check_simulation
+from app.osparc.osparc import start_simulation as do_start_simulation
+from app.osparc.osparc import check_simulation as do_check_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
 
 logging.basicConfig()
@@ -670,7 +671,7 @@ def inject_template_data(resp):
 
     try:
         response = s3.get_object(
-            Bucket="pennsieve-prod-discover-publish-use1",
+            Bucket=Config.S3_BUCKET_NAME,
             Key="{}/{}/files/template.json".format(id_, version),
             RequestPayer="requester",
         )
@@ -683,7 +684,7 @@ def inject_template_data(resp):
             )
         try:
             response = s3.get_object(
-                Bucket="pennsieve-prod-discover-publish-use1",
+                Bucket=Config.S3_BUCKET_NAME,
                 Key="{}/{}/packages/template.json".format(id_, version),
                 RequestPayer="requester",
             )
@@ -735,6 +736,14 @@ def sim_dataset(id_):
 @app.route("/get_osparc_data")
 def get_osparc_data():
     return jsonify(osparc_data)
+
+
+@app.route('/sim/service')
+def osparc_search():
+    if request.method == 'GET':
+        search = request.args.get('search')
+        results = search_services(search)
+        return jsonify(results)
 
 
 @app.route("/project/<project_id>", methods=["GET"])

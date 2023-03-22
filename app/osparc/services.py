@@ -65,6 +65,8 @@ services = [
     },
 ]
 
+file_extensions = None
+
 
 def search_services(search_terms):
 
@@ -89,3 +91,24 @@ def search_services(search_terms):
     else:
 
         return services
+
+
+def generate_file_extensions():
+
+    global file_extensions
+
+    if file_extensions is None:
+
+        file_extensions = {}
+
+        for service in services:    
+
+            for extension in service.get('file_extensions'):
+
+                if not file_extensions.get(extension):
+
+                    file_extensions[extension] = []
+
+                file_extensions[extension].append(service.get('name_key'))
+
+    return file_extensions

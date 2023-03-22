@@ -263,10 +263,10 @@ def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
 
 # Download a file from S3
 @app.route("/download")
-def create_presigned_url(expiration=3600):
+def create_presigned_url(expiration=3600, bucket_name=Config.S3_BUCKET_NAME):
     key = request.args.get("key")
-    s3BucketName = request.args.get("s3BucketName") or Config.S3_BUCKET_NAME
-    content_type = request.args.get("contentType") or "application/octet-stream"
+    s3BucketName = request.args.get("s3BucketName", bucket_name)
+    content_type = request.args.get("contentType", "application/octet-stream")
 
     return create_s3_presigned_url(s3BucketName, key, content_type, expiration)
 
@@ -287,7 +287,7 @@ def thumbnail_from_neurolucida_file():
 
 
 @app.route("/thumbnail/segmentation")
-def extract_thumbnail_from_xml_file():
+def extract_thumbnail_from_xml_file(bucket_name=Config.S3_BUCKET_NAME):
     """
     Extract a thumbnail from a mbf xml file.
     First phase is to find the thumbnail element in the xml document.
@@ -296,10 +296,8 @@ def extract_thumbnail_from_xml_file():
     query_args = request.args
     if 'path' not in query_args:
         return abort(400, description=f"Query arguments are not valid.")
-    # if 's3BucketName' not in query_args:
-    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
 
-    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
     path = query_args['path']
     resource = None
     start_tag_found = False
@@ -352,13 +350,10 @@ def extract_thumbnail_from_xml_file():
 
 
 @app.route("/exists/<path:path>")
-def url_exists(path):
+def url_exists(path, bucket_name=Config.S3_BUCKET_NAME):
 
     query_args = request.args
-    # if 's3BucketName' not in query_args:
-    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
-
-    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
 
     try:
         head_response = s3.head_object(
@@ -405,7 +400,7 @@ def get_discover_path():
 def direct_download_url(path, bucket_name=Config.S3_BUCKET_NAME):
 
     query_args = request.args
-    s3BucketName = query_args.get("s3BucketName") or bucket_name
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
 
     try:
         head_response = s3.head_object(
@@ -414,7 +409,7 @@ def direct_download_url(path, bucket_name=Config.S3_BUCKET_NAME):
             RequestPayer="requester"
         )
         content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
-        if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
+        if content_length and not content_length < Config.DIRECT_DOWNLOAD_LIMIT :  # 20 MB
             return abort(413, description=f"File too big to download: {content_length}")
     except botocore.exceptions.ClientError as err:
         # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
@@ -535,14 +530,13 @@ def get_dataset_info_pennsieve_identifier():
 
 
 @app.route("/segmentation_info/")
-def get_segmentation_info_from_file():
+def get_segmentation_info_from_file(bucket_name=Config.S3_BUCKET_NAME):
     query_args = request.args
-    # if 's3BucketName' not in query_args:
-    #     return abort(400, description=f"Query arguments must include 's3BucketName'.")
+
     if 'dataset_path' not in query_args:
         return abort(400, description=f"Query arguments must include 'dataset_path'.")
 
-    s3BucketName = query_args.get("s3BucketName") or Config.S3_BUCKET_NAME
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
     dataset_path = query_args.get('dataset_path')
     try:
         response = s3.get_object(

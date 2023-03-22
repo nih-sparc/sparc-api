@@ -8,7 +8,7 @@ from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
-from app.osparc.services import search_services
+from app.osparc.services import search_services, generate_file_extensions
 
 import botocore
 import boto3
@@ -744,6 +744,13 @@ def osparc_search():
         search = request.args.get('search')
         results = search_services(search)
         return jsonify(results)
+
+
+@app.route('/sim/file')
+def osparc_extensions():
+    if request.method == 'GET':
+        extensions = generate_file_extensions()
+        return jsonify(extensions)
 
 
 @app.route("/project/<project_id>", methods=["GET"])

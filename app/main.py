@@ -263,7 +263,7 @@ def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
 
 # Download a file from S3
 @app.route("/download")
-def create_presigned_url(expiration=3600, bucket_name=Config.S3_BUCKET_NAME):
+def create_presigned_url(expiration=3600, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     key = request.args.get("key")
     s3BucketName = request.args.get("s3BucketName", bucket_name)
     content_type = request.args.get("contentType", "application/octet-stream")
@@ -287,7 +287,7 @@ def thumbnail_from_neurolucida_file():
 
 
 @app.route("/thumbnail/segmentation")
-def extract_thumbnail_from_xml_file(bucket_name=Config.S3_BUCKET_NAME):
+def extract_thumbnail_from_xml_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     """
     Extract a thumbnail from a mbf xml file.
     First phase is to find the thumbnail element in the xml document.
@@ -350,7 +350,7 @@ def extract_thumbnail_from_xml_file(bucket_name=Config.S3_BUCKET_NAME):
 
 
 @app.route("/exists/<path:path>")
-def url_exists(path, bucket_name=Config.S3_BUCKET_NAME):
+def url_exists(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
@@ -397,7 +397,7 @@ def get_discover_path():
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
-def direct_download_url(path, bucket_name=Config.S3_BUCKET_NAME):
+def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
@@ -530,7 +530,7 @@ def get_dataset_info_pennsieve_identifier():
 
 
 @app.route("/segmentation_info/")
-def get_segmentation_info_from_file(bucket_name=Config.S3_BUCKET_NAME):
+def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     query_args = request.args
 
     if 'dataset_path' not in query_args:

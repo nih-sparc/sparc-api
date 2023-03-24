@@ -8,7 +8,7 @@ from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
-from app.osparc.services import search_services, generate_file_extensions
+from app.osparc.services import OSparcServices
 
 import botocore
 import boto3
@@ -67,8 +67,6 @@ s3 = boto3.client(
 )
 
 biolucida_lock = Lock()
-
-osparc_data = {}
 
 try:
     maptable = MapTable(Config.DATABASE_URL)
@@ -140,6 +138,7 @@ def connect_to_pennsieve():
 
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
+services_scheduler = BackgroundScheduler()
 featured_dataset_id_scheduler = BackgroundScheduler()
 update_contentful_event_entries_scheduler = BackgroundScheduler()
 
@@ -161,6 +160,9 @@ if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
         update_contentful_event_entries_scheduler.start()
     # Update the contentful entries daily at 2 AM EST
     update_contentful_event_entries_scheduler.add_job(update_all_events_sort_order, 'cron', hour=2, timezone='US/Eastern')
+
+
+osparc_data = {}
 
 @app.before_first_request
 def get_osparc_file_viewers():
@@ -204,6 +206,23 @@ def get_metrics():
         logging.info('Starting scheduler for metrics acquisition')
         metrics_scheduler.start()
 
+osparc_services = OSparcServices()
+
+@app.before_first_request
+def get_services():
+    logging.info('Fetching oSPARC services')
+    try:
+        req = requests.get(url=f'{Config.OSPARC_API_HOST}/services')
+        services_resp = req.json()
+        osparc_services.set_services(services_resp['data'])
+    except requests.exceptions.RequestException:
+        print('error')
+        logging.error('Request to get oSPARC services failed')
+
+
+# Gets oSPARC services before the first request after startup and then once a day.
+services_scheduler.add_job(func=get_services, trigger="interval", days=1)
+
 # Gets oSPARC viewers before the first request after startup and then once a day.
 viewers_scheduler.add_job(func=get_osparc_file_viewers, trigger="interval", days=1)
 
@@ -227,6 +246,9 @@ def shutdown_schedulers():
     logging.info('Stopping scheduler for updating featured dataset id')
     if featured_dataset_id_scheduler.running:
         featured_dataset_id_scheduler.shutdown()
+    logging.info('Stopping scheduler for oSPARC services')
+    if services_scheduler.running:
+        services_scheduler.shutdown()
 
 
 atexit.register(shutdown_schedulers)
@@ -742,14 +764,14 @@ def get_osparc_data():
 def osparc_search():
     if request.method == 'GET':
         search = request.args.get('search')
-        results = search_services(search)
+        results = osparc_services.search_services(search)
         return jsonify(results)
 
 
 @app.route('/sim/file')
 def osparc_extensions():
     if request.method == 'GET':
-        extensions = generate_file_extensions()
+        extensions = osparc_services.file_extensions
         return jsonify(extensions)
 
 

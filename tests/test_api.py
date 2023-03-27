@@ -22,6 +22,13 @@ def test_direct_download_url_small_file(client):
     assert r.status_code == 200
     assert b"proximal colon" in r.data
 
+def test_direct_download_url_new_bucket_file(client):
+    new_s3_file = '307%2F1%2Ffiles%2Fderivative%2Fhuman_body_metadata.json'
+    r = client.get(f"/s3-resource/{new_s3_file}?s3BucketName=prd-sparc-discover-use1")
+
+    assert r.status_code == 200
+    assert b"colon" in r.data
+
 
 def test_direct_download_url_thumbnail(client):
     small_s3_file = '95/1/files/derivative%2FScaffold%2Fthumbnail.png'
@@ -194,7 +201,13 @@ def test_non_existing_simulation_ui_file(client):
     assert r.status_code == 404
 
 
-def test_simulation_ui_file(client):
+def test_simulation_ui_file_old_s3_bucket(client):
     r = client.get('/simulation_ui_file/135')
     assert r.status_code == 200
-    assert r.get_json()['input'][1]['visible'] == 'sm == 1'
+    assert r.get_json()['simulation']['solvers'][0]['name'] == 'simcore/services/comp/opencor'
+
+
+def test_simulation_ui_file_new_s3_bucket(client):
+    r = client.get('/simulation_ui_file/308')
+    assert r.status_code == 200
+    assert r.get_json()['simulation']['solvers'][0]['name'] == 'simcore/services/comp/kember-cardiac-model'

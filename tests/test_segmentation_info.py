@@ -19,3 +19,15 @@ def test_segmentation_info(client):
     assert 'subject' in json_data
 
     assert json_data['atlas']['organ'] == 'Pancreas'
+
+
+def test_segmentation_info_namespaced(client):
+    file_path = '230/1/files/primary/sub-dorsal-4/sam-CGRP-Mouse-Dorsal-4/3D_scaffold_-_CGRP-Mice-Dorsal-4.xml'
+    r = client.get('/segmentation_info/', query_string={'dataset_path': file_path})
+    assert r.status_code == 200
+
+    json_data = r.json
+    assert 'atlas' in json_data
+    assert 'subject' in json_data
+
+    assert json_data['atlas']['organ'] == 'Stomach'

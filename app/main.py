@@ -787,7 +787,9 @@ def osparc_search():
 def osparc_extensions():
     if request.method == 'GET':
         extensions = osparc_services.file_extensions
-        return jsonify(extensions)
+        return jsonify({
+            "file_viewers": extensions
+        })
 
 
 @app.route("/project/<project_id>", methods=["GET"])

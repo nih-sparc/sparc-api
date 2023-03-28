@@ -15,6 +15,7 @@ import json
 import logging
 import re
 import requests
+from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.combining import OrTrigger
@@ -680,12 +681,14 @@ def inject_markdown(resp):
 def inject_template_data(resp):
     id_ = resp.get("id")
     version = resp.get("version")
-    if id_ is None or version is None:
+    uri = resp.get("uri")
+    if id_ is None or version is None or uri is None:
         return
-
+    parsed_uri = urlparse(uri)
+    bucket = parsed_uri.netloc
     try:
         response = s3.get_object(
-            Bucket="pennsieve-prod-discover-publish-use1",
+            Bucket=bucket,
             Key="{}/{}/files/template.json".format(id_, version),
             RequestPayer="requester",
         )
@@ -698,7 +701,7 @@ def inject_template_data(resp):
             )
         try:
             response = s3.get_object(
-                Bucket="pennsieve-prod-discover-publish-use1",
+                Bucket=bucket,
                 Key="{}/{}/packages/template.json".format(id_, version),
                 RequestPayer="requester",
             )

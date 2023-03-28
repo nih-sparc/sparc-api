@@ -708,7 +708,7 @@ def inject_template_data(resp):
 
     try:
         response = s3.get_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket="pennsieve-prod-discover-publish-use1",
             Key="{}/{}/files/template.json".format(id_, version),
             RequestPayer="requester",
         )
@@ -721,7 +721,7 @@ def inject_template_data(resp):
             )
         try:
             response = s3.get_object(
-                Bucket=Config.S3_BUCKET_NAME,
+                Bucket="pennsieve-prod-discover-publish-use1",
                 Key="{}/{}/packages/template.json".format(id_, version),
                 RequestPayer="requester",
             )

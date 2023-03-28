@@ -14,6 +14,7 @@ import botocore
 import boto3
 import json
 import logging
+import re
 import requests
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -285,10 +286,10 @@ def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
 
 # Download a file from S3
 @app.route("/download")
-def create_presigned_url(expiration=3600):
+def create_presigned_url(expiration=3600, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     key = request.args.get("key")
-    s3BucketName = request.args.get("s3BucketName") or Config.S3_BUCKET_NAME
-    content_type = request.args.get("contentType") or "application/octet-stream"
+    s3BucketName = request.args.get("s3BucketName", bucket_name)
+    content_type = request.args.get("contentType", "application/octet-stream")
 
     return create_s3_presigned_url(s3BucketName, key, content_type, expiration)
 
@@ -309,7 +310,7 @@ def thumbnail_from_neurolucida_file():
 
 
 @app.route("/thumbnail/segmentation")
-def extract_thumbnail_from_xml_file():
+def extract_thumbnail_from_xml_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     """
     Extract a thumbnail from a mbf xml file.
     First phase is to find the thumbnail element in the xml document.
@@ -319,6 +320,7 @@ def extract_thumbnail_from_xml_file():
     if 'path' not in query_args:
         return abort(400, description=f"Query arguments are not valid.")
 
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
     path = query_args['path']
     resource = None
     start_tag_found = False
@@ -329,7 +331,7 @@ def extract_thumbnail_from_xml_file():
     while not start_tag_found or not end_tag_found:
         try:
             response = s3.get_object(
-                Bucket=Config.S3_BUCKET_NAME,
+                Bucket=s3BucketName,
                 Key=path,
                 Range=f"bytes={start_byte}-{end_byte}",
                 RequestPayer="requester"
@@ -371,10 +373,14 @@ def extract_thumbnail_from_xml_file():
 
 
 @app.route("/exists/<path:path>")
-def url_exists(path):
+def url_exists(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
+
+    query_args = request.args
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
+
     try:
         head_response = s3.head_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=path,
             RequestPayer="requester"
         )
@@ -414,24 +420,27 @@ def get_discover_path():
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
-def direct_download_url(path):
+def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
+
+    query_args = request.args
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
+
     try:
         head_response = s3.head_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=path,
             RequestPayer="requester"
         )
+        content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
+        if content_length and not content_length < Config.DIRECT_DOWNLOAD_LIMIT :  # 20 MB
+            return abort(413, description=f"File too big to download: {content_length}")
     except botocore.exceptions.ClientError as err:
         # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
         if err.response["Error"]["Code"] == "404":
             return abort(404, description=f'Provided path was not found on the s3 resource')
 
-    content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
-    if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
-        return abort(413, description=f"File too big to download: {content_length}")
-
     response = s3.get_object(
-        Bucket=Config.S3_BUCKET_NAME,
+        Bucket=s3BucketName,
         Key=path,
         RequestPayer="requester"
     )
@@ -544,11 +553,17 @@ def get_dataset_info_pennsieve_identifier():
 
 
 @app.route("/segmentation_info/")
-def get_segmentation_info_from_file():
-    dataset_path = request.args.get('dataset_path')
+def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
+    query_args = request.args
+
+    if 'dataset_path' not in query_args:
+        return abort(400, description=f"Query arguments must include 'dataset_path'.")
+
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
+    dataset_path = query_args.get('dataset_path')
     try:
         response = s3.get_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=dataset_path,
             RequestPayer="requester"
         )
@@ -1243,6 +1258,7 @@ def get_related_terms(query):
 
 @app.route("/simulation_ui_file/<identifier>")
 def simulation_ui_file(identifier):
+
     results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
     results_json = json.loads(results.data)
 
@@ -1250,9 +1266,10 @@ def simulation_ui_file(identifier):
         item = results_json["results"][0]
         uri = item["s3uri"]
         path = item["abi-simulation-file"][0]["dataset"]["path"]
-        key = f"{uri}files/{path}".replace(f"s3://{Config.S3_BUCKET_NAME}/", "")
+        key = re.sub(r"s3://[^/]*/", "", f"{uri}files/{path}")
+        s3_bucket_name = re.sub(r"s3://|/.*", "", uri)
 
-        return jsonify(json.loads(direct_download_url(key)))
+        return jsonify(json.loads(direct_download_url(key, s3_bucket_name)))
     except Exception:
         abort(404, description="no simulation UI file could be found")
 

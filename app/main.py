@@ -16,6 +16,7 @@ import json
 import logging
 import re
 import requests
+from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.combining import OrTrigger
@@ -575,14 +576,14 @@ def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     resource = response["Body"].read().decode('UTF-8')
     xml = ElementTree.fromstring(resource)
-    subject_element = xml.find('./sparcdata/subject')
+    subject_element = xml.find('./{*}sparcdata/{*}subject')
     info = {}
     if subject_element is not None:
         info['subject'] = subject_element.attrib
     else:
         info['subject'] = {'age': '', 'sex': '', 'species': '', 'subjectid': ''}
 
-    atlas_element = xml.find('./sparcdata/atlas')
+    atlas_element = xml.find('./{*}sparcdata/{*}atlas')
     if atlas_element is not None:
         info['atlas'] = atlas_element.attrib
     else:
@@ -703,12 +704,14 @@ def inject_markdown(resp):
 def inject_template_data(resp):
     id_ = resp.get("id")
     version = resp.get("version")
-    if id_ is None or version is None:
+    uri = resp.get("uri")
+    if id_ is None or version is None or uri is None:
         return
-
+    parsed_uri = urlparse(uri)
+    bucket = parsed_uri.netloc
     try:
         response = s3.get_object(
-            Bucket="pennsieve-prod-discover-publish-use1",
+            Bucket=bucket,
             Key="{}/{}/files/template.json".format(id_, version),
             RequestPayer="requester",
         )
@@ -721,7 +724,7 @@ def inject_template_data(resp):
             )
         try:
             response = s3.get_object(
-                Bucket="pennsieve-prod-discover-publish-use1",
+                Bucket=bucket,
                 Key="{}/{}/packages/template.json".format(id_, version),
                 RequestPayer="requester",
             )

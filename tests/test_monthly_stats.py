@@ -13,18 +13,21 @@ test_data = {
         "datasets": [
             {
                 "datasetId": 230,
+                "name": "Test dataset 1",
                 "version": 1,
                 "origin": "SPARC",
                 "downloads": 1
             },
             {
                 "datasetId": 225,
+                "name": "Test dataset 2",
                 "version": 1,
                 "origin": "SPARC",
                 "downloads": 1
             },
             {
                 "datasetId": 141,
+                "name": "Test dataset 3",
                 "version": 2,
                 "origin": "SPARC",
                 "downloads": 1

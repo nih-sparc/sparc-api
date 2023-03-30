@@ -424,6 +424,14 @@ def test_raw_response_structure(client):
     #     print(k, data['hits']['hits'][0][k])
 
 
+def test_get_body_scaffold_info(client):
+    # Test if we get a shorter list of uberons with species specified
+    r = client.get('/get_body_scaffold_info/human')
+    result = json.loads(r.data)
+    assert result['id'] == '307'
+    assert result['path'] == 'derivative/human_body_metadata.json'
+    assert 'prd-sparc-discover-use1' in result['s3uri']
+
 def test_getting_curies(client):
     # Test if we get a shorter list of uberons with species specified
     r = client.get('/get-organ-curies/')

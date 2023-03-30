@@ -1085,7 +1085,7 @@ def create_wrike_task():
               )
 
         if (resp.status_code == 200):
-          if 'userEmail' in form and form['userEmail'] and 'sendCopy' in form and form['sendCopy'] == 'True':
+          if 'userEmail' in form and form['userEmail'] and 'sendCopy' in form and form['sendCopy'] == 'true':
             # default to bug form if task type not specified
             subject = 'SPARC Reported Error/Issue Submission'
             body = issue_reporting_email.substitute({ 'message': description })

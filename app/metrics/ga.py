@@ -1,3 +1,4 @@
+from json import JSONDecodeError
 import logging
 from datetime import datetime
 
@@ -24,6 +25,9 @@ def init_ga_reporting():
             logging.info('No key path set for Google analytics.')
             return None
 
+    except JSONDecodeError as e:
+        logging.error('An error occurred while instantiating the GA reporter.', str(e))
+        return None
     except TypeError as e:
         logging.error('An error occurred while instantiating the GA reporter.', str(e))
         return None

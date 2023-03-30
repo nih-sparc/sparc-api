@@ -13,7 +13,9 @@ import botocore
 import boto3
 import json
 import logging
+import re
 import requests
+from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.combining import OrTrigger
@@ -31,15 +33,15 @@ from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
-    create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query
+    create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id
 from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
-from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results, \
-    reform_related_terms, reform_anatomy_results
+from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
+    reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc import start_simulation as do_start_simulation
@@ -262,10 +264,10 @@ def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
 
 # Download a file from S3
 @app.route("/download")
-def create_presigned_url(expiration=3600):
+def create_presigned_url(expiration=3600, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     key = request.args.get("key")
-    s3BucketName = request.args.get("s3BucketName") or Config.S3_BUCKET_NAME
-    content_type = request.args.get("contentType") or "application/octet-stream"
+    s3BucketName = request.args.get("s3BucketName", bucket_name)
+    content_type = request.args.get("contentType", "application/octet-stream")
 
     return create_s3_presigned_url(s3BucketName, key, content_type, expiration)
 
@@ -286,7 +288,7 @@ def thumbnail_from_neurolucida_file():
 
 
 @app.route("/thumbnail/segmentation")
-def extract_thumbnail_from_xml_file():
+def extract_thumbnail_from_xml_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     """
     Extract a thumbnail from a mbf xml file.
     First phase is to find the thumbnail element in the xml document.
@@ -296,6 +298,7 @@ def extract_thumbnail_from_xml_file():
     if 'path' not in query_args:
         return abort(400, description=f"Query arguments are not valid.")
 
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
     path = query_args['path']
     resource = None
     start_tag_found = False
@@ -306,7 +309,7 @@ def extract_thumbnail_from_xml_file():
     while not start_tag_found or not end_tag_found:
         try:
             response = s3.get_object(
-                Bucket=Config.S3_BUCKET_NAME,
+                Bucket=s3BucketName,
                 Key=path,
                 Range=f"bytes={start_byte}-{end_byte}",
                 RequestPayer="requester"
@@ -348,10 +351,14 @@ def extract_thumbnail_from_xml_file():
 
 
 @app.route("/exists/<path:path>")
-def url_exists(path):
+def url_exists(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
+
+    query_args = request.args
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
+
     try:
         head_response = s3.head_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=path,
             RequestPayer="requester"
         )
@@ -391,24 +398,27 @@ def get_discover_path():
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
-def direct_download_url(path):
+def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
+
+    query_args = request.args
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
+
     try:
         head_response = s3.head_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=path,
             RequestPayer="requester"
         )
+        content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
+        if content_length and not content_length < Config.DIRECT_DOWNLOAD_LIMIT :  # 20 MB
+            return abort(413, description=f"File too big to download: {content_length}")
     except botocore.exceptions.ClientError as err:
         # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
         if err.response["Error"]["Code"] == "404":
             return abort(404, description=f'Provided path was not found on the s3 resource')
 
-    content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
-    if content_length and content_length > Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
-        return abort(413, description=f"File too big to download: {content_length}")
-
     response = s3.get_object(
-        Bucket=Config.S3_BUCKET_NAME,
+        Bucket=s3BucketName,
         Key=path,
         RequestPayer="requester"
     )
@@ -529,11 +539,18 @@ def get_dataset_info_pennsieve_identifier():
 
 
 @app.route("/segmentation_info/")
-def get_segmentation_info_from_file():
-    dataset_path = request.args.get('dataset_path')
+def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
+    query_args = request.args
+
+    if 'dataset_path' not in query_args:
+        return abort(400, description=f"Query arguments must include 'dataset_path'.")
+
+    s3BucketName = query_args.get("s3BucketName", bucket_name)
+    dataset_path = query_args.get('dataset_path')
+
     try:
         response = s3.get_object(
-            Bucket=Config.S3_BUCKET_NAME,
+            Bucket=s3BucketName,
             Key=dataset_path,
             RequestPayer="requester"
         )
@@ -545,14 +562,14 @@ def get_segmentation_info_from_file():
 
     resource = response["Body"].read().decode('UTF-8')
     xml = ElementTree.fromstring(resource)
-    subject_element = xml.find('./sparcdata/subject')
+    subject_element = xml.find('./{*}sparcdata/{*}subject')
     info = {}
     if subject_element is not None:
         info['subject'] = subject_element.attrib
     else:
         info['subject'] = {'age': '', 'sex': '', 'species': '', 'subjectid': ''}
 
-    atlas_element = xml.find('./sparcdata/atlas')
+    atlas_element = xml.find('./{*}sparcdata/{*}atlas')
     if atlas_element is not None:
         info['atlas'] = atlas_element.attrib
     else:
@@ -673,12 +690,14 @@ def inject_markdown(resp):
 def inject_template_data(resp):
     id_ = resp.get("id")
     version = resp.get("version")
-    if id_ is None or version is None:
+    uri = resp.get("uri")
+    if id_ is None or version is None or uri is None:
         return
-
+    parsed_uri = urlparse(uri)
+    bucket = parsed_uri.netloc
     try:
         response = s3.get_object(
-            Bucket="pennsieve-prod-discover-publish-use1",
+            Bucket=bucket,
             Key="{}/{}/files/template.json".format(id_, version),
             RequestPayer="requester",
         )
@@ -691,7 +710,7 @@ def inject_template_data(resp):
             )
         try:
             response = s3.get_object(
-                Bucket="pennsieve-prod-discover-publish-use1",
+                Bucket=bucket,
                 Key="{}/{}/packages/template.json".format(id_, version),
                 RequestPayer="requester",
             )
@@ -803,6 +822,19 @@ def get_owner_email(owner_id):
     else:
         return jsonify({"email": res[0].email})
 
+# Get information of the latest body scaffold for species.
+# This endpoint returns the metadata file path, bucket,
+# dataset id and version which can be used to construct the url
+@app.route("/get_body_scaffold_info/<species>", methods=["GET"])
+def get_body_scaffold_info(species):
+    id = get_body_scaffold_dataset_id(species)
+    if id:
+        query = create_pennsieve_identifier_query(id)
+        result = process_get_first_scaffold_info(dataset_search(query))
+        if result:
+            return result
+
+    return abort(404, description=f"Whole body info not found for {species}")
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):
@@ -1220,6 +1252,7 @@ def get_related_terms(query):
 
 @app.route("/simulation_ui_file/<identifier>")
 def simulation_ui_file(identifier):
+
     results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
     results_json = json.loads(results.data)
 
@@ -1227,9 +1260,10 @@ def simulation_ui_file(identifier):
         item = results_json["results"][0]
         uri = item["s3uri"]
         path = item["abi-simulation-file"][0]["dataset"]["path"]
-        key = f"{uri}files/{path}".replace(f"s3://{Config.S3_BUCKET_NAME}/", "")
+        key = re.sub(r"s3://[^/]*/", "", f"{uri}files/{path}")
+        s3_bucket_name = re.sub(r"s3://|/.*", "", uri)
 
-        return jsonify(json.loads(direct_download_url(key)))
+        return jsonify(json.loads(direct_download_url(key, s3_bucket_name)))
     except Exception:
         abort(404, description="no simulation UI file could be found")
 
@@ -1342,3 +1376,4 @@ def event_updated():
                 abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")
+

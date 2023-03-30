@@ -1,3 +1,13 @@
+#Hardcoded list for getting whole body scaffold,
+#Update this list as needed
+BODY_SCAFFOLD_DATASET = {
+    'human': 307,
+    'mouse': 167,
+    'pig': 227,
+    'rat': 147
+}
+
+
 def create_query_string(query_string):
     return {
         "from": 0,
@@ -238,6 +248,13 @@ def create_filter_request(query, terms, facets, size, start):
     data["query"]["query_string"]["query"] = qs
     return data
 
+# Get the id for the current body scaffold dataset id
+# of the specified species
+def get_body_scaffold_dataset_id(species):
+    if species:
+        return BODY_SCAFFOLD_DATASET.get(species.lower(), None)
+
+    return None
 
 # Type map is used to map SciCrunch paths to given facet
 # genotype is deprecated.

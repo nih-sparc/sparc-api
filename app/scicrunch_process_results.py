@@ -1,6 +1,7 @@
 import importlib
 import json
 import re
+from app.config import Config
 from flask import jsonify
 
 from app.scicrunch_processing_common import SKIPPED_OBJ_ATTRIBUTES
@@ -71,6 +72,23 @@ def _remove_unused_files_information(obj_list):
 def process_results(results):
     return jsonify({'numberOfHits': results['hits']['total'], 'results': _prepare_results(results)})
 
+# process the search result to get the first scaffold of the first dataset
+def process_get_first_scaffold_info(results):
+    results = _prepare_results(results)
+    # iterate through to get the first scaffold
+    for result in results:
+        if 'abi-scaffold-metadata-file' in result and len(result['abi-scaffold-metadata-file']) > 0:
+            try:
+                path = result['abi-scaffold-metadata-file'][0]['dataset']['path']
+                id = result['dataset_identifier']
+                version = result['dataset_version']
+                s3uri = result['s3uri']
+                return jsonify({'path':path, 'id': id, 'version': version, 's3uri': s3uri})
+            except KeyError:
+                return None
+
+    #None found, let the caller handle that
+    return None
 
 def reform_anatomy_results(results):
     processed_outputs = []

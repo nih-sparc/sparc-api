@@ -77,12 +77,15 @@ def process_get_first_scaffold_info(results):
     # iterate through to get the first scaffold
     for result in results:
         if 'abi-scaffold-metadata-file' in result and len(result['abi-scaffold-metadata-file']) > 0:
-            path = result['abi-scaffold-metadata-file'][0].get('dataset', {}).get('path')
-            id = result.get('dataset_identifier', 0)
-            version = result.get('dataset_version', 0)
-            s3uri = result.get('s3uri', Config.DEFAULT_S3_BUCKET_NAME)
-            return jsonify({'path':path, 'id': id, 'version': version, 's3uri': s3uri})
-    
+            try:
+                path = result['abi-scaffold-metadata-file'][0]['dataset']['path']
+                id = result['dataset_identifier']
+                version = result['dataset_version']
+                s3uri = result['s3uri']
+                return jsonify({'path':path, 'id': id, 'version': version, 's3uri': s3uri})
+            except KeyError:
+                return None
+
     #None found, let the caller handle that
     return None
 

@@ -812,14 +812,14 @@ def get_owner_email(owner_id):
 # dataset id and version which can be used to construct the url
 @app.route("/get_body_scaffold_info/<species>", methods=["GET"])
 def get_body_scaffold_info(species):
-    # Filter to find user based on provided int id
     id = get_body_scaffold_dataset_id(species)
     if id:
-        result = process_get_first_scaffold_info(dataset_search(create_pennsieve_identifier_query(id)))
+        query = create_pennsieve_identifier_query(id)
+        result = process_get_first_scaffold_info(dataset_search(query))
         if result:
             return result
 
-    return abort(400, description=f"Whole body info not found for {species}")
+    return abort(404, description=f"Whole body info not found for {species}")
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):

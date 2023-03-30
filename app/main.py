@@ -33,15 +33,15 @@ from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
-    create_multiple_doi_query, create_multiple_discoverId_query
+    create_multiple_doi_query, create_multiple_discoverId_query, get_body_scaffold_dataset_id
 from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
-from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results, \
-    reform_related_terms
+from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
+    reform_curies_results, reform_dataset_results, reform_related_terms
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc import start_simulation as do_start_simulation
@@ -539,6 +539,7 @@ def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     s3BucketName = query_args.get("s3BucketName", bucket_name)
     dataset_path = query_args.get('dataset_path')
+
     try:
         response = s3.get_object(
             Bucket=s3BucketName,
@@ -806,6 +807,19 @@ def get_owner_email(owner_id):
     else:
         return jsonify({"email": res[0].email})
 
+# Get information of the latest body scaffold for species.
+# This endpoint returns the metadata file path, bucket,
+# dataset id and version which can be used to construct the url
+@app.route("/get_body_scaffold_info/<species>", methods=["GET"])
+def get_body_scaffold_info(species):
+    id = get_body_scaffold_dataset_id(species)
+    if id:
+        query = create_pennsieve_identifier_query(id)
+        result = process_get_first_scaffold_info(dataset_search(query))
+        if result:
+            return result
+
+    return abort(404, description=f"Whole body info not found for {species}")
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):
@@ -1347,3 +1361,4 @@ def event_updated():
                 abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")
+

@@ -975,8 +975,8 @@ def create_wrike_task():
         hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
         ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
         url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'
-        followers = []
-        responsibles = []
+        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
+        responsibles = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
         customStatus = Config.DRC_WRIKE_CUSTOM_STATUS_ID
         taskType = ""
         templateTaskId = ""
@@ -1097,7 +1097,10 @@ def create_wrike_task():
               body = service_interest_email.substitute({ 'message': description })
             elif (taskType == "general"):
               subject = 'SPARC Question or Inquiry Submission'
-              body = general_interest_email.substitute({ 'message': description })
+              body = creation_request_confirmation_email.substitute({ 'message': description })
+            elif (taskType == "research"):
+              subject = 'SPARC Research Submission'
+              body = service_interest_email.substitute({ 'message': description })
             elif (taskType == "news"):
               subject = 'SPARC News Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })

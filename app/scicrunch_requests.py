@@ -29,6 +29,7 @@ def create_doi_query(doi):
         }
     }
 
+
 def create_multiple_doi_query(dois):
     return {
         "size": 999,
@@ -38,6 +39,7 @@ def create_multiple_doi_query(dois):
             }
         }
     }
+
 
 def create_multiple_discoverId_query(ids):
     return {
@@ -68,6 +70,25 @@ def create_title_query(title):
                 "query": " AND ".join(query)
             }
         }
+    }
+
+
+def create_anatomy_query(identifier):
+    return {
+        "size": 1,
+        "from": 0,
+        "query": {
+            "match": {
+                "pennsieve.identifier": {
+                    "query": identifier
+                }
+            }
+        },
+        "_source": [
+            "anatomy",
+            "item.curie",
+            "organisms"
+        ]
     }
 
 

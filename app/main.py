@@ -525,7 +525,10 @@ def get_dataset_info_object_identifier():
 
 @app.route("/dataset_info/anatomy")
 def get_dataset_info_anatomy():
-    identifier = request.args.get('identifier')
+    identifier = request.args.get('identifier', -1)
+    if identifier == -1:
+        return abort(404, description=f'Identifier for API call not set.')
+
     query = create_anatomy_query(identifier)
 
     return reform_anatomy_results(dataset_search(query))

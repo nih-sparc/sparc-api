@@ -88,7 +88,6 @@ def create_anatomy_query(identifier):
             "anatomy",
             "item.curie",
             "organisms"
-
         ]
     }
 

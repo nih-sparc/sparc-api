@@ -1,3 +1,4 @@
+from json import JSONDecodeError
 import logging
 from datetime import datetime
 
@@ -13,15 +14,22 @@ VIEW_ID = Config.GOOGLE_API_GA_VIEW_ID
 
 def init_ga_reporting():
     try:
-        credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            KEY_PATH,
-            SCOPE
-        )
-        analytics = build('analyticsreporting', 'v4', credentials=credentials)
-        return analytics
+        if KEY_PATH:
+            credentials = ServiceAccountCredentials.from_json_keyfile_name(
+                KEY_PATH,
+                SCOPE
+            )
+            analytics = build('analyticsreporting', 'v4', credentials=credentials)
+            return analytics
+        else:
+            logging.info('No key path set for Google analytics.')
+            return None
 
-    except Exception as e:
-        logging.error('An error occured while instantiating the GA reporter.', e)
+    except JSONDecodeError as e:
+        logging.error('An error occurred while instantiating the GA reporter.', str(e))
+        return None
+    except TypeError as e:
+        logging.error('An error occurred while instantiating the GA reporter.', str(e))
         return None
 
 

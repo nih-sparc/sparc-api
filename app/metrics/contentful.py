@@ -137,18 +137,19 @@ def get_featured_datasets():
         url=url
     )
 
-    json_data = response.json()
-
     featured_datasets = []
-    if _have_featured_datasets(json_data):
-        featured_data = json_data['items'][0]
-        date_to_clear = featured_data['fields']['dateToClearFeaturedDatasets']
-        featured_datasets = featured_data['fields']['featuredDatasets']
-        if date_to_clear is not None:
-            time_now = datetime.now(timezone.utc)
-            iso_utc_offset = "+00:00"
-            expiration_time = datetime.fromisoformat(date_to_clear.replace('Z', iso_utc_offset))
-            if expiration_time < time_now:
-                featured_datasets = []
+    if response.status_code == requests.codes.ok:
+        json_data = response.json()
+
+        if _have_featured_datasets(json_data):
+            featured_data = json_data['items'][0]
+            date_to_clear = featured_data['fields']['dateToClearFeaturedDatasets']
+            featured_datasets = featured_data['fields']['featuredDatasets']
+            if date_to_clear is not None:
+                time_now = datetime.now(timezone.utc)
+                iso_utc_offset = "+00:00"
+                expiration_time = datetime.fromisoformat(date_to_clear.replace('Z', iso_utc_offset))
+                if expiration_time < time_now:
+                    featured_datasets = []
 
     return featured_datasets

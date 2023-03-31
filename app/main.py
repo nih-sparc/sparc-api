@@ -1116,10 +1116,10 @@ def create_wrike_task():
               body = service_interest_email.substitute({ 'message': description })
             elif (taskType == "general"):
               subject = 'SPARC Question or Inquiry Submission'
-              body = creation_request_confirmation_email.substitute({ 'message': description })
+              body = general_interest_email.substitute({ 'message': description })
             elif (taskType == "research"):
               subject = 'SPARC Research Submission'
-              body = service_interest_email.substitute({ 'message': description })
+              body = creation_request_confirmation_email.substitute({ 'message': description })
             elif (taskType == "news"):
               subject = 'SPARC News Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })

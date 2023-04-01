@@ -34,7 +34,7 @@ from requests.auth import HTTPBasicAuth
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id
-from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email
+from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, service_interest_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -1104,21 +1104,33 @@ def create_wrike_task():
               )
 
         if (resp.status_code == 200):
-          if 'userEmail' in form and form['userEmail']:
+          if 'userEmail' in form and form['userEmail'] and 'sendCopy' in form and form['sendCopy'] == 'true':
             # default to bug form if task type not specified
-            subject = 'Issue Reporting'
+            subject = 'SPARC Reported Error/Issue Submission'
             body = issue_reporting_email.substitute({ 'message': description })
-            if (taskType == "news"):
-              subject = 'News creation request'
+            if (taskType == "feedback"):
+              subject = 'SPARC Feedback Submission'
+              body = feedback_email.substitute({ 'message': description })
+            elif (taskType == "interest"):
+              subject = 'SPARC Service Interest Submission'
+              body = service_interest_email.substitute({ 'message': description })
+            elif (taskType == "general"):
+              subject = 'SPARC Question or Inquiry Submission'
+              body = general_interest_email.substitute({ 'message': description })
+            elif (taskType == "research"):
+              subject = 'SPARC Research Submission'
+              body = creation_request_confirmation_email.substitute({ 'message': description })
+            elif (taskType == "news"):
+              subject = 'SPARC News Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })
             elif (taskType == "event"):
-              subject = 'Event creation request'
+              subject = 'SPARC Event Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })
             elif (taskType == "toolsAndResources"):
-              subject = 'Tool/Resource creation request'
+              subject = 'SPARC Tool/Resource Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })
             elif (taskType == "communitySpotlight"):
-              subject = 'Success Story/Fireside Chat creation request'
+              subject = 'SPARC Story Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })
             userEmail = form['userEmail']
             if len(userEmail) > 0:

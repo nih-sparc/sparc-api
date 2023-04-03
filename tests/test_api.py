@@ -211,3 +211,11 @@ def test_simulation_ui_file_new_s3_bucket(client):
     r = client.get('/simulation_ui_file/308')
     assert r.status_code == 200
     assert r.get_json()['simulation']['solvers'][0]['name'] == 'simcore/services/comp/kember-cardiac-model'
+
+
+def test_get_featured_datasets(client):
+    r = client.get('/get_featured_datasets_identifiers')
+    assert r.status_code == 200
+    json = r.get_json()
+    assert 'identifiers' in json
+    assert type(json['identifiers']) == list

@@ -2,7 +2,7 @@ import atexit
 import base64
 
 from app.metrics.pennsieve import get_download_count
-from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count
+from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
 from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
 from app.metrics.algolia import get_dataset_count, init_algolia_client
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
@@ -34,15 +34,15 @@ from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
-    create_multiple_doi_query, create_multiple_discoverId_query
-from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email
+    create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id
+from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, service_interest_email
 from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
 from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
-from app.scicrunch_process_results import reform_dataset_results, process_results, reform_aggregation_results, reform_curies_results, \
-    reform_related_terms
+from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
+    reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str
 from app.osparc.osparc import start_simulation as do_start_simulation
@@ -84,6 +84,7 @@ try:
     featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(Config.DATABASE_URL)
 except AttributeError:
     featuredDatasetIdSelectorTable = None
+
 
 class Biolucida(object):
     _token = ''
@@ -545,6 +546,17 @@ def get_dataset_info_object_identifier():
     return reform_dataset_results(dataset_search(query))
 
 
+@app.route("/dataset_info/anatomy")
+def get_dataset_info_anatomy():
+    identifier = request.args.get('identifier', -1)
+    if identifier == -1:
+        return abort(404, description=f'Identifier for API call not set.')
+
+    query = create_anatomy_query(identifier)
+
+    return reform_anatomy_results(dataset_search(query))
+
+
 @app.route("/dataset_info/using_pennsieve_identifier")
 def get_dataset_info_pennsieve_identifier():
     identifier = request.args.get('identifier')
@@ -562,6 +574,7 @@ def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     s3BucketName = query_args.get("s3BucketName", bucket_name)
     dataset_path = query_args.get('dataset_path')
+
     try:
         response = s3.get_object(
             Bucket=s3BucketName,
@@ -825,14 +838,21 @@ def datasets_by_project_id(project_id):
     else:
         abort(404, description="Resource not found")
 
+
+@app.route("/get_featured_datasets_identifiers", methods=["GET"])
+def get_featured_datasets_identifiers():
+    return {'identifiers': get_featured_datasets()}
+
+
 @app.route("/get_featured_dataset", methods=["GET"])
 def get_featured_dataset():
     featured_dataset_id = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)["featured_dataset_id"]
     if featured_dataset_id == -1:
-        # In case there was an error while setting the id, just return a default dataset so the homepage does not break
-        default_id = 32
-        return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, default_id)).json()
+        # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
+        featured_dataset_id = 32
+
     return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
+
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
@@ -846,6 +866,19 @@ def get_owner_email(owner_id):
     else:
         return jsonify({"email": res[0].email})
 
+# Get information of the latest body scaffold for species.
+# This endpoint returns the metadata file path, bucket,
+# dataset id and version which can be used to construct the url
+@app.route("/get_body_scaffold_info/<species>", methods=["GET"])
+def get_body_scaffold_info(species):
+    id = get_body_scaffold_dataset_id(species)
+    if id:
+        query = create_pennsieve_identifier_query(id)
+        result = process_get_first_scaffold_info(dataset_search(query))
+        if result:
+            return result
+
+    return abort(404, description=f"Whole body info not found for {species}")
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):
@@ -1111,21 +1144,33 @@ def create_wrike_task():
               )
 
         if (resp.status_code == 200):
-          if 'userEmail' in form and form['userEmail']:
+          if 'userEmail' in form and form['userEmail'] and 'sendCopy' in form and form['sendCopy'] == 'true':
             # default to bug form if task type not specified
-            subject = 'Issue Reporting'
+            subject = 'SPARC Reported Error/Issue Submission'
             body = issue_reporting_email.substitute({ 'message': description })
-            if (taskType == "news"):
-              subject = 'News creation request'
+            if (taskType == "feedback"):
+              subject = 'SPARC Feedback Submission'
+              body = feedback_email.substitute({ 'message': description })
+            elif (taskType == "interest"):
+              subject = 'SPARC Service Interest Submission'
+              body = service_interest_email.substitute({ 'message': description })
+            elif (taskType == "general"):
+              subject = 'SPARC Question or Inquiry Submission'
+              body = general_interest_email.substitute({ 'message': description })
+            elif (taskType == "research"):
+              subject = 'SPARC Research Submission'
+              body = creation_request_confirmation_email.substitute({ 'message': description })
+            elif (taskType == "news"):
+              subject = 'SPARC News Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })
             elif (taskType == "event"):
-              subject = 'Event creation request'
+              subject = 'SPARC Event Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })
             elif (taskType == "toolsAndResources"):
-              subject = 'Tool/Resource creation request'
+              subject = 'SPARC Tool/Resource Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })
             elif (taskType == "communitySpotlight"):
-              subject = 'Success Story/Fireside Chat creation request'
+              subject = 'SPARC Story Submission'
               body = creation_request_confirmation_email.substitute({ 'message': description })
             userEmail = form['userEmail']
             if len(userEmail) > 0:
@@ -1387,3 +1432,4 @@ def event_updated():
                 abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")
+

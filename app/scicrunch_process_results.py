@@ -1,6 +1,7 @@
 import importlib
 import json
 import re
+from app.config import Config
 from flask import jsonify
 
 from app.scicrunch_processing_common import SKIPPED_OBJ_ATTRIBUTES
@@ -14,7 +15,7 @@ def _prepare_results(results):
         try:
             version = hit['_source']['item']['version']['keyword']
         except KeyError:
-            #Try to get minimal information out from the datasets
+            # Try to get minimal information out from the datasets
             version = 'undefined'
 
         package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
@@ -33,7 +34,7 @@ def _prepare_results(results):
                 file['dataset']['path']
                 for file in hit['_source']['objects']
                 if 'additional_mimetype' in file and \
-                    file['additional_mimetype']['name'].find('abi.context-information') != -1
+                   file['additional_mimetype']['name'].find('abi.context-information') != -1
             ]
         else:
             attr['abi-contextual-information'] = []
@@ -50,13 +51,14 @@ def _prepare_results(results):
 
         _remove_unused_files_information(attr['files'])
         attr.update(sort_files_by_mime_type(attr['files']))
-        #All files are sorted, files are not required anymore
+        # All files are sorted, files are not required anymore
         del attr['files']
         output.append(attr)
 
     return output
 
-#Remove unused attributes in the obj list, this does not need to be version dependent at this moment
+
+# Remove unused attributes in the obj list, this does not need to be version dependent at this moment
 def _remove_unused_files_information(obj_list):
     if not obj_list:
         return None
@@ -70,6 +72,32 @@ def _remove_unused_files_information(obj_list):
 def process_results(results):
     return jsonify({'numberOfHits': results['hits']['total'], 'results': _prepare_results(results)})
 
+# process the search result to get the first scaffold of the first dataset
+def process_get_first_scaffold_info(results):
+    results = _prepare_results(results)
+    # iterate through to get the first scaffold
+    for result in results:
+        if 'abi-scaffold-metadata-file' in result and len(result['abi-scaffold-metadata-file']) > 0:
+            try:
+                path = result['abi-scaffold-metadata-file'][0]['dataset']['path']
+                id = result['dataset_identifier']
+                version = result['dataset_version']
+                s3uri = result['s3uri']
+                return jsonify({'path':path, 'id': id, 'version': version, 's3uri': s3uri})
+            except KeyError:
+                return None
+
+    #None found, let the caller handle that
+    return None
+
+def reform_anatomy_results(results):
+    processed_outputs = []
+    hits = results['hits']['hits']
+    for i, hit in enumerate(hits):
+        processed_outputs.append(hit['_source'])
+
+    return {'result': processed_outputs}
+
 
 def reform_dataset_results(results):
     processed_outputs = []
@@ -78,7 +106,7 @@ def reform_dataset_results(results):
         try:
             version = kb_result['version']
         except KeyError:
-            #Try to get minimal information out from the datasets
+            # Try to get minimal information out from the datasets
             version = 'undefined'
         package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
         m = importlib.import_module(f'app.{package_version}')
@@ -139,6 +167,7 @@ def _manipulate_attr(output):
 
     return output
 
+
 def _extract_dataset_path_remote_id(data, key, id_):
     extracted_data = None
     for dataset_path_remote_id in data[key]:
@@ -182,7 +211,7 @@ def reform_curies_results(data):
             match = re.search(pattern, item['key'])
             if match:
                 name = match.group(1)
-                
+
             if curie and name:
                 id_name_map[curie] = name
         except KeyError:
@@ -196,6 +225,7 @@ def reform_curies_results(data):
         result['uberon']['array'].append(pair)
 
     return result
+
 
 # Turn the result into a list in the uberon.array field
 def reform_related_terms(data):

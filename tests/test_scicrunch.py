@@ -52,6 +52,7 @@ def test_scicrunch_dataset_doi(client):
     else:
         pytest.skip('DOI used in test is out of date.')
 
+
 def test_scicrunch_multiple_dataset_doi(client):
     # Testing with dataset 55 and 68
     run_doi_test_1 = check_doi_status(client, "55", '10.26275/pzek-91wx')
@@ -69,6 +70,7 @@ def test_scicrunch_multiple_dataset_doi(client):
     else:
         pytest.skip('DOI used in test is out of date.')
 
+
 def test_scicrunch_multiple_dataset_ids(client):
     # Testing with dataset 55 and 68
     r = client.get('/dataset_info/using_multiple_discoverIds/?discoverIds=55&discoverIds=68')
@@ -79,6 +81,7 @@ def test_scicrunch_multiple_dataset_ids(client):
         discover_id_2 = results[1]['dataset_identifier']
         assert discover_id_1 == "55" or discover_id_1 == "68"
         assert discover_id_2 == "55" or discover_id_2 == "68"
+
 
 def test_scicrunch_search(client):
     r = client.get('/search/heart')
@@ -140,6 +143,33 @@ def test_create_identifier_query(client):
     assert result['title'] == 'Morphometric analysis of the abdominal vagus nerve in rats'
 
 
+def test_create_anatomy_query(client):
+    r = client.get('/dataset_info/anatomy?identifier=90')
+
+    json_data = json.loads(r.data)
+    assert 'result' in json_data
+
+    results = json_data['result']
+    assert len(results) == 1
+
+    result = results[0]
+
+    assert 'anatomy' in result
+    assert 'organ' in result['anatomy']
+    assert len(result['anatomy']['organ']) == 1
+    assert 'curie' in result['anatomy']['organ'][0]
+    assert result['anatomy']['organ'][0]['curie'] == 'UBERON:0001759'
+    assert 'item' in result
+    assert 'curie' in result['item']
+    assert result['item']['curie'].startswith("DOI:")
+    assert 'organisms' in result
+    assert 'subject' in result['organisms']
+    assert len(result['organisms']['subject']) == 1
+    assert 'species' in result['organisms']['subject'][0]
+    assert 'curie' in result['organisms']['subject'][0]['species']
+    assert result['organisms']['subject'][0]['species']['curie'] == 'NCBITaxon:10116'
+
+
 def test_response_version(client):
     # Testing with dataset 44
     identifier = "44"
@@ -174,7 +204,7 @@ def test_response_abi_plot(client):
             # Construct the file path prefix, it should be /exists/212/1/files
             path_prefix = '/'.join(('', 'exists', identifier, version, 'files'))
             for plot in json_data['result'][0]['abi-plot']:
-                for path in  plot['datacite']['isDescribedBy']['path']:
+                for path in plot['datacite']['isDescribedBy']['path']:
                     if path:
                         path = '/'.join((path_prefix, path))
                         # Check if the file exists using the /exists/{path} route
@@ -230,7 +260,7 @@ def test_response_abi_scaffold(client):
                             print(path)
                             assert json_data2['exists'] == 'true'
 
-                assert len(json_data['result'][0]['abi-scaffold-thumbnail']) == 4         
+                assert len(json_data['result'][0]['abi-scaffold-thumbnail']) == 4
                 for plot in json_data['result'][0]['abi-scaffold-thumbnail']:
                     for path in plot['datacite']['isDerivedFrom']['path']:
                         if path:
@@ -268,7 +298,7 @@ source_structure = {
                                       'description',
                                       'name', 'identifier', 'docid', 'curie'],
                          'optional': [{'version': {'type': dict, 'required': ['keyword'], 'optional': []}},
-                                       'techniques', 'readme', 'modalities', 'names']
+                                      'techniques', 'readme', 'modalities', 'names']
                      }}, 'pennsieve', 'provenance', 'supportingAwards'],
     'optional': ['anatomy', 'attributes', 'dates', 'diseases', 'distributions',
                  {'objects':
@@ -277,7 +307,7 @@ source_structure = {
                          'item': {
                              'type': dict,
                              'required': ['bytes', 'dataset', 'identifier', 'mimetype', 'name', 'updated'],
-                             'optional': [ 'distributions' ]}
+                             'optional': ['distributions']}
                      }
                  }, 'organisms', 'protocols', 'publication', 'xrefs']
 }
@@ -394,6 +424,14 @@ def test_raw_response_structure(client):
     #     print(k, data['hits']['hits'][0][k])
 
 
+def test_get_body_scaffold_info(client):
+    # Test if we get a shorter list of uberons with species specified
+    r = client.get('/get_body_scaffold_info/human')
+    result = json.loads(r.data)
+    assert result['id'] == '307'
+    assert result['path'] == 'derivative/human_body_metadata.json'
+    assert 'prd-sparc-discover-use1' in result['s3uri']
+
 def test_getting_curies(client):
     # Test if we get a shorter list of uberons with species specified
     r = client.get('/get-organ-curies/')
@@ -438,12 +476,14 @@ def test_scaffold_files(client):
             r = client.get(f"/s3-resource/{key}")
             assert r.status_code == 200
 
+
 def test_finding_contextual_information(client):
     r = client.get('/dataset_info/using_multiple_discoverIds/?discoverIds=76')
     results = json.loads(r.data)
     assert results['numberOfHits'] > 0  # Test we could find the generic colon scaffold dataset
     for item in results['results']:
         assert len(item['abi-contextual-information']) > 0  # Check it has contextual information
+
 
 def test_undefined_version_dataset_search(client):
     # Testing with dataset 17 which is not versioned

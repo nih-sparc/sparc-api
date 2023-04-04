@@ -84,8 +84,6 @@ SKIPPED_MIME_TYPES = [
     'font/ttf',
     'image/gznii',
     'image/vnd.nikon.nd2',
-    'image/vnd.ome.xml+jp2',
-    'image/vnd.ome.xml+jpx',
     'image/vnd.ome.xml+tiff',
     'image/vnd.zeiss.czi',
     'image/x-coreldraw',

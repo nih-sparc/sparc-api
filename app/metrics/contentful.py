@@ -3,7 +3,7 @@ import contentful
 import contentful_management
 import requests
 
-from datetime import datetime, timezone
+from datetime import date, timezone
 
 from app.config import Config
 
@@ -146,9 +146,8 @@ def get_featured_datasets():
             date_to_clear = featured_data['fields']['dateToClearFeaturedDatasets']
             featured_datasets = featured_data['fields']['featuredDatasets']
             if date_to_clear is not None:
-                time_now = datetime.now(timezone.utc)
-                iso_utc_offset = "+00:00"
-                expiration_time = datetime.fromisoformat(date_to_clear.replace('Z', iso_utc_offset))
+                time_now = date.today()
+                expiration_time = date.fromisoformat(date_to_clear)
                 if expiration_time < time_now:
                     featured_datasets = []
 

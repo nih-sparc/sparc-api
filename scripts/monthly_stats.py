@@ -35,12 +35,23 @@ class MonthlyStats(object):
             if (now - self.created_at) > datetime.timedelta(days=1):  # Do not run if app was started within 24h
                 self.run()
             else:
-                logging.info('SPARC api has started in the last 24 hours. Waiting until 24h has passed before '
-                             'sending emails')
+                message = 'SPARC api has started in the last 24 hours. Waiting until 24h has passed before ' \
+                            'sending emails'
+                logging.warning(message)
+                self.send_logging_email(message)
 
     def run(self):
-        self.get_stats()
-        return self.send_stats(self.user_stats)
+        try:
+            self.get_stats()
+            sendgrid_responses = self.send_stats(self.user_stats)
+        except BaseException as error:
+            logging.exception(f'Hit error while running monthly stats. {error}')
+            self.send_logging_email(f'Hit error while running monthly stats. {error}')
+        else:
+            self.send_logging_email(f'Monthly stats sent successfully \n'
+                                    f'Sent to: {[self.user_stats[orcid_id]["email"] for orcid_id in self.user_stats]} \n'
+                                    f'Send grid Responses: {sendgrid_responses}')
+
 
     def get_stats(self):
         self._pennsieve_temp_api_key = self.pennsieve_login()
@@ -155,4 +166,10 @@ class MonthlyStats(object):
                                                                     email_destination,
                                                                     'SPARC monthly dataset download summary',
                                                                     email_body)
+
+    def send_logging_email(self, message):
+        self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
+                                                             Config.METRICS_EMAIL_ADDRESS,
+                                                             'SPARC monthly dataset download summary',
+                                                             message)
 

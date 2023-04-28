@@ -64,12 +64,17 @@ class MonthlyStats(object):
 
     def send_stats(self, user_stats):
         responses = []
+        email_address = ''
+        email_body = ''
         for orcid_id in user_stats:
             if 'email' in user_stats[orcid_id].keys():
                 email_address = user_stats[orcid_id]['email']
                 email_body = create_html_template(remove_duplicates(user_stats[orcid_id]['datasets']))
-                r = self.send_email(email_address, email_body)
+                if not self.debug_mode:  # don't want to max out our sendgrid account in testing
+                    r = self.send_email(email_address, email_body)
             responses.append(r)
+        if self.debug_mode:
+            responses = [self.send_email(email_address, email_body)]  # send last email if in debug mode
         return responses
 
     # Get 1 month's metrics from Pennsieve
@@ -168,8 +173,17 @@ class MonthlyStats(object):
                                                                     email_body)
 
     def send_logging_email(self, message):
-        self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
-                                                             Config.METRICS_EMAIL_ADDRESS,
-                                                             'SPARC monthly dataset download summary',
-                                                             message)
+        status_code = 000
+        try:
+            status_code = self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
+                                                                 Config.METRICS_EMAIL_ADDRESS,
+                                                                 'SPARC monthly dataset download summary',
+                                                                 message)
+            if status_code != 202:
+                logging.error('Could not send sendgrid email, likely because rate limit is hit')
+        except BaseException as err:
+            logging.error(err)
+
+        return status_code
+
 

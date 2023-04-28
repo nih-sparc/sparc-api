@@ -68,3 +68,7 @@ def test_email():  # Note that this will send an email to the test_"email_recipi
 def test_full_run():  # For each recipient, this will send an email to the test_email for each email that would have been sent to a user
     responses = ms.run()
     assert_true(False not in [r.status_code == 202 for r in responses])
+
+def test_log_email():
+    response = ms.send_logging_email('testing log email')
+    assert_true(response == 202)

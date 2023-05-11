@@ -179,8 +179,12 @@ class MonthlyStats(object):
                                                                  Config.METRICS_EMAIL_ADDRESS,
                                                                  'SPARC monthly dataset download summary',
                                                                  message)
-            if status_code != 202:
-                logging.error('Could not send sendgrid email, likely because rate limit is hit')
+            if status_code == 403:
+                logging.error('Could not send sendgrid email because rate limit is hit (403)')
+            elif status_code == 401:
+                logging.error('Could not send sendgrid email. Sendgrid keys are likely incorrect (401)')
+            else:
+                logging.error(f'Unknown error. Status code: {status_code}')
         except BaseException as err:
             logging.error(err)
 

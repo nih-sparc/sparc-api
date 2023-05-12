@@ -185,7 +185,7 @@ class MonthlyStats(object):
                 logging.error('Could not send sendgrid email because rate limit is hit (403)')
             elif status_code == 401:
                 logging.error('Could not send sendgrid email. Sendgrid keys are likely incorrect (401)')
-            else
+            else:
                 logging.error(f'Unknown error. Status code: {status_code}')
         except BaseException as err:
             logging.error(err)

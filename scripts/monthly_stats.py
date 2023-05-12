@@ -35,12 +35,23 @@ class MonthlyStats(object):
             if (now - self.created_at) > datetime.timedelta(days=1):  # Do not run if app was started within 24h
                 self.run()
             else:
-                logging.info('SPARC api has started in the last 24 hours. Waiting until 24h has passed before '
-                             'sending emails')
+                message = 'SPARC api has started in the last 24 hours. Waiting until 24h has passed before ' \
+                            'sending emails'
+                logging.warning(message)
+                self.send_logging_email(message)
 
     def run(self):
-        self.get_stats()
-        return self.send_stats(self.user_stats)
+        try:
+            self.get_stats()
+            sendgrid_responses = self.send_stats(self.user_stats)
+        except BaseException as error:
+            logging.exception(f'Hit error while running monthly stats. {error}')
+            self.send_logging_email(f'Hit error while running monthly stats. {error}')
+        else:
+            self.send_logging_email(f'Monthly stats sent successfully \n'
+                                    f'Sent to: {[self.user_stats[orcid_id]["email"] for orcid_id in self.user_stats]} \n'
+                                    f'Send grid Responses: {sendgrid_responses}')
+
 
     def get_stats(self):
         self._pennsieve_temp_api_key = self.pennsieve_login()
@@ -53,12 +64,17 @@ class MonthlyStats(object):
 
     def send_stats(self, user_stats):
         responses = []
+        email_address = ''
+        email_body = ''
         for orcid_id in user_stats:
             if 'email' in user_stats[orcid_id].keys():
                 email_address = user_stats[orcid_id]['email']
                 email_body = create_html_template(remove_duplicates(user_stats[orcid_id]['datasets']))
-                r = self.send_email(email_address, email_body)
+                if not self.debug_mode:  # don't want to max out our sendgrid account in testing
+                    r = self.send_email(email_address, email_body)
             responses.append(r)
+        if self.debug_mode:
+            responses = [self.send_email(email_address, email_body)]  # send last email if in debug mode
         return responses
 
     # Get 1 month's metrics from Pennsieve
@@ -155,4 +171,25 @@ class MonthlyStats(object):
                                                                     email_destination,
                                                                     'SPARC monthly dataset download summary',
                                                                     email_body)
+
+    def send_logging_email(self, message):
+        status_code = 000
+        try:
+            status_code = self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
+                                                                 Config.METRICS_EMAIL_ADDRESS,
+                                                                 'SPARC monthly dataset download summary',
+                                                                 message)
+            if status_code == 202:
+                logging.info(f'Logging email sent successfully to {config.METRICS_EMAIL_ADDRESS} (202)')
+            elif status_code == 403:
+                logging.error('Could not send sendgrid email because rate limit is hit (403)')
+            elif status_code == 401:
+                logging.error('Could not send sendgrid email. Sendgrid keys are likely incorrect (401)')
+            else:
+                logging.error(f'Unknown error. Status code: {status_code}')
+        except BaseException as err:
+            logging.error(err)
+
+        return status_code
+
 

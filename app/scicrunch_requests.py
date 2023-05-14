@@ -161,6 +161,22 @@ def create_doi_request(doi):
     return query
 
 
+def create_pennsieve_id_query(pennseiveId):
+    query = {
+        "size": 50,
+        "from": 0,
+        "query": {
+            "term": {
+                "item.identifier.aggregate": {
+                    "value": f"N:dataset:{pennseiveId}"
+                }
+            }
+        }
+    }
+
+    print(query)
+    return query
+
 # create_facet_query(type): Generates facet search request data for sci-crunch  given a 'type'; where
 # 'type' is either 'species', 'gender', or 'organ' at this stage.
 #  Returns a tuple of the type-map and request data ( type_map, data )

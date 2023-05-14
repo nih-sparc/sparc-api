@@ -19,7 +19,7 @@ from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
-    create_multiple_doi_query, create_multiple_discoverId_query
+    create_multiple_doi_query, create_multiple_discoverId_query, create_pennsieve_id_query
 from scripts.email_sender import EmailSender, feedback_email, resource_submission_confirmation_email, creation_request_confirmation_email, issue_reporting_email, community_spotlight_submit_form_email, news_and_events_submit_form_email
 from threading import Lock
 from xml.etree import ElementTree
@@ -562,6 +562,16 @@ def getFileUrlFromPennsieve(discoverId):
     if url != None:
         return jsonify({'url': url})
     return jsonify({'error': 'error with the provided ID '}, status=502)
+
+    
+@app.route("/dataset_info/using_pennsieveId")
+@app.route("/dataset_info/using_pennsieveId/")
+def get_dataset_info_pennsieve_id():
+    ids = request.args.get('ids')
+    query = create_pennsieve_id_query(ids)
+
+    return process_results(dataset_search(query))
+
 
 @app.route("/dataset_info/using_title")
 def get_dataset_info_title():

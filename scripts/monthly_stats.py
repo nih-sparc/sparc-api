@@ -41,6 +41,7 @@ class MonthlyStats(object):
                 self.send_logging_email(message)
 
     def run(self):
+        sendgrid_responses = []
         try:
             self.get_stats()
             sendgrid_responses = self.send_stats(self.user_stats)
@@ -49,8 +50,9 @@ class MonthlyStats(object):
             self.send_logging_email(f'Hit error while running monthly stats. {error}')
         else:
             self.send_logging_email(f'Monthly stats sent successfully \n'
-                                    f'Sent to: {[self.user_stats[orcid_id]["email"] for orcid_id in self.user_stats]} \n'
+                                    f'Sent to: {[self.user_stats[orcid_id]["email"] for orcid_id in self.user_stats if "email" in self.user_stats[orcid_id].keys()]} \n'
                                     f'Send grid Responses: {sendgrid_responses}')
+        return sendgrid_responses
 
 
     def get_stats(self):
@@ -72,9 +74,9 @@ class MonthlyStats(object):
                 email_body = create_html_template(remove_duplicates(user_stats[orcid_id]['datasets']))
                 if not self.debug_mode:  # don't want to max out our sendgrid account in testing
                     r = self.send_email(email_address, email_body)
-            responses.append(r)
+                    responses.append(r)
         if self.debug_mode:
-            responses = [self.send_email(email_address, email_body)]  # send last email if in debug mode
+            responses = [self.send_logging_email(email_body)]  # send last email as log if in debug mode
         return responses
 
     # Get 1 month's metrics from Pennsieve
@@ -173,23 +175,22 @@ class MonthlyStats(object):
                                                                     email_body)
 
     def send_logging_email(self, message):
-        status_code = 000
         try:
-            status_code = self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
+            response = self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
                                                                  Config.METRICS_EMAIL_ADDRESS,
                                                                  'SPARC monthly dataset download summary',
                                                                  message)
-            if status_code == 202:
-                logging.info(f'Logging email sent successfully to {config.METRICS_EMAIL_ADDRESS} (202)')
-            elif status_code == 403:
+            if response.status_code == 202:
+                logging.info(f'Logging email sent successfully to {Config.METRICS_EMAIL_ADDRESS} (202)')
+            elif response.status_code == 403:
                 logging.error('Could not send sendgrid email because rate limit is hit (403)')
-            elif status_code == 401:
+            elif response.status_code == 401:
                 logging.error('Could not send sendgrid email. Sendgrid keys are likely incorrect (401)')
             else:
-                logging.error(f'Unknown error. Status code: {status_code}')
+                logging.error(f'Unknown error. Status code: {response.status_code}')
         except BaseException as err:
             logging.error(err)
 
-        return status_code
+        return response
 
 

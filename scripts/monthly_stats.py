@@ -25,6 +25,10 @@ class MonthlyStats(object):
         self.run_day = 1  # This is the day of the month emails will be sent
         self.debug_email = debug_email
         self.debug_mode = debug_mode
+        if debug_mode:
+            self.logging_address = debug_email
+        else:
+            self.logging_address = Config.METRICS_EMAIL_ADDRESS
 
     # daily_run_check runs on a set day of the month. However, since we do nt want to send two emails to users if the
     #       app restarts on the first day of the month, We assume an email has already been sent if the app has just
@@ -177,11 +181,11 @@ class MonthlyStats(object):
     def send_logging_email(self, message):
         try:
             response = self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
-                                                                 Config.METRICS_EMAIL_ADDRESS,
+                                                                 self.logging_address,
                                                                  'SPARC monthly dataset download summary',
                                                                  message)
             if response.status_code == 202:
-                logging.info(f'Logging email sent successfully to {Config.METRICS_EMAIL_ADDRESS} (202)')
+                logging.info(f'Logging email sent successfully to {self.logging_address} (202)')
             elif response.status_code == 403:
                 logging.error('Could not send sendgrid email because rate limit is hit (403)')
             elif response.status_code == 401:

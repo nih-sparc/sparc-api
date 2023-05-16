@@ -6,7 +6,7 @@ from nose.tools import assert_true
 #  The email address below can be modified to check the emails are sending and look as expected
 #  (using any email you control is fine as long as it is not pushed to github)
 
-test_email_recipient = 'myname@domain.com'
+test_email_recipient = Config.TESTING_EMAIL_ADDRESS
 
 test_data = {
     "0000-0002-3722-6351": {

@@ -6,7 +6,7 @@ from nose.tools import assert_true
 #  The email address below can be modified to check the emails are sending and look as expected
 #  (using any email you control is fine as long as it is not pushed to github)
 
-test_email_recipient = 'myname@domain.com'
+test_email_recipient = Config.TESTING_EMAIL_ADDRESS
 
 test_data = {
     "0000-0002-3722-6351": {
@@ -71,4 +71,4 @@ def test_full_run():  # For each recipient, this will send an email to the test_
 
 def test_log_email():
     response = ms.send_logging_email('testing log email')
-    assert_true(response == 202)
+    assert_true(response.status_code == 202)

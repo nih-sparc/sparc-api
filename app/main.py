@@ -568,7 +568,11 @@ def getFileUrlFromPennsieve(discoverId):
 @app.route("/dataset_info/using_pennsieveId/")
 def get_dataset_info_pennsieve_id():
     ids = request.args.get('ids')
-    query = create_pennsieve_id_query(ids)
+
+    if len(ids) > 4:
+        query = create_pennsieve_id_query(ids)
+    else:
+        query = create_multiple_discoverId_query([ids])
 
     return process_results(dataset_search(query))
 

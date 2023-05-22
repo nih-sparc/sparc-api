@@ -795,7 +795,9 @@ def get_osparc_data():
 def osparc_search():
     if request.method == 'GET':
         search = request.args.get('search')
-        results = osparc_services.search_services(search)
+        limit = request.args.get('limit', default=10, type=int)
+        skip = request.args.get('skip', default=0, type=int)
+        results = osparc_services.search_services(search, limit, skip)
         return jsonify(results)
 
 

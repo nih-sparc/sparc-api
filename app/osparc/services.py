@@ -9,7 +9,7 @@ class OSparcServices:
         self.generate_file_extensions()
 
 
-    def search_services(self, search_terms):
+    def search_services(self, search_terms, limit, skip):
 
         if isinstance(search_terms, str) and len(search_terms):
 
@@ -27,11 +27,23 @@ class OSparcServices:
                 self.services
             )
 
-            return list(result)
+            items = list(result)
+
+            return {
+                "items": items[skip:skip+limit],
+                "limit": limit,
+                "skip": skip,
+                "total": len(items)
+            }
 
         else:
 
-            return self.services
+            return {
+                "items": self.services[skip:skip+limit],
+                "limit": limit,
+                "skip": skip,
+                "total": len(self.services)
+            }
 
 
     def generate_file_extensions(self):

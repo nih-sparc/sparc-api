@@ -379,7 +379,7 @@ def url_exists(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
-    
+
     try:
         head_response = s3.head_object(
             Bucket=s3BucketName,

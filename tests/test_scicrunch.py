@@ -1,5 +1,6 @@
 import json
 import pytest
+import re
 from packaging import version
 
 from app import app
@@ -472,9 +473,12 @@ def test_scaffold_files(client):
         if 'abi-scaffold-metadata-file' in item and 's3uri' in item:
             uri = item['s3uri']
             path = item['abi-scaffold-metadata-file'][0]['dataset']['path']
-            key = f"{uri}files/{path}".replace('s3://pennsieve-prod-discover-publish-use1/', '')
-            r = client.get(f"/s3-resource/{key}")
-            assert r.status_code == 200
+            key = re.sub(r"s3://[^/]*/", "", f"{uri}files/{path}")
+            s3_bucket_name = re.sub(r"s3://|/.*", "", uri)
+            r = client.get(f"/exists/{key}?s3BucketName={s3_bucket_name}")
+            data = r.data.decode('utf-8')
+            json_data = json.loads(data)
+            assert json_data['exists'] == 'true'
 
 
 def test_finding_contextual_information(client):

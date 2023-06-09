@@ -18,8 +18,8 @@ def pennsieve_login():
     cognito_idp_client = boto3.client(
         "cognito-idp",
         region_name=cognito_region,
-        aws_access_key_id="",
-        aws_secret_access_key="",
+        aws_access_key_id=Config.SPARC_PORTAL_AWS_KEY,
+        aws_secret_access_key=Config.SPARC_PORTAL_AWS_SECRET,
     )
 
     login_response = cognito_idp_client.initiate_auth(

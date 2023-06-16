@@ -129,9 +129,10 @@ class MonthlyStats(object):
     # Get details for a given metrics object
     def get_dataset_details_from_pennsieve(self, metrics):
         # send a request asking for info on the datsets with downloads
+        uniqueIds = set([d['datasetId'] for d in metrics])
         r = requests.get(f'{Config.PENNSIEVE_API_HOST}/discover/datasets', {
             'limit': 1000,
-            'ids': [d['datasetId'] for d in metrics]
+            'ids': uniqueIds
         })
         r.raise_for_status()
         return r.json()['datasets']

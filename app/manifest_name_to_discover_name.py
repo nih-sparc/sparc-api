@@ -5003,5 +5003,8 @@ name_map = {'files/primary/sub-PR1705/pool-PR1705/PR1705_Blockface_1-531_Shaina-
             'files/source/HB-ICN-Ch2-1362238629-Raw_Data.csv': 'files/source/HB-ICN-Ch2-1362238629-Raw Data.csv',
             'files/source/HB-ICN-Ch4-1362238626-Raw_Data.csv': 'files/source/HB-ICN-Ch4-1362238626-Raw Data.csv', 'files/source/manifest_.xlsx': 'files/source/manifest.xlsx',
             'files/source/HB-ICN-Ch3-1362238627-Raw_Data.csv': 'files/source/HB-ICN-Ch3-1362238627-Raw Data.csv',
-            'files/source/HB-ICN-CH1-1362238630-Raw_Data.csv': 'files/source/HB-ICN-CH1-1362238630-Raw Data.csv'
+            'files/source/HB-ICN-CH1-1362238630-Raw_Data.csv': 'files/source/HB-ICN-CH1-1362238630-Raw Data.csv',
+            'files/primary/sub-Cadaver-Subject-1/Ultrasound_raw_Cadaver_Subject 1.mp4': 'files/primary/sub-Cadaver-Subject-1/Ultrasound_raw_Cadaver_Subject_1.mp4',
+            'files/primary/sub-Cadaver-Subject-2/Ultrasound_raw_Cadaver_Subject 2.mp4': 'files/primary/sub-Cadaver-Subject-2/Ultrasound_raw_Cadaver_Subject_2.mp4',
+            'files/primary/sub-Cadaver-Subject-3/Ultrasound_raw_Cadaver_Subject 3.mp4': 'files/primary/sub-Cadaver-Subject-3/Ultrasound_raw_Cadaver_Subject_3.mp4'
 }

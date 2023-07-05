@@ -5006,5 +5006,7 @@ name_map = {'files/primary/sub-PR1705/pool-PR1705/PR1705_Blockface_1-531_Shaina-
             'files/source/HB-ICN-CH1-1362238630-Raw_Data.csv': 'files/source/HB-ICN-CH1-1362238630-Raw Data.csv',
             'files/primary/sub-Cadaver-Subject-1/Ultrasound_raw_Cadaver_Subject 1.mp4': 'files/primary/sub-Cadaver-Subject-1/Ultrasound_raw_Cadaver_Subject_1.mp4',
             'files/primary/sub-Cadaver-Subject-2/Ultrasound_raw_Cadaver_Subject 2.mp4': 'files/primary/sub-Cadaver-Subject-2/Ultrasound_raw_Cadaver_Subject_2.mp4',
-            'files/primary/sub-Cadaver-Subject-3/Ultrasound_raw_Cadaver_Subject 3.mp4': 'files/primary/sub-Cadaver-Subject-3/Ultrasound_raw_Cadaver_Subject_3.mp4'
+            'files/primary/sub-Cadaver-Subject-3/Ultrasound_raw_Cadaver_Subject 3.mp4': 'files/primary/sub-Cadaver-Subject-3/Ultrasound_raw_Cadaver_Subject_3.mp4',
+            'files/derivative/sam-P21 BAT/ses-Pgp9.5/P21-3_Pgp9.5.jpx': 'files/derivative/sam-P21 BAT/ses-Pgp9.5/P21-3 Pgp9.5.jpx',
+            'files/derivative/sam-P21 BAT/ses-Pgp9.5/P21-4_Pgp9.5.jpx': 'files/derivative/sam-P21 BAT/ses-Pgp9.5/P21-4 Pgp9.5.jpx'
 }

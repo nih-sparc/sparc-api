@@ -59,7 +59,7 @@ def test_image_xmp_info_1197(client):
     assert 'pixel_width' in r.json
     assert r.json['pixel_width'] == "0.008184"
     assert r.json['pixel_height'] == "0.008184"
-    assert r.json['z_spacing'] == "-1.000000"
+    assert r.json['z_spacing'] == "1.000000"
 
 
 def test_image_xmp_info_850(client):
@@ -90,6 +90,19 @@ def test_image_blv_link_invalid_image_id(client):
     r = client.get('/image_blv_link/XYZ')
 
     assert r.status_code == 400
+
+
+def test_image_search_dataset_77(client):
+    r = client.get('/image_search/77')
+
+    assert 'dataset_images' in r.json
+    assert r.json['discover_dataset_id'] == "77"
+    assert r.json['status'] == "success"
+
+def test_image_search_dataset_292(client):
+    r = client.get('/image_search/292')
+
+    assert r.json['status'] == "failure"
 
 
 if __name__ == '__main__':

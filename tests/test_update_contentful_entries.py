@@ -1,5 +1,5 @@
 from datetime import datetime, timezone, timedelta
-from update_contentful_entries import calculate_sort_order
+from scripts.update_contentful_entries import calculate_sort_order
 
 def test_calculate_sort_order():
     # Get the current UTC date and time

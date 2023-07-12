@@ -5,13 +5,17 @@ def test_calculate_sort_order():
     # Get the current UTC date and time
     now = datetime.now(timezone.utc)    
     # Format the date in ISO format
-    current_date_iso = now.date().isoformat()
+    current_date_iso = now.isoformat()
     # Subtract one day to get a day in the past
     past_date = now - timedelta(days=1)
-    past_date_iso = past_date.date().isoformat()
+    past_date_iso = past_date.isoformat()
     # Add one day to get a day in the future
     future_date = now + timedelta(days=1)
-    future_date_iso = future_date.date().isoformat()
+    future_date_iso = future_date.isoformat()
+
+    print(f"CURRENT_DATE = {current_date_iso}")
+    print(f"PAST_DATE = {past_date_iso}")
+    print(f"FUTURE_DATE = {future_date_iso}")
 
     assert calculate_sort_order(past_date_iso) < 0 
     assert calculate_sort_order(future_date_iso) > 0

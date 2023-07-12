@@ -17,3 +17,4 @@ def test_calculate_sort_order():
     assert calculate_sort_order(current_date_iso) == 1.1
     assert calculate_sort_order(past_date_iso, future_date_iso) == 1
     assert calculate_sort_order(past_date_iso, past_date_iso) < 0
+    

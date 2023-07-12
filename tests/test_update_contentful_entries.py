@@ -2,8 +2,7 @@ from datetime import datetime, timezone, timedelta
 from scripts.update_contentful_entries import calculate_sort_order
 
 def test_calculate_sort_order():
-    # Get the current UTC date and time
-    now = datetime.now(timezone.utc)    
+    now = datetime.now()    
     # Format the date in ISO format
     current_date_iso = now.isoformat()
     # Subtract one day to get a day in the past

@@ -66,8 +66,7 @@ def calculate_sort_order(start_date, end_date=None):
     start_date_datetime = datetime.fromisoformat(start_date).astimezone(timezone.utc)
     now = datetime.now().astimezone(timezone.utc)
     time_from_event_in_seconds = (start_date_datetime - now).total_seconds()
-    time_from_event_in_days = time_from_event_in_seconds / 86400
-    time_from_event_in_days = int(time_from_event_in_days)
+    time_from_event_in_days = int(time_from_event_in_seconds / 86400)
     # in order to maintain the correct event sorting for upcoming (closet first, followed by closest in the future, followed by closest in the past),
     # we cannot simply keep track of the time from the event. Instead we take the inverse of the dates in the future so that they are less than the nearest future dates.
     upcoming_sort_order = 1.1

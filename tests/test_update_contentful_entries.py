@@ -11,10 +11,6 @@ def test_calculate_sort_order():
     # Add one day to get a day in the future
     future_date = now + timedelta(days=1)
     future_date_iso = future_date.isoformat()
-    print(f"NOW UTC = ", now)
-    print(f"NOW ISO = {current_date_iso}")
-    print(f"PAST_DATE = {past_date_iso}")
-    print(f"FUTURE_DATE = {future_date_iso}")
 
     assert calculate_sort_order(past_date_iso) < 0 
     assert calculate_sort_order(future_date_iso) > 0

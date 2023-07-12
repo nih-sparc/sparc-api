@@ -62,15 +62,11 @@ def update_all_events_sort_order():
                 update_entry_using_json_response('event', entry_id, original_state)
 
 def calculate_sort_order(start_date, end_date=None):
-    # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
-    start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
-    print(f"START_DATE_DATETIME = {start_date_datetime}")
+    # convert from ISO time format provided by contentful in UTC timezone
+    start_date_datetime = datetime.fromisoformat(start_date).astimezone(timezone.utc)
     now = datetime.now().astimezone(timezone.utc)
-    print(f"NOW = {now}")
-    time_from_event_in_seconds = (datetime.fromisoformat(start_date).astimezone(timezone.utc) - now).total_seconds()
-    print(f"TIMW FROM EVENT IN SECONDS = {time_from_event_in_seconds}")
+    time_from_event_in_seconds = (start_date_datetime - now).total_seconds()
     time_from_event_in_days = time_from_event_in_seconds / 86400
-    print(f"TIME FROM EVENT IN DAYS = {time_from_event_in_days}")
     time_from_event_in_days = int(time_from_event_in_days)
     # in order to maintain the correct event sorting for upcoming (closet first, followed by closest in the future, followed by closest in the past),
     # we cannot simply keep track of the time from the event. Instead we take the inverse of the dates in the future so that they are less than the nearest future dates.
@@ -83,9 +79,11 @@ def calculate_sort_order(start_date, end_date=None):
         if end_date is None:
             upcoming_sort_order = time_from_event_in_days
         else:
-            end_date_datetime = datetime.strptime(datetime.fromisoformat(end_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
+            end_date_datetime = datetime.fromisoformat(end_date).astimezone(timezone.utc)
+            end_time_from_now_in_seconds = (end_date_datetime - now).total_seconds()
+            end_time_from_now_in_days = int(end_time_from_now_in_seconds / 86400)
             # if the event is ongoing (meaning its end date has not yet passed)
-            has_event_ended = (end_date_datetime - datetime.now()).total_seconds() < 0
+            has_event_ended = end_time_from_now_in_days < 0
             if not has_event_ended:
                 # show ongoing events first
                 upcoming_sort_order = 1

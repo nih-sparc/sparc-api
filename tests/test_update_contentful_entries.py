@@ -10,7 +10,7 @@ def test_calculate_sort_order():
     past_date = now - timedelta(days=1)
     past_date_iso = past_date.date().isoformat()
     # Add one day to get a day in the future
-    future_date = now - timedelta(days=1)
+    future_date = now + timedelta(days=1)
     future_date_iso = future_date.date().isoformat()
 
     assert calculate_sort_order(past_date_iso) < 0 

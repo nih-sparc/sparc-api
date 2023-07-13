@@ -61,17 +61,32 @@ def update_all_events_sort_order():
                 }
                 update_entry_using_json_response('event', entry_id, original_state)
 
-def calculate_sort_order(start_date):
-    # convert from ISO time format provided by contentful in UTC timezone to naive offset datetime object
-    start_date_datetime = datetime.strptime(datetime.fromisoformat(start_date).astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f')
-    time_from_event_in_seconds = (start_date_datetime - datetime.now()).total_seconds()
-    time_from_event_in_days = time_from_event_in_seconds / 86400
+def calculate_sort_order(start_date, end_date=None):
+    # convert from ISO time format provided by contentful in UTC timezone
+    start_date_datetime = datetime.fromisoformat(start_date).astimezone(timezone.utc)
+    now = datetime.now().astimezone(timezone.utc)
+    time_from_event_in_seconds = (start_date_datetime - now).total_seconds()
+    time_from_event_in_days = int(time_from_event_in_seconds / 86400)
     # in order to maintain the correct event sorting for upcoming (closet first, followed by closest in the future, followed by closest in the past),
     # we cannot simply keep track of the time from the event. Instead we take the inverse of the dates in the future so that they are less than the nearest future dates.
-    upcoming_sort_order = 1
+    upcoming_sort_order = 1.1
+    # if start date is in the future
     if time_from_event_in_days > 0:
         upcoming_sort_order = 1/time_from_event_in_days
+    # is start date has passed
     if time_from_event_in_days < 0:
-        upcoming_sort_order = time_from_event_in_days
+        if end_date is None:
+            upcoming_sort_order = time_from_event_in_days
+        else:
+            end_date_datetime = datetime.fromisoformat(end_date).astimezone(timezone.utc)
+            end_time_from_now_in_seconds = (end_date_datetime - now).total_seconds()
+            end_time_from_now_in_days = int(end_time_from_now_in_seconds / 86400)
+            # if the event is ongoing (meaning its end date has not yet passed)
+            has_event_ended = end_time_from_now_in_days < 0
+            if not has_event_ended:
+                # show ongoing events first
+                upcoming_sort_order = 1
+            else:
+                upcoming_sort_order = time_from_event_in_days
 
     return upcoming_sort_order

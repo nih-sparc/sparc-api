@@ -7,7 +7,10 @@ def update_event_sort_order(event):
     event_entry_metadata = event['metadata']
     if 'startDate' in event_entry_fields and 'upcomingSortOrder' in event_entry_fields:
         start_date = event_entry_fields['startDate']['en-US']
-        upcoming_sort_order = calculate_sort_order(start_date)
+        end_date = None
+        if 'endDate' in event_entry_fields:
+            end_date = event_entry_fields['endDate']['en-US']
+        upcoming_sort_order = calculate_sort_order(start_date, end_date)
         event_entry_fields['upcomingSortOrder']['en-US'] = upcoming_sort_order
         event_state = {
             'fields': event_entry_fields,
@@ -41,7 +44,10 @@ def update_all_events_sort_order():
                     entry_had_existing_changes = True
             
             start_date = original_fields_dict['startDate']['en-US']
-            upcoming_sort_order = calculate_sort_order(start_date)
+            end_date = None
+            if 'endDate' in original_fields_dict:
+                end_date = original_fields_dict['endDate']['en-US']
+            upcoming_sort_order = calculate_sort_order(start_date, end_date)
             original_fields_dict['upcomingSortOrder']['en-US'] = upcoming_sort_order
             if entry_is_published:
                 # if entry has changes that are not yet published then we want to publish only the already published state

@@ -427,10 +427,13 @@ def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
 
+    s3_path = path.replace(' ', '_')
+    s3_path = s3_path.replace(',','_')
+
     try:
         head_response = s3.head_object(
             Bucket=s3BucketName,
-            Key=path,
+            Key=s3_path,
             RequestPayer="requester"
         )
         content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
@@ -443,7 +446,7 @@ def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     response = s3.get_object(
         Bucket=s3BucketName,
-        Key=path,
+        Key=s3_path,
         RequestPayer="requester"
     )
 

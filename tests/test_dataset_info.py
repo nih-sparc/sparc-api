@@ -273,3 +273,9 @@ def test_pennsieve_identifier_dataset_search(client):
     print(first_result)
     for r in result[BIOLUCIDA_3D]:
         print(r['dataset']['path'])
+
+def test_name_mangling_for_s3_resource(client):
+    # This test uses a file on dataset 328 which has a file where space is converted to underscore
+    # to check the name mangling code is working
+    r = client.get('/s3-resource/328/1/files/derivative/mapped_Pig%207_thumbnail.jpeg?s3BucketName=prd-sparc-discover-use1')
+    assert r.status_code == 200

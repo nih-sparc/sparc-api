@@ -1,6 +1,18 @@
 import base64
 from io import BytesIO
+from app.manifest_name_to_discover_name import name_map
 
+def check_path_in_mangled_list(s3_path):
+
+    # Split out the file part of the path
+    s3_paths = s3_path.split('files/')
+    s3_paths[1] = 'files/' + s3_paths[1]  # Add the part we split on back
+
+    # Switch the path to the mapped one if it is listed
+    if s3_paths[1] in name_map:
+        s3_paths[1] = name_map[s3_paths[1]]
+
+    return s3_paths[0] + s3_paths[1]  # Return the path with dataset info at the front
 
 def img_to_base64_str(img):
     """

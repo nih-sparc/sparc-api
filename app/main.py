@@ -44,7 +44,7 @@ from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
     reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
-from app.utilities import img_to_base64_str
+from app.utilities import img_to_base64_str, check_path_in_mangled_list
 from app.osparc.osparc import start_simulation as do_start_simulation
 from app.osparc.osparc import check_simulation as do_check_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
@@ -379,11 +379,12 @@ def url_exists(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
+    s3_path = check_path_in_mangled_list(path)
 
     try:
         head_response = s3.head_object(
             Bucket=s3BucketName,
-            Key=path,
+            Key=s3_path,
             RequestPayer="requester"
         )
     except ClientError:
@@ -426,11 +427,12 @@ def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
+    s3_path = check_path_in_mangled_list(path)
 
     try:
         head_response = s3.head_object(
             Bucket=s3BucketName,
-            Key=path,
+            Key=s3_path,
             RequestPayer="requester"
         )
         content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
@@ -443,7 +445,7 @@ def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     response = s3.get_object(
         Bucket=s3BucketName,
-        Key=path,
+        Key=s3_path,
         RequestPayer="requester"
     )
 

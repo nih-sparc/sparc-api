@@ -5,7 +5,7 @@ from app.scicrunch_processing_common import map_mime_type, COMMON_IMAGES, NOT_SP
 from app.scicrunch_processing_common import PASS_THROUGH_KEYS as BASE_PASS_THROUGH_KEYS
 from app.manifest_name_to_discover_name import name_map
 
-PASS_THROUGH_KEYS = ["doi", "dataset_identifier", "dataset_version", "dataset_revision", *BASE_PASS_THROUGH_KEYS]
+PASS_THROUGH_KEYS = ["doi", "dataset_identifier", "dataset_version", "dataset_revision", "keywords", *BASE_PASS_THROUGH_KEYS]
 
 
 # attributes is used to map desired parameters onto the path of keys needed in the sci-crunch response.
@@ -17,6 +17,7 @@ ATTRIBUTES_MAP = {
     'sampleSize': ['item', 'statistics', 'samples', 'count'],
     'subjectSize': ['item', 'statistics', 'subjects', 'count'],
     'name': ['item', 'name'],
+    'keywords': ['item', 'keywords'],
     'description': ['item', 'description'],
     'identifier': ['item', 'identifier'],
     'uri': ['distributions', 'current', 'uri'],

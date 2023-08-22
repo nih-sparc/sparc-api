@@ -2,6 +2,8 @@ import json
 import pytest
 from app import app
 
+from app.config import Config
+
 from timeit import default_timer as timer
 
 from app.scicrunch_processing_common import SCAFFOLD_FILE, PLOT_FILE, COMMON_IMAGES, THUMBNAIL_IMAGE, NAME, BIOLUCIDA_3D, VIDEO, SEGMENTATION_FILES, BIOLUCIDA_2D
@@ -273,3 +275,25 @@ def test_pennsieve_identifier_dataset_search(client):
     print(first_result)
     for r in result[BIOLUCIDA_3D]:
         print(r['dataset']['path'])
+
+def test_name_mangling_for_s3_resource(client):
+    # This test uses a file on dataset 328 which has a file where space is converted to underscore
+    # to check the name mangling code is working
+    r = client.get('/s3-resource/328/1/files/derivative/mapped_Pig%207_thumbnail.jpeg?s3BucketName=prd-sparc-discover-use1')
+    assert r.status_code == 200
+
+def test_size_limit_on_mangled_s3_resource(client):
+    # This test checks that files that are mangled and too large will return a 413
+
+    config_download_limit = Config.DIRECT_DOWNLOAD_LIMIT  # Store download limit
+    Config.DIRECT_DOWNLOAD_LIMIT = 20  # set limit to 20 bytes to force a 413
+
+    # Use a try-except to make sure we can set the limit back
+    try:
+        r = client.get('/s3-resource/328/1/files/derivative/mapped_Pig%207_thumbnail.jpeg?s3BucketName=prd-sparc-discover-use1')
+    except:
+        pass
+
+    Config.DIRECT_DOWNLOAD_LIMIT = config_download_limit  # set limit back
+
+    assert r.status_code == 413  # Check we got the correct response

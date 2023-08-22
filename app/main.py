@@ -44,7 +44,7 @@ from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
     reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
-from app.utilities import img_to_base64_str
+from app.utilities import img_to_base64_str, get_path_from_mangled_list
 from app.osparc.osparc import start_simulation as do_start_simulation
 from app.osparc.osparc import check_simulation as do_check_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results
@@ -417,6 +417,25 @@ def get_discover_path():
 
     return abort(404, description=f'Failed to retrieve uri {uri}')
 
+def s3_header_check(path, bucket_name):
+    try:
+        head_response = s3.head_object(
+            Bucket=bucket_name,
+            Key=path,
+            RequestPayer="requester"
+        )
+        content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
+        if content_length and not content_length < Config.DIRECT_DOWNLOAD_LIMIT :  # 20 MB
+            return abort(413, description= f"File too big to download: {content_length}")
+    except botocore.exceptions.ClientError as err:
+        # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
+        if err.response["Error"]["Code"] == "404":
+            return (404, f'Provided path was not found on the s3 resource')
+        else:
+            abort(err.response["Error"]["Code"], err.response["Error"]["Message"])
+    else:
+        return (200, 'OK')
+
 # Reverse proxy for objects from S3, a simple get object
 # operation. This is used by scaffoldvuer and its
 # important to keep the relative <path> for accessing
@@ -426,24 +445,28 @@ def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
+    s3_path = path  # Will modify s3_path if we find name mangling
 
-    try:
-        head_response = s3.head_object(
-            Bucket=s3BucketName,
-            Key=path,
-            RequestPayer="requester"
-        )
-        content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
-        if content_length and not content_length < Config.DIRECT_DOWNLOAD_LIMIT :  # 20 MB
-            return abort(413, description=f"File too big to download: {content_length}")
-    except botocore.exceptions.ClientError as err:
-        # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
-        if err.response["Error"]["Code"] == "404":
-            return abort(404, description=f'Provided path was not found on the s3 resource')
+    # Check the header to see if too large or does not exist
+    response = s3_header_check(path, s3BucketName)
+
+    # If the file does not exist, check if the name was mangled
+    if response[0] == 404:
+        s3_path_modified = get_path_from_mangled_list(path)
+        if s3_path_modified == s3_path:
+            abort(404, description=f'Provided path was not found on the s3 resource')  # Abort if path did not change
+
+        # Check the modified path
+        response2 = s3_header_check(s3_path_modified, s3BucketName)
+        if response2[0] == 200:
+            s3_path = s3_path_modified  # Modify the path if de-mangling was successful
+        elif response2[0] == 404:
+            abort(404, description=f'Provided path was not found on the s3 resource')
+
 
     response = s3.get_object(
         Bucket=s3BucketName,
-        Key=path,
+        Key=s3_path,
         RequestPayer="requester"
     )
 

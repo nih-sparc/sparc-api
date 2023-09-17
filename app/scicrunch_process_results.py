@@ -80,10 +80,13 @@ def process_get_first_scaffold_info(results):
         if 'abi-scaffold-metadata-file' in result and len(result['abi-scaffold-metadata-file']) > 0:
             try:
                 path = result['abi-scaffold-metadata-file'][0]['dataset']['path']
+                context_info = ''
+                if len(result['abi-context-file']) > 0:
+                    context_info = result['abi-context-file'][0]['dataset']['path']
                 id = result['dataset_identifier']
                 version = result['dataset_version']
                 s3uri = result['s3uri']
-                return jsonify({'path':path, 'id': id, 'version': version, 's3uri': s3uri})
+                return jsonify({'path':path, 'id': id, 'version': version, 's3uri': s3uri, 'contextinfo': context_info})
             except KeyError:
                 return None
 

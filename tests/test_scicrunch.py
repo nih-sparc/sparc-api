@@ -138,7 +138,7 @@ def test_create_identifier_query(client):
 
     result = results[0]
     assert 'version' in result
-    assert result['version'] == '1.1.5'
+    assert result['version'] == '1.2.0'
 
     assert 'title' in result
     assert result['title'] == 'Morphometric analysis of the abdominal vagus nerve in rats'

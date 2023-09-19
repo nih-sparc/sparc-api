@@ -52,18 +52,19 @@ class BFWorker(object):
       fileArray = filePath.split('/')
       items = self.bf.get_dataset(datasetId).items
       count = 0
+      depth = 0
       while type(items) is list:
           item = items[count]
-          for fileName in fileArray:
-              if fileName == item.name:
-                  if type(item) is pennsieve.Collection:
-                      items = item.items
-                      count = -1
-                      continue
-                  else:
-                      try:
-                          return item.files[0].url
-                      except:
-                          return None
+          if fileArray[depth] == item.name:
+              if type(item) is pennsieve.Collection:
+                  items = item.items
+                  count = -1
+                  depth += 1
+                  continue
+              else:
+                  try:
+                      return item.files[0].url
+                  except:
+                      return None
           count += 1
       return None

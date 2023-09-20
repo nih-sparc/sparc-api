@@ -50,6 +50,7 @@ class BFWorker(object):
 
   def getURLFromDatasetIdAndFilePath(self, datasetId, filePath):
       fileArray = filePath.split('/')
+      fileArray = list(filter(lambda f: not f.isdigit(), fileArray))
       items = self.bf.get_dataset(datasetId).items
       count = 0
       depth = 0

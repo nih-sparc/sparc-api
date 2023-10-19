@@ -1091,6 +1091,9 @@ def create_wrike_task():
           responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
           customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
           templateTaskId = Config.COMMUNITY_SPOTLIGHT_TEMPLATE_TASK_ID
+        elif (taskType == "research"):
+          followers.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
+          responsibles.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
 
         if (templateTaskId != ""):
           templateUrl = 'https://www.wrike.com/api/v4/tasks/' + templateTaskId

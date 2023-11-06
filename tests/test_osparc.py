@@ -132,7 +132,7 @@ def test_osparc_successful_simulation(client):
     }
     r = client.post("/start_simulation", json=data)
     assert r.status_code == 200
-    json_data: dict = json.loads(r.data)
+    json_data = json.loads(r.data)
     assert (status := json_data.get("status")) is not None
     assert status == "ok"
     assert (check_simulation_data := json_data.get("data")) is not None
@@ -170,7 +170,7 @@ def test_osparc_failing_simulation(client):
     }
     r = client.post("/start_simulation", json=data)
     assert r.status_code == 200
-    json_data: dict = json.loads(r.data)
+    json_data = json.loads(r.data)
     assert (status := json_data.get("status")) is not None
     assert status == "ok"    
     assert (check_simulation_data := json_data.get("data")) is not None

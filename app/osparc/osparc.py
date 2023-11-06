@@ -114,7 +114,7 @@ def start_simulation(data):
 
         status = solvers_api.start_job(solver.id, solver.version, job.id)
 
-        if status.state != "PUBLISHED":
+        if status.state not in {"PUBLISHED", "PENDING"}:
             raise SimulationException(
                 "the simulation job could not be submitted")
 

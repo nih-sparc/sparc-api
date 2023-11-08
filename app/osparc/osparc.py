@@ -152,12 +152,10 @@ def check_simulation(data):
         solver_version = data["solver"]["version"]
         status = solvers_api.inspect_job(solver_name, solver_version, job_id)
 
-        if status.state in {"SUCCESS", "FAILED"}:
-            # The simulation has completed, but was it successful?
+        if status.state == "FAILED":
+            raise SimulationException("the simulation failed")
 
-            if status.state == "FAILED":
-                raise SimulationException("the simulation failed")
-
+        if status.state == "SUCCESS":
             # Retrieve the simulation job outputs.
 
             try:

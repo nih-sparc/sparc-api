@@ -3,9 +3,12 @@ import json
 import re
 from app.config import Config
 from flask import jsonify
-
+from os import listdir
 from app.scicrunch_processing_common import SKIPPED_OBJ_ATTRIBUTES
 
+
+def convert_patch_to_X(version):
+    return version[:-1] + 'X'
 
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
 def _prepare_results(results):
@@ -14,6 +17,7 @@ def _prepare_results(results):
     for i, hit in enumerate(hits):
         try:
             version = hit['_source']['item']['version']['keyword']
+            version = convert_patch_to_X(version)
         except KeyError:
             # Try to get minimal information out from the datasets
             version = 'undefined'

@@ -2,10 +2,13 @@ import json
 import pytest
 import re
 from packaging import version
+import requests
+from os import listdir
 
 from app import app
 from app.main import dataset_search
 from app.scicrunch_requests import create_query_string
+from app.config import Config
 
 from known_uberons import UBERONS_DICT
 from known_dois import has_doi_changed, warn_doi_changes
@@ -18,10 +21,26 @@ def client():
     return app.test_client()
 
 
+
 def test_scicrunch_keys(client):
     r = client.get('/search/')
     assert r.status_code == 200
     assert 'numberOfHits' in json.loads(r.data).keys()
+
+def test_scicrunch_versions_are_supported():
+    r = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}&q=""')
+    results = r.json()
+    hits = results['hits']['hits']
+    available_versions = listdir('../app/')
+    for i, hit in enumerate(hits):
+        try:
+            version = hit['_source']['item']['version']['keyword'][:-1] + 'X'
+        except KeyError:
+            # Try to get minimal information out from the datasets
+            version = 'undefined'
+
+        package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
+        assert package_version in available_versions
 
 
 def check_doi_status(client, dataset_id, doi):

@@ -3,7 +3,7 @@ import pytest
 import re
 from packaging import version
 import requests
-from os import listdir
+import os
 
 from app import app
 from app.main import dataset_search
@@ -28,10 +28,16 @@ def test_scicrunch_keys(client):
     assert 'numberOfHits' in json.loads(r.data).keys()
 
 def test_scicrunch_versions_are_supported():
+    # Lines below are to allow the test to be run from the root dir or sparc-api/tests
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    app_directory = os.path.join(current_directory, '..', 'app')
+
+    # List the contents of the 'app' directory, to find which versions we have files for
+    available_versions = os.listdir(app_directory)
+
     r = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}&q=""')
     results = r.json()
     hits = results['hits']['hits']
-    available_versions = listdir('../app/')
     for i, hit in enumerate(hits):
         try:
             version = hit['_source']['item']['version']['keyword'][:-1] + 'X'
@@ -39,7 +45,7 @@ def test_scicrunch_versions_are_supported():
             # Try to get minimal information out from the datasets
             version = 'undefined'
 
-        package_version = f'scicrunch_processing_v_{version.replace(".", "_")}'
+        package_version = f'scicrunch_processing_v_{version.replace(".", "_")}.py'
         assert package_version in available_versions
 
 

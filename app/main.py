@@ -739,16 +739,15 @@ def inject_markdown(resp):
 
 def inject_template_data(resp):
     id_ = resp.get("id")
-    version = resp.get("version")
     uri = resp.get("uri")
-    if id_ is None or version is None or uri is None:
+    if id_ is None or uri is None:
         return
     parsed_uri = urlparse(uri)
     bucket = parsed_uri.netloc
     try:
         response = s3.get_object(
             Bucket=bucket,
-            Key="{}/{}/files/template.json".format(id_, version),
+            Key="{}/files/template.json".format(id_),
             RequestPayer="requester",
         )
     except ClientError:
@@ -761,7 +760,7 @@ def inject_template_data(resp):
         try:
             response = s3.get_object(
                 Bucket=bucket,
-                Key="{}/{}/packages/template.json".format(id_, version),
+                Key="{}/packages/template.json".format(id_),
                 RequestPayer="requester",
             )
         except ClientError as e:

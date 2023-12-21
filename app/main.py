@@ -344,7 +344,7 @@ def extract_thumbnail_from_xml_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
             else:
                 return abort(404, description=f"Unknown error for file: '{path}'")
 
-        resource = response["Body"].read().decode('UTF-8')
+        resource = response["Body"].read()
         start_tag_found = '<thumbnail ' in resource
         end_tag_found = '</thumbnail>' in resource
         if start_tag_found and not end_tag_found:
@@ -610,7 +610,7 @@ def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
         else:
             return abort(404, description=f"Unknown error for file: '{dataset_path}'")
 
-    resource = response["Body"].read().decode('UTF-8')
+    resource = response["Body"].read()
     xml = ElementTree.fromstring(resource)
     subject_element = xml.find('./{*}sparcdata/{*}subject')
     info = {}

@@ -344,7 +344,7 @@ def extract_thumbnail_from_xml_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
             else:
                 return abort(404, description=f"Unknown error for file: '{path}'")
 
-        resource = response["Body"].read()
+        resource = response["Body"].read().decode('UTF-8')
         start_tag_found = '<thumbnail ' in resource
         end_tag_found = '</thumbnail>' in resource
         if start_tag_found and not end_tag_found:

@@ -54,13 +54,13 @@ def get_cda_client_entry(id):
 
 
 def get_all_entries(content_type_id):
-    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
+    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}&limit=999'
     response = requests.get(url=url)
     return response.json()['items']
 
 
 def get_all_published_entries(content_type_id):
-    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}'
+    url = f'https://{Config.CTF_CMA_API_HOST}/spaces/{Config.CTF_SPACE_ID}/environments/master/public/entries?access_token={Config.CTF_CMA_ACCESS_TOKEN}&content_type={content_type_id}&limit=999'
     response = requests.get(url)
     return response.json()['items']
 

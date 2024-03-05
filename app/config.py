@@ -86,3 +86,5 @@ class Config(object):
     CTF_CMA_ACCESS_TOKEN = os.environ.get("CTF_CMA_ACCESS_TOKEN")
     CTF_SPACE_ID = os.environ.get("CTF_SPACE_ID")
     CTF_HOMEPAGE_ID = os.environ.get("CTF_HOMEPAGE_ID", '4qJ9WUWXg09FAUvCnbGxBY')
+    NUXT_TURNSTILE_SECRET_KEY = os.environ.get("NUXT_TURNSTILE_SECRET_KEY")
+    TURNSTILE_URL = os.environ.get("TURNSTILE_URL", "https://challenges.cloudflare.com/turnstile/v0/siteverify")

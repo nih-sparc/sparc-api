@@ -1061,8 +1061,8 @@ def create_wrike_task():
         captchaResp = captchaReq.json()
         if "success" not in captchaResp or not captchaResp["success"]:
             abort(409, description="Failed Captcha Validation")
-    else:
-        abort(409, description="Missing Captcha Token")
+    # else:
+    #     abort(409, description="Missing Captcha Token")
     # captcha all good
     if form and 'title' in form and 'description' in form:
         title = form["title"]

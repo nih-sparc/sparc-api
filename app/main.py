@@ -1050,6 +1050,20 @@ def get_scaffold_state():
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
     form = request.form
+    if "captcha_token" in form:
+        captchaReq = requests.post(
+            url=Config.TURNSTILE_URL,
+            json={
+                "secret": Config.NUXT_TURNSTILE_SECRET_KEY,
+                "response": form["captcha_token"]
+            }
+        )
+        captchaResp = captchaReq.json()
+        if "success" not in captchaResp or not captchaResp["success"]:
+            abort(409, description="Failed Captcha Validation")
+    # else:
+    #     abort(409, description="Missing Captcha Token")
+    # captcha all good
     if form and 'title' in form and 'description' in form:
         title = form["title"]
         description = form["description"]

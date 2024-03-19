@@ -795,11 +795,21 @@ def build_filetypes_table(osparc_viewers):
         table[filetype].append(viewer)
     return table
 
-
 @app.route("/sim/dataset/<id_>")
 def sim_dataset(id_):
     if request.method == "GET":
         req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
+        if req.ok:
+            json_data = req.json()
+            inject_markdown(json_data)
+            inject_template_data(json_data)
+            return jsonify(json_data)
+        abort(404, description="Resource not found")
+
+@app.route("/sim/dataset/<id_>/versions/<version_>")
+def sim_dataset_versions(id_, version_):
+    if request.method == "GET":
+        req = requests.get("{}/datasets/{}/versions/{}".format(Config.DISCOVER_API_HOST, id_, version_))
         if req.ok:
             json_data = req.json()
             inject_markdown(json_data)

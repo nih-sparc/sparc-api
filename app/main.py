@@ -171,10 +171,14 @@ osparc_data = {}
 def get_osparc_file_viewers():
     logging.info('Getting oSPARC viewers')
     # Gets a list of default viewers.
-    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers')
-    viewers = req.json()
-    table = build_filetypes_table(viewers["data"])
-    osparc_data["file_viewers"] = table
+    try:
+        req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers')
+        if req.ok and 'application/json' in req.headers.get('content-type', ''):
+            viewers = req.json()
+            table = build_filetypes_table(viewers["data"])
+            osparc_data["file_viewers"] = table
+    except Exception as e:
+        logging.error('Could not retreive oSPARC viewers', e)
     if not viewers_scheduler.running:
         logging.info('Starting scheduler for oSPARC viewers acquisition')
         viewers_scheduler.start()
@@ -218,9 +222,8 @@ def get_services():
         req = requests.get(url=f'{Config.OSPARC_API_HOST}/services')
         services_resp = req.json()
         osparc_services.set_services(services_resp['data'])
-    except requests.exceptions.RequestException:
-        print('error')
-        logging.error('Request to get oSPARC services failed')
+    except Exception as e:
+        logging.error('Request to get oSPARC services failed', e)
 
 
 # Gets oSPARC services before the first request after startup and then once a day.
@@ -1483,4 +1486,3 @@ def event_updated():
                 abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")
-

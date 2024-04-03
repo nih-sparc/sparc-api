@@ -1486,4 +1486,3 @@ def event_updated():
                 abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")
-

@@ -889,7 +889,7 @@ def get_featured_dataset():
         featured_dataset_id = 32
     response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
     # in case the dataset has been unpublished, just return default
-    if response.status_code != 200:
+    if response['datasets'] == []:
         response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, 32)).json()
     return response
 

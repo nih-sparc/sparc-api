@@ -887,9 +887,11 @@ def get_featured_dataset():
     if featured_dataset_id == -1:
         # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
         featured_dataset_id = 32
-
-    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
-
+    response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
+    # in case the dataset has been unpublished, just return default
+    if response['datasets'] == []:
+        response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, 32)).json()
+    return response
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):

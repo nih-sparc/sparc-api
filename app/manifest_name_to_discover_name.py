@@ -5115,4 +5115,35 @@ name_map = {'files/primary/sub-PR1705/pool-PR1705/PR1705_Blockface_1-531_Shaina-
 }
 
 biolucida_name_map = {
+    'ChAT Sample 6 Distal.jp2': 'ChAT Sample 6 Distal (1).jp2', 
+    'ChAT Sample 6 Middle.jp2': 'ChAT Sample 6 Middle (1).jp2', 
+    'ChAT Sample 6 Proximal.jp2': 'ChAT Sample 6 Proximal (1).jp2', 
+    'nNOS Sample 6 Distal.jp2': 'nNOS Sample 6 Distal (1).jp2', 
+    'nNOS Sample 6 Middle.jp2': 'nNOS Sample 6 Middle (1).jp2', 
+    'nNOS Sample 6 Proximal.jp2': 'nNOS Sample 6 Proximal (1).jp2', 
+    'Wnt-1 Sample 8 Distal.jp2': 'Wnt-1 Sample 8 Distal (1).jp2', 
+    'Wnt-1 Sample 8 Middle.jp2': 'Wnt-1 Sample 8 Middle (1).jp2', 
+    'Wnt-1 Sample 8 Oral.jp2': 'Wnt-1 Sample 8 Proximal (1).jp2',
+    'File 100 05-07-2019 DYM 22 7 Pr Chat;YFP DIN GFP-g nNOS-m VIP-r Hu-b_TileScan_00': 'File 100 05-07-2019 DYM 22 7 Pr Chat;YFP DIN GFP-g nNOS-m VIP-r Hu-b_TileScan_002_Merging001_ProjMax001_6.jp2'
+    'File 124 05-22-2019 PYF 3 6 Phox2b YFP Pr GFP-g Hu-b_TileScan_001_Merging001_Pro': 'File 124 05-22-2019 PYF 3 6 Phox2b YFP Pr GFP-g Hu-b_TileScan_001_Merging001_ProjMax001_3.jp2',
+    'File 118 10-14-2019 DYM 12 8 Chat YFP Pr 1 GFP-g CalB-r Hu-b 63x_Series015_ProjM': 'File 118 10-14-2019 DYM 12 8 Chat YFP Pr 1 GFP-g CalB-r Hu-b 63x_Series015_ProjMax001_8.jp2',
+    'File 152 02-17-20 A DYM 8 6 Distal Chat-g CalB-r CalR-b_TileScan_001_Merging001_': 'File 152 02-17-20 A DYM 8 6 Distal Chat-g CalB-r CalR-b_TileScan_001_Merging001_ProjMax001_3.jp2',
+    'File_78_05-23-2018_Chat-r_Hu-b__TileScan_001_Merging002_Merged001_Processed001_4': 'File_78_05-23-2018_Chat-r_Hu-b__TileScan_001_Merging002_Merged001_Processed001_4.jp2',
+    'File 170 02-12-19 KYM 3 1 Prox2 GGRP-g Hu-b_TileScan_002_Merging001_ProjMax001_1': 'File 170 02-12-19 KYM 3 1 Prox2 GGRP-g Hu-b_TileScan_002_Merging001_ProjMax001_10.jp2',
+    'File 170 02-12-19 KYM 3 1 Prox2 GGRP-g Hu-b_TileScan_001_Merging001_ProjMax001_3': 'File 170 02-12-19 KYM 3 1 Prox2 GGRP-g Hu-b_TileScan_001_Merging001_ProjMax001_3.jp2',
+    'File 173 03-8-19 KM3 Mid CGRP-g Hu-b SYT1-r_10X prox region of Mid Colon_ProjMax': 'File 173 03-8-19 KM3 Mid CGRP-g Hu-b SYT1-r_10X prox region of Mid Colon_ProjMax001_17.jp2',
+    'File_154_10-3-19_WTM_2_9_Prox_GABA-g_SST-r_Hu-b_TileScan_001_Merging001_Processe': 'File_154_10-3-19_WTM_2_9_Prox_GABA-g_SST-r_Hu-b_TileScan_001_Merging001_Processed001_3.jp2',
+    'large airway.jp2': 'airway.jp2',
+    'right vagal injection fibers further down nerve.jp2': 'nerve.jp2',
+    '340-vagal-nodose-jugular.jp2': 'jugular.jp2',
+    'sham nodose.jp2': 'nodose.jp2',
+    'main nerve to lung.jp2': 'lung.jp2',
+    'large airway.jp2': 'airway.jp2',
+    'main nerve to lung.jp2': 'lung.jp2',
+    '340-vagal-nodose-jugular.jp2': 'jugular.jp2',
+    '20171222_MTF47ChATChR2_heartdorsal_ICganglia_DAPI405_ChR2EYFP_PGPCy3_GFP647_10X_': '20171222_MTF47ChATChR2_heartdorsal_ICganglia_DAPI405_ChR2EYFP_PGPCy3_GFP647_10X_01.jpx',
+    '20180319_MTF61ChATChR2_Rvagus_ChR2EYFP488_PGPCy3_GFP647_10X_01_Stitch_Subset_Max': '20180319_MTF61ChATChR2_Rvagus_ChR2EYFP488_PGPCy3_GFP647_10X_01_Stitch_Subset_Maximum intensity projection 2.jp2',
+    '20180319_MTF52ChATChR2_heartdorsal_ICganglion_ChR2EYFP488_PGPCy3_GFP647_10X_01.j': '20180319_MTF52ChATChR2_heartdorsal_ICganglion_ChR2EYFP488_PGPCy3_GFP647_10X_01.jpx',
+    '20180319_MTF51ChATChR2_heartdorsal_ICganglion_ChR2EYFP488_PGPCy3_GFP647_10X_01_M': '20180319_MTF51ChATChR2_heartdorsal_ICganglion_ChR2EYFP488_PGPCy3_GFP647_10X_01_Maximum intensity projection.jp2',
+    '2019-11-01 ACh sensor staining in SMG 02 - Same Thresholds.jpx': '2019-11-01-ACh sensor staining in SMG 02 Same Thresholds.jpx'
 }

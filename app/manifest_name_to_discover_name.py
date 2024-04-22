@@ -5113,3 +5113,6 @@ name_map = {'files/primary/sub-PR1705/pool-PR1705/PR1705_Blockface_1-531_Shaina-
             'files/derivative/sub-15\sam-3\sub-15_sam-3_ChAT_P15-3p3_20x.jp2': 'files/derivative/sub-15/sam-3/sub-15_sam-3_ChAT_P15-3p3_20x.jp2',
             'files/derivative/sub-15\sam-3\sub-15_sam-3_TH_P15-3p1_20x.jp2': 'files/derivative/sub-15/sam-3/sub-15_sam-3_TH_P15-3p1_20x.jp2'
 }
+
+biolucida_name_map = {
+}

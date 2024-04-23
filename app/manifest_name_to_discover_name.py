@@ -5111,7 +5111,8 @@ name_map = {'files/primary/sub-PR1705/pool-PR1705/PR1705_Blockface_1-531_Shaina-
             'files/derivative/sub-15\sam-2\sub-15_sam-2_ChAT_P15-2p2_20x.jp2': 'files/derivative/sub-15/sam-2/sub-15_sam-2_ChAT_P15-2p2_20x.jp2',
             'files/derivative/sub-15\sam-2\sub-15_sam-2_TH_P15-2p1_20x.jp2': 'files/derivative/sub-15/sam-2/sub-15_sam-2_TH_P15-2p1_20x.jp2',
             'files/derivative/sub-15\sam-3\sub-15_sam-3_ChAT_P15-3p3_20x.jp2': 'files/derivative/sub-15/sam-3/sub-15_sam-3_ChAT_P15-3p3_20x.jp2',
-            'files/derivative/sub-15\sam-3\sub-15_sam-3_TH_P15-3p1_20x.jp2': 'files/derivative/sub-15/sam-3/sub-15_sam-3_TH_P15-3p1_20x.jp2'
+            'files/derivative/sub-15\sam-3\sub-15_sam-3_TH_P15-3p1_20x.jp2': 'files/derivative/sub-15/sam-3/sub-15_sam-3_TH_P15-3p1_20x.jp2',
+            'files/derivative/sub-218/sam-c-Kit_NeuN_M218/c-Kit NeuN pC MP M218 20X0.6Z 201021_201028.jpx': 'files/derivative/sub-218/sam-c-Kit_NeuN_M218/c-Kit NeuN pC am-MP M218 20X0.6Z 201021_201028.jpx',
 }
 
 biolucida_name_map = {

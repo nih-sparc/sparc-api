@@ -47,7 +47,7 @@ from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str, get_path_from_mangled_list
 from app.osparc.osparc import start_simulation as do_start_simulation
 from app.osparc.osparc import check_simulation as do_check_simulation
-from app.biolucida_process_results import process_results as process_biolucida_results
+from app.biolucida_process_results import process_results as process_biolucida_results, process_result as process_biolucida_result
 
 logging.basicConfig()
 
@@ -951,7 +951,7 @@ def thumbnail_by_image_id(image_id, recursive_call=False):
 def image_info_by_image_id(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/{0}".format(image_id)
     response = requests.request("GET", url)
-    return response.json()
+    return process_biolucida_result(response.json())
 
 
 @app.route("/image_search/<dataset_id>", methods=["GET"])

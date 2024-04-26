@@ -4,7 +4,7 @@ import base64
 from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
 from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
-from app.metrics.algolia import get_dataset_count, init_algolia_client
+from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
@@ -1488,3 +1488,7 @@ def event_updated():
                 abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")
+
+@app.route("/all_dataset_ids", methods=["GET"])
+def all_dataset_ids():
+    return get_all_dataset_ids()

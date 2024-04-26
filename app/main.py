@@ -34,7 +34,8 @@ from requests.auth import HTTPBasicAuth
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
-    create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id
+    create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id, \
+    create_multiple_mimetype_query
 from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, service_interest_email
 from threading import Lock
 from xml.etree import ElementTree
@@ -544,6 +545,15 @@ def get_dataset_info_dois():
 
     return process_results(dataset_search(query))
 
+@app.route("/multiple_dataset_info/using_multiple_mimetype")
+@app.route("/multiple_dataset_info/using_multiple_mimetype/")
+def get_file_info_from_mimetype():
+    q = request.args.getlist('q')
+    query = create_multiple_mimetype_query(q)
+
+    return process_results(dataset_search(query))
+
+
 @app.route("/dataset_info/using_multiple_discoverIds")
 @app.route("/dataset_info/using_multiple_discoverIds/")
 def get_dataset_info_discoverIds():
@@ -865,7 +875,12 @@ def datasets_by_project_id(project_id):
 
 @app.route("/get_featured_datasets_identifiers", methods=["GET"])
 def get_featured_datasets_identifiers():
-    return {'identifiers': get_featured_datasets()}
+    featured_dataset_id = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)["featured_dataset_id"]
+    if featured_dataset_id == -1:
+        # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
+        featured_dataset_id = 32
+
+    return featured_dataset_id
 
 
 @app.route("/get_featured_dataset", methods=["GET"])

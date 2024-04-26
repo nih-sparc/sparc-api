@@ -191,6 +191,19 @@ def create_doi_request(doi):
     return query
 
 
+def create_multiple_mimetype_query(mimetype_query):
+    query = {
+        "query": {
+            "query_string": {
+                "fields": [
+                    "*mimetype.name"
+                ],
+                "query": f'"{mimetype_query}"'
+            }
+        }
+    }
+    return query
+
 # create_facet_query(type): Generates facet search request data for sci-crunch  given a 'type'; where
 # 'type' is either 'species', 'gender', or 'organ' at this stage.
 #  Returns a tuple of the type-map and request data ( type_map, data )

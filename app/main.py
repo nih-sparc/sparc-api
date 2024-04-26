@@ -1491,4 +1491,7 @@ def event_updated():
 
 @app.route("/all_dataset_ids", methods=["GET"])
 def all_dataset_ids():
-    return get_all_dataset_ids()
+    list = get_all_dataset_ids()
+    string_list = [str(element) for element in list]
+    delimiter = ", "
+    return delimiter.join(string_list)

@@ -172,7 +172,7 @@ class MonthlyStats(object):
                                                                     email_destination,
                                                                     'SPARC monthly dataset download summary',
                                                                     email_body)
-        elif Config.DEPLOY_ENV == 'production':
+        elif Config.SEND_MONTHLY_STATS == 'TRUE':
             email_destination = email_address
             return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
                                                                     email_destination,

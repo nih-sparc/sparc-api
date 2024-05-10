@@ -875,12 +875,7 @@ def datasets_by_project_id(project_id):
 
 @app.route("/get_featured_datasets_identifiers", methods=["GET"])
 def get_featured_datasets_identifiers():
-    featured_dataset_id = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)["featured_dataset_id"]
-    if featured_dataset_id == -1:
-        # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
-        featured_dataset_id = 32
-
-    return featured_dataset_id
+    return {'identifiers': get_featured_datasets()}
 
 
 @app.route("/get_featured_dataset", methods=["GET"])

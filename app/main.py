@@ -548,6 +548,7 @@ def get_dataset_info_dois():
 @app.route("/multiple_dataset_info/using_multiple_mimetype")
 @app.route("/multiple_dataset_info/using_multiple_mimetype/")
 def get_file_info_from_mimetype():
+    # q here is a scicrunch query ie: "*jp2*+OR+*vnd.ome.xml*+OR+*jpx*"
     q = request.args.getlist('q')
     query = create_multiple_mimetype_query(q)
 

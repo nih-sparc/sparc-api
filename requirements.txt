@@ -21,7 +21,7 @@ osparc==0.4.3
 pillow
 public==2019.4.13
 pytest
-pymongo==3.8.0
+pymongo==4.6.3
 python-dateutil==2.8.0
 python-dotenv==0.10.3
 query-string==2019.4.13

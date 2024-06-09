@@ -1,6 +1,6 @@
 html_start = \
 '<h1 style="color: #1a1489;" data-darkreader-inline-color="">SPARC Download Statistics</h1> \
-<p>This month, you have had downloads on the following datasets:</p> \
+<p>This month, you have had downloads of the following datasets:</p> \
 <table style="border-collapse: collapse; width: 100%;" border="1"> \
 <tbody> \
 <tr> \

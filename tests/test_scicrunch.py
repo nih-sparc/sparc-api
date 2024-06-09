@@ -2,10 +2,13 @@ import json
 import pytest
 import re
 from packaging import version
+import requests
+import os
 
 from app import app
 from app.main import dataset_search
 from app.scicrunch_requests import create_query_string
+from app.config import Config
 
 from known_uberons import UBERONS_DICT
 from known_dois import has_doi_changed, warn_doi_changes
@@ -18,10 +21,32 @@ def client():
     return app.test_client()
 
 
+
 def test_scicrunch_keys(client):
     r = client.get('/search/')
     assert r.status_code == 200
     assert 'numberOfHits' in json.loads(r.data).keys()
+
+def test_scicrunch_versions_are_supported():
+    # Lines below are to allow the test to be run from the root dir or sparc-api/tests
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    app_directory = os.path.join(current_directory, '..', 'app')
+
+    # List the contents of the 'app' directory, to find which versions we have files for
+    available_versions = os.listdir(app_directory)
+
+    r = requests.get(f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}&q=""')
+    results = r.json()
+    hits = results['hits']['hits']
+    for i, hit in enumerate(hits):
+        try:
+            version = hit['_source']['item']['version']['keyword'][:-1] + 'X'
+        except KeyError:
+            # Try to get minimal information out from the datasets
+            version = 'undefined'
+
+        package_version = f'scicrunch_processing_v_{version.replace(".", "_")}.py'
+        assert package_version in available_versions
 
 
 def check_doi_status(client, dataset_id, doi):
@@ -138,7 +163,7 @@ def test_create_identifier_query(client):
 
     result = results[0]
     assert 'version' in result
-    assert result['version'] == '1.1.5'
+    assert result['version'] == '1.2.1'
 
     assert 'title' in result
     assert result['title'] == 'Morphometric analysis of the abdominal vagus nerve in rats'
@@ -431,7 +456,8 @@ def test_get_body_scaffold_info(client):
     result = json.loads(r.data)
     assert result['id'] == '307'
     assert result['path'] == 'derivative/human_body_metadata.json'
-    assert 'prd-sparc-discover-use1' in result['s3uri']
+    assert result['contextinfo'] == 'derivative/scaffold_context_info.json'
+    assert 'prd-sparc-discover50-use1' in result['s3uri']
 
 def test_getting_curies(client):
     # Test if we get a shorter list of uberons with species specified

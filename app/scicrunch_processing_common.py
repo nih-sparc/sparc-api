@@ -64,6 +64,8 @@ SKIPPED_OBJ_ATTRIBUTES = [
 
 
 def map_mime_type(mime_type, obj):
+    mime_type = mime_type.strip()
+
     if mime_type == '':
         return SKIP
 

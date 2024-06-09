@@ -132,13 +132,17 @@ def test_osparc_successful_simulation(client):
     }
     r = client.post("/start_simulation", json=data)
     assert r.status_code == 200
-    check_simulation_data = json.loads(r.data)["data"]
+    json_data = json.loads(r.data)
+    assert (status := json_data.get("status")) is not None
+    assert status == "ok"
+    assert (check_simulation_data := json_data.get("data")) is not None
     while True:
         r = client.post("/check_simulation", json=check_simulation_data)
         assert r.status_code == 200
         json_data = json.loads(r.data)
-        assert json_data["status"] == "ok"
-        if "results" in json_data:
+        assert (status := json_data.get("status")) is not None 
+        assert status == "ok"
+        if json_data.get("results"):
             assert json.dumps(json_data, sort_keys=True) == json.dumps(res, sort_keys=True)
             break
 
@@ -166,11 +170,15 @@ def test_osparc_failing_simulation(client):
     }
     r = client.post("/start_simulation", json=data)
     assert r.status_code == 200
-    check_simulation_data = json.loads(r.data)["data"]
+    json_data = json.loads(r.data)
+    assert (status := json_data.get("status")) is not None
+    assert status == "ok"    
+    assert (check_simulation_data := json_data.get("data")) is not None
     while True:
         r = client.post("/check_simulation", json=check_simulation_data)
         assert r.status_code == 200
         json_data = json.loads(r.data)
-        if json_data["status"] == "nok":
+        assert (status := json_data.get("status")) is not None
+        if status == "nok":
             assert json.dumps(json_data, sort_keys=True) == json.dumps(res, sort_keys=True)
             break

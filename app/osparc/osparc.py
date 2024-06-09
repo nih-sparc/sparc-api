@@ -114,7 +114,7 @@ def start_simulation(data):
 
         status = solvers_api.start_job(solver.id, solver.version, job.id)
 
-        if status.state != "PUBLISHED":
+        if status.state not in {"PUBLISHED", "PENDING"}:
             raise SimulationException(
                 "the simulation job could not be submitted")
 
@@ -152,12 +152,10 @@ def check_simulation(data):
         solver_version = data["solver"]["version"]
         status = solvers_api.inspect_job(solver_name, solver_version, job_id)
 
-        if status.progress == 100:
-            # The simulation has completed, but was it successful?
+        if status.state == "FAILED":
+            raise SimulationException("the simulation failed")
 
-            if status.state != "SUCCESS":
-                raise SimulationException("the simulation failed")
-
+        if status.state == "SUCCESS":
             # Retrieve the simulation job outputs.
 
             try:

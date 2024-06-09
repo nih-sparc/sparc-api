@@ -1,6 +1,7 @@
 import re
 
 from xml.etree import ElementTree
+from app.manifest_name_to_discover_name import biolucida_name_map
 
 
 XMP_NS = {'xmp': 'http://ns.adobe.com/xap/1.0/', 'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'x': 'adobe:ns:meta/'}
@@ -87,3 +88,12 @@ def process_results(data):
         raise NotImplementedError(f"Not able to handle XMP core meta data for version: '{version}'")
 
     raise AttributeError(f"Not able to match version from: '{xmp_version_string}'")
+
+
+def process_result(data):
+    if 'name' in data:
+        image_name = data['name']
+        if image_name in biolucida_name_map:
+            data['name'] = biolucida_name_map[image_name]
+
+    return data

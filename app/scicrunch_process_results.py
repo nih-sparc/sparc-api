@@ -3,9 +3,11 @@ import json
 import re
 from app.config import Config
 from flask import jsonify
-
 from app.scicrunch_processing_common import SKIPPED_OBJ_ATTRIBUTES
 
+
+def convert_patch_to_X(version):
+    return version[:-1] + 'X'
 
 # process_kb_results: Loop through SciCrunch results pulling out desired attributes and processing DOIs and CSV files
 def _prepare_results(results):
@@ -14,6 +16,7 @@ def _prepare_results(results):
     for i, hit in enumerate(hits):
         try:
             version = hit['_source']['item']['version']['keyword']
+            version = convert_patch_to_X(version)
         except KeyError:
             # Try to get minimal information out from the datasets
             version = 'undefined'
@@ -80,10 +83,13 @@ def process_get_first_scaffold_info(results):
         if 'abi-scaffold-metadata-file' in result and len(result['abi-scaffold-metadata-file']) > 0:
             try:
                 path = result['abi-scaffold-metadata-file'][0]['dataset']['path']
+                context_info = ''
+                if len(result['abi-context-file']) > 0:
+                    context_info = result['abi-context-file'][0]['dataset']['path']
                 id = result['dataset_identifier']
                 version = result['dataset_version']
                 s3uri = result['s3uri']
-                return jsonify({'path':path, 'id': id, 'version': version, 's3uri': s3uri})
+                return jsonify({'path':path, 'id': id, 'version': version, 's3uri': s3uri, 'contextinfo': context_info})
             except KeyError:
                 return None
 
@@ -105,6 +111,7 @@ def reform_dataset_results(results):
     for kb_result in kb_results:
         try:
             version = kb_result['version']
+            version = convert_patch_to_X(version)
         except KeyError:
             # Try to get minimal information out from the datasets
             version = 'undefined'

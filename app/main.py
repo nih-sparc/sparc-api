@@ -4,7 +4,7 @@ import base64
 from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
 from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
-from app.metrics.algolia import get_dataset_count, init_algolia_client
+from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
@@ -47,7 +47,7 @@ from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str, get_path_from_mangled_list
 from app.osparc.osparc import start_simulation as do_start_simulation
 from app.osparc.osparc import check_simulation as do_check_simulation
-from app.biolucida_process_results import process_results as process_biolucida_results
+from app.biolucida_process_results import process_results as process_biolucida_results, process_result as process_biolucida_result
 
 logging.basicConfig()
 
@@ -171,10 +171,14 @@ osparc_data = {}
 def get_osparc_file_viewers():
     logging.info('Getting oSPARC viewers')
     # Gets a list of default viewers.
-    req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers')
-    viewers = req.json()
-    table = build_filetypes_table(viewers["data"])
-    osparc_data["file_viewers"] = table
+    try:
+        req = requests.get(url=f'{Config.OSPARC_API_HOST}/viewers')
+        if req.ok and 'application/json' in req.headers.get('content-type', ''):
+            viewers = req.json()
+            table = build_filetypes_table(viewers["data"])
+            osparc_data["file_viewers"] = table
+    except Exception as e:
+        logging.error('Could not retreive oSPARC viewers', e)
     if not viewers_scheduler.running:
         logging.info('Starting scheduler for oSPARC viewers acquisition')
         viewers_scheduler.start()
@@ -218,9 +222,8 @@ def get_services():
         req = requests.get(url=f'{Config.OSPARC_API_HOST}/services')
         services_resp = req.json()
         osparc_services.set_services(services_resp['data'])
-    except requests.exceptions.RequestException:
-        print('error')
-        logging.error('Request to get oSPARC services failed')
+    except Exception as e:
+        logging.error('Request to get oSPARC services failed', e)
 
 
 # Gets oSPARC services before the first request after startup and then once a day.
@@ -610,7 +613,7 @@ def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
         else:
             return abort(404, description=f"Unknown error for file: '{dataset_path}'")
 
-    resource = response["Body"].read().decode('UTF-8')
+    resource = response["Body"].read()
     xml = ElementTree.fromstring(resource)
     subject_element = xml.find('./{*}sparcdata/{*}subject')
     info = {}
@@ -739,16 +742,15 @@ def inject_markdown(resp):
 
 def inject_template_data(resp):
     id_ = resp.get("id")
-    version = resp.get("version")
     uri = resp.get("uri")
-    if id_ is None or version is None or uri is None:
+    if id_ is None or uri is None:
         return
     parsed_uri = urlparse(uri)
     bucket = parsed_uri.netloc
     try:
         response = s3.get_object(
             Bucket=bucket,
-            Key="{}/{}/files/template.json".format(id_, version),
+            Key="{}/files/template.json".format(id_),
             RequestPayer="requester",
         )
     except ClientError:
@@ -761,7 +763,7 @@ def inject_template_data(resp):
         try:
             response = s3.get_object(
                 Bucket=bucket,
-                Key="{}/{}/packages/template.json".format(id_, version),
+                Key="{}/packages/template.json".format(id_),
                 RequestPayer="requester",
             )
         except ClientError as e:
@@ -796,11 +798,21 @@ def build_filetypes_table(osparc_viewers):
         table[filetype].append(viewer)
     return table
 
-
 @app.route("/sim/dataset/<id_>")
 def sim_dataset(id_):
     if request.method == "GET":
         req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
+        if req.ok:
+            json_data = req.json()
+            inject_markdown(json_data)
+            inject_template_data(json_data)
+            return jsonify(json_data)
+        abort(404, description="Resource not found")
+
+@app.route("/sim/dataset/<id_>/versions/<version_>")
+def sim_dataset_versions(id_, version_):
+    if request.method == "GET":
+        req = requests.get("{}/datasets/{}/versions/{}".format(Config.DISCOVER_API_HOST, id_, version_))
         if req.ok:
             json_data = req.json()
             inject_markdown(json_data)
@@ -818,7 +830,7 @@ def get_osparc_data():
 def osparc_search():
     if request.method == 'GET':
         search = request.args.get('search')
-        limit = request.args.get('limit', default=10, type=int)
+        limit = request.args.get('limit', default=5, type=int)
         skip = request.args.get('skip', default=0, type=int)
         results = osparc_services.search_services(search, limit, skip)
         return jsonify(results)
@@ -875,9 +887,11 @@ def get_featured_dataset():
     if featured_dataset_id == -1:
         # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
         featured_dataset_id = 32
-
-    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
-
+    response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
+    # in case the dataset has been unpublished, just return default
+    if response['datasets'] == []:
+        response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, 32)).json()
+    return response
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
@@ -937,7 +951,7 @@ def thumbnail_by_image_id(image_id, recursive_call=False):
 def image_info_by_image_id(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/{0}".format(image_id)
     response = requests.request("GET", url)
-    return response.json()
+    return process_biolucida_result(response.json())
 
 
 @app.route("/image_search/<dataset_id>", methods=["GET"])
@@ -1051,6 +1065,20 @@ def get_scaffold_state():
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
     form = request.form
+    if "captcha_token" in form:
+        captchaReq = requests.post(
+            url=Config.TURNSTILE_URL,
+            json={
+                "secret": Config.NUXT_TURNSTILE_SECRET_KEY,
+                "response": form["captcha_token"]
+            }
+        )
+        captchaResp = captchaReq.json()
+        if "success" not in captchaResp or not captchaResp["success"]:
+            abort(409, description="Failed Captcha Validation")
+    # else:
+    #     abort(409, description="Missing Captcha Token")
+    # captcha all good
     if form and 'title' in form and 'description' in form:
         title = form["title"]
         description = form["description"]
@@ -1091,6 +1119,9 @@ def create_wrike_task():
           responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
           customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
           templateTaskId = Config.COMMUNITY_SPOTLIGHT_TEMPLATE_TASK_ID
+        elif (taskType == "research"):
+          followers.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
+          responsibles.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
 
         if (templateTaskId != ""):
           templateUrl = 'https://www.wrike.com/api/v4/tasks/' + templateTaskId
@@ -1458,3 +1489,9 @@ def event_updated():
         else:
             abort(400, description="Missing event data")
 
+@app.route("/all_dataset_ids", methods=["GET"])
+def all_dataset_ids():
+    list = get_all_dataset_ids()
+    string_list = [str(element) for element in list]
+    delimiter = ", "
+    return delimiter.join(string_list)

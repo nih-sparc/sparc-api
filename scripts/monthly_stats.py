@@ -149,12 +149,14 @@ class MonthlyStats(object):
             for contributor in dataset['contributors']:
                 orcid_id = contributor['orcid']
 
-                # Add the download info with an orcid id as a key
-                if orcid_id not in users.keys():
-                    users[orcid_id] = {}
-                    users[orcid_id]['datasets'] = downloadInfo
-                else:
-                    users[orcid_id]['datasets'] += downloadInfo
+                if orcid_id is not None:
+                    # Add the download info with an orcid id as a key
+                    if orcid_id not in users.keys():
+                        users[orcid_id] = {}
+                        users[orcid_id]['datasets'] = downloadInfo
+                    else:
+                        # Must to a dictionary 'get' below, as using += mutates the dictionary
+                        users[orcid_id]['datasets'] = users.get(orcid_id)['datasets'] + downloadInfo
 
         return users
 
@@ -172,7 +174,7 @@ class MonthlyStats(object):
                                                                     email_destination,
                                                                     'SPARC monthly dataset download summary',
                                                                     email_body)
-        elif Config.DEPLOY_ENV == 'production':
+        elif Config.SEND_MONTHLY_STATS == 'TRUE':
             email_destination = email_address
             return self.send_grid.sendgrid_email_with_unsubscribe_group(Config.METRICS_EMAIL_ADDRESS,
                                                                     email_destination,

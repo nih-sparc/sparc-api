@@ -34,6 +34,7 @@ ATTRIBUTES_MAP = {
     'dataset_revision': ['pennsieve', 'revision', 'identifier'],
 }
 
+
 def sort_files_by_mime_type(obj_list):
     sorted_files = {}
     if not obj_list:

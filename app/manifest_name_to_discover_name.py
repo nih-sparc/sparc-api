@@ -5133,6 +5133,24 @@ name_map = {'files/primary/sub-PR1705/pool-PR1705/PR1705_Blockface_1-531_Shaina-
             'files/derivative/Claudin_C65-1_1-50_10xp1.jp2': 'files/derivative/sub-65/sam-1/Claudin_C65-1_1-50_10xp1.jp2', 
             'files/derivative/Claudin_C69-1_1-50_10xp2.jp2': 'files/derivative/sub-69/sam-1/Claudin_C69-1_1-50_10xp2.jp2', 
             'files/derivative/Claudin_C70-1_1-50_10xp3.jp2': 'files/derivative/sub-70/sam-1/Claudin_C70-1_1-50_10xp3.jp2',
+            "files/derivative/sub-H2115/sam-H2115/SPARC_H2115A_LM_NOS%26ChAT_DiI.xml":"files/derivative/sub-H2115/sam-H2115/SPARC_H2115A_LM_NOS_26ChAT_DiI.xml",
+            "files/derivative/sub-H2100/sam-H2100/SPARC_H2100A_LM_NOS%26ChAT_DiI.xml":"files/derivative/sub-H2100/sam-H2100/SPARC_H2100A_LM_NOS_26ChAT_DiI.xml",
+            "files/derivative/sub-H2150/sam-H2150/SPARC_H2150c_LM (Taeniae)_DiI ChAT%26NOS.xml":"files/derivative/sub-H2150/sam-H2150/SPARC_H2150c_LM (Taeniae)_DiI ChAT_26NOS.xml",
+            "files/derivative/sub-H2102/sam-H2102/SPARC_H2102B_LM_NOS%26ChAT_DiI.xml":"files/derivative/sub-H2102/sam-H2102/SPARC_H2102B_LM_NOS_26ChAT_DiI.xml",
+            "files/derivative/sub-H2101/sam-H2101/SPARC_H2101D_LM_NOS%26ChAT_DiI.xml":"files/derivative/sub-H2101/sam-H2101/SPARC_H2101D_LM_NOS_26ChAT_DiI.xml",
+            "files/derivative/sub-H2162/sam-H2162/SPARC_H2162a_LM (Taeniae)_DiI ChAT%26NOS.xml":"files/derivative/sub-H2162/sam-H2162/SPARC_H2162a_LM (Taeniae)_DiI ChAT_26NOS.xml",
+            "files/derivative/sub-H2139/sam-H2139/SPARC_H2139c_LM (Taeniae)_DiI VIP%26NOS.xml":"files/derivative/sub-H2139/sam-H2139/SPARC_H2139c_LM (Taeniae)_DiI VIP_26NOS.xml",
+            "files/derivative/sub-H2146/sam-H2146/SPARC_H2146b_LM (Taeniae)_DiI VIP%26NOS.xml":"files/derivative/sub-H2146/sam-H2146/SPARC_H2146b_LM (Taeniae)_DiI VIP_26NOS.xml",
+            "files/derivative/sub-H2111/sam-H2111/SPARC_H2111A_LM_NOS%26ChAT_DiI.xml":"files/derivative/sub-H2111/sam-H2111/SPARC_H2111A_LM_NOS_26ChAT_DiI.xml",
+            "files/derivative/sub-H2104/sam-H2104/SPARC_H2104B_LM_NOS%26ChAT_DiI.xml":"files/derivative/sub-H2104/sam-H2104/SPARC_H2104B_LM_NOS_26ChAT_DiI.xml",
+            "files/derivative/sub-H2109/sam-H2109/SPARC_H2109B_LM_NOS%26ChAT_DiI.xml":"files/derivative/sub-H2109/sam-H2109/SPARC_H2109B_LM_NOS_26ChAT_DiI.xml",
+            "files/derivative/sub-H2151/sam-H2151C/SPARC_H2151c_LM (Taeniae)_DiI ChAT%26NOS.xml":"files/derivative/sub-H2151/sam-H2151C/SPARC_H2151c_LM (Taeniae)_DiI ChAT_26NOS.xml",
+            "files/derivative/sub-H2151/sam-H2151/SPARC_H2151b_LM (Taeniae)_DiI ChAT%26NOS.xml":"files/derivative/sub-H2151/sam-H2151/SPARC_H2151b_LM (Taeniae)_DiI ChAT_26NOS.xml",
+            "files/derivative/sub-H2149/sam-H2149/SPARC_H2149c_LM (Taeniae)_DiI ChAT%26NOS.xml":"files/derivative/sub-H2149/sam-H2149/SPARC_H2149c_LM (Taeniae)_DiI ChAT_26NOS.xml",
+            "files/derivative/sub-H2149/sam-H2149B/SPARC_H2149b_LM (Taeniae)_DiI VIP%26NOS.xml":"files/derivative/sub-H2149/sam-H2149B/SPARC_H2149b_LM (Taeniae)_DiI VIP_26NOS.xml",
+            "files/derivative/sub-H2107/sam-H2107/SPARC_H2107C_LM_NOS%26ChAT_DiI.xml":"files/derivative/sub-H2107/sam-H2107/SPARC_H2107C_LM_NOS_26ChAT_DiI.xml",
+            "files/derivative/sub-H2145/sam-H2145/SPARC_H2145c_LM (Taeniae)_DiI ChAT%26NOS.xml":"files/derivative/sub-H2145/sam-H2145/SPARC_H2145c_LM (Taeniae)_DiI ChAT_26NOS.xml",
+            "files/derivative/sub-H2145/sam-H2145B/SPARC_H2145b_LM (Taeniae)_DiI VIP%26NOS.xml":"files/derivative/sub-H2145/sam-H2145B/SPARC_H2145b_LM (Taeniae)_DiI VIP_26NOS.xml"
 }
 
 biolucida_name_map = {

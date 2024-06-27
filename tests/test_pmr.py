@@ -54,5 +54,4 @@ def test_pmr_latest_exposure_workspace_without_latest_exposure(client):
 
 def test_pmr_latest_exposure_workspace_with_invalid_workspace_url(client):
     r = client.post("/pmr_latest_exposure", json={"workspace_url": "https://some.url.com/"})
-    print(r.get_json())
     assert r.status_code == 400

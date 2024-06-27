@@ -1083,7 +1083,7 @@ def create_wrike_task():
         title = form["title"]
         description = form["description"]
         newTaskDescription = form["description"]
-        
+
         hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
         ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
         url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'

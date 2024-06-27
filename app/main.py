@@ -1380,6 +1380,22 @@ def simulation_ui_file(identifier):
         abort(404, description="no simulation UI file could be found")
 
 
+@app.route("/pmr_file", methods=["POST"])
+def pmr_file():
+    data = request.get_json()
+    if data and "path" in data:
+        try:
+            resp = requests.post(f"{Config.PMR_HOST}/{data['path']}")
+            if resp.status_code == 200:
+                return base64.b64encode(resp.content)
+            else:
+                return resp.json()
+        except:
+            abort(400, description="invalid path")
+    else:
+        abort(400, description="missing path")
+
+
 @app.route("/start_simulation", methods=["POST"])
 def start_simulation():
     data = request.get_json()

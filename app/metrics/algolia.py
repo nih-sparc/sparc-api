@@ -33,4 +33,4 @@ def get_all_dataset_ids():
 def get_associated_datasets(projectId):
   client = init_algolia_client()
   index = client.init_index(INDEX)
-  return index.search('query', { 'filters': "supportingAwards.identifier:'{0}'".format(projectId) })
+  return index.search('', { 'filters': "supportingAwards.identifier:'{0}'".format(projectId), 'hitsPerPage': 999 })

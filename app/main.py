@@ -847,31 +847,11 @@ def osparc_extensions():
 
 @app.route("/project/<project_id>", methods=["GET"])
 def datasets_by_project_id(project_id):
-    # 1 - call discover to get awards on all datasets (let put a very high limit to make sure we do not miss any)
+    datasets = algolia.get_associated_datasets(project_id)
+    print(f'datasets = {datasets}')
 
-    req = requests.get(
-        "{}/search/records?limit=1000&offset=0&model=award".format(
-            Config.DISCOVER_API_HOST
-        )
-    )
-
-    records = req.json()["records"]
-
-    # 2 - filter response to retain only awards with project_id
-    result = filter(lambda x: "award_id" in x["properties"] and x["properties"]["award_id"] == project_id, records)
-
-    ids = map(lambda x: str(x["datasetId"]), result)
-
-    separator = "&ids="
-
-    list_ids = separator.join(ids)
-
-    # 3 - get the datasets from the list of ids from #2
-
-    if len(list_ids) > 0:
-        return requests.get(
-            "{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, list_ids)
-        ).json()
+    if len(datasets) > 0:
+        return datasets.hits.json()
     else:
         abort(404, description="Resource not found")
 

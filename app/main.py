@@ -847,10 +847,10 @@ def osparc_extensions():
 
 @app.route("/project/<project_id>", methods=["GET"])
 def datasets_by_project_id(project_id):
-    datasets = json.dumps(get_associated_datasets(project_id))
+    datasets = get_associated_datasets(project_id)
 
     if len(datasets['hits']) > 0:
-        return datasets['hits']
+        return jsonify(datasets['hits'])
     else:
         abort(404, description="Resource not found")
 

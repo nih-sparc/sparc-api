@@ -113,3 +113,4 @@ def get_featured_dataset_id_table_state(table):
         return json.loads(current_state)
     except:
         return default_data
+    

@@ -29,4 +29,8 @@ def get_all_dataset_ids():
     if record['objectID'] is not None:
       object_ids.append(record['objectID'])
   return object_ids
-  
+
+def get_associated_datasets(projectId):
+  client = init_algolia_client()
+  index = client.init_index(INDEX)
+  return index.search('', { 'filters': "supportingAwards.identifier:'{0}'".format(projectId), 'hitsPerPage': 999 })

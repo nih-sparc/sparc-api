@@ -4,7 +4,7 @@ import base64
 from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
 from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
-from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids
+from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids, get_associated_datasets
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
@@ -847,31 +847,10 @@ def osparc_extensions():
 
 @app.route("/project/<project_id>", methods=["GET"])
 def datasets_by_project_id(project_id):
-    # 1 - call discover to get awards on all datasets (let put a very high limit to make sure we do not miss any)
+    datasets = get_associated_datasets(project_id)
 
-    req = requests.get(
-        "{}/search/records?limit=1000&offset=0&model=award".format(
-            Config.DISCOVER_API_HOST
-        )
-    )
-
-    records = req.json()["records"]
-
-    # 2 - filter response to retain only awards with project_id
-    result = filter(lambda x: "award_id" in x["properties"] and x["properties"]["award_id"] == project_id, records)
-
-    ids = map(lambda x: str(x["datasetId"]), result)
-
-    separator = "&ids="
-
-    list_ids = separator.join(ids)
-
-    # 3 - get the datasets from the list of ids from #2
-
-    if len(list_ids) > 0:
-        return requests.get(
-            "{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, list_ids)
-        ).json()
+    if len(datasets['hits']) > 0:
+        return jsonify(datasets['hits'])
     else:
         abort(404, description="Resource not found")
 

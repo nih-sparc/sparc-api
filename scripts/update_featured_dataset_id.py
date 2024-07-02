@@ -106,8 +106,11 @@ def get_featured_dataset_id_table_state(table):
     }
     if table is None:
         return default_data
+    try:
+        current_state = table.pullState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME)
+        if current_state is None:
+            current_state = table.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
+        return json.loads(current_state)
+    except:
+        return default_data
     
-    current_state = table.pullState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME)
-    if current_state is None:
-        current_state = table.updateState(Config.FEATURED_DATASET_ID_SELECTOR_TABLENAME, json.dumps(default_data), True)
-    return json.loads(current_state)

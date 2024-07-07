@@ -43,6 +43,7 @@ MAPPED_MIME_TYPES = {
     'inode/vnd.abi.scaffold.view+file': SCAFFOLD_VIEW_FILE,
     'text/vnd.abi.plot+tab-separated-values': PLOT_FILE,
     'text/vnd.abi.plot+csv': PLOT_FILE,
+    'text/vnd.abi+thumbnail': THUMBNAIL_IMAGE,
     'image/png': COMMON_IMAGES,
     'image/tiff': 'tiff-image',
     'image/tif': 'tiff-image',

@@ -36,6 +36,7 @@ MAPPED_MIME_TYPES = {
     'application/x.vnd.abi.scaffold.view+json': SCAFFOLD_VIEW_FILE,
     'application/x.vnd.abi.simulation+json': SIMULATION_FILE,
     'image/x.vnd.abi.thumbnail+jpeg': THUMBNAIL_IMAGE,
+    'image/x.vnd.abi.thumbnail+png': THUMBNAIL_IMAGE,
     'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
     'inode/vnd.abi.scaffold+file': SCAFFOLD_FILE,
     'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,

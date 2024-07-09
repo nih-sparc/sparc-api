@@ -1,3 +1,5 @@
+from app.scicrunch_processing_skipped_mimetypes import SKIPPED_MIME_TYPES
+
 NOT_SPECIFIED = 'not-specified'
 SKIP = 'skip'
 
@@ -34,6 +36,7 @@ MAPPED_MIME_TYPES = {
     'application/x.vnd.abi.scaffold.view+json': SCAFFOLD_VIEW_FILE,
     'application/x.vnd.abi.simulation+json': SIMULATION_FILE,
     'image/x.vnd.abi.thumbnail+jpeg': THUMBNAIL_IMAGE,
+    'image/x.vnd.abi.thumbnail+png': THUMBNAIL_IMAGE,
     'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
     'inode/vnd.abi.scaffold+file': SCAFFOLD_FILE,
     'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,
@@ -52,58 +55,6 @@ MAPPED_MIME_TYPES = {
     'video/mp4': VIDEO
 }
 
-SKIPPED_MIME_TYPES = [
-    'application/fastq',
-    'application/json',
-    'application/octet-stream',
-    'application/pdf',
-    'application/rar',
-    'application/rdf+xml',
-    'application/vnd.cambridge-electronic-designced.spike2.32.data',
-    'application/vnd.cambridge-electronic-designced.spike2.64.data',
-    'application/vnd.cambridge-electronic-designced.spike2.resource+xml',
-    'application/vnd.ms-excel',
-    'application/vnd.oasis.opendocument.database',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.wolfram.mathematica.package',
-    'application/x-bzip-compressed-fastq',
-    'application/x-gz-compressed-fastq',
-    'application/x-matlab',
-    'application/x-matlab-data',
-    'application/x-msdos-program',
-    'application/x-tar',
-    'application/xml',
-    'application/zip',
-    'audio/midi',
-    'audio/x-mod',
-    'chemical/x-gamess-input',
-    'chemical/x-ncbi-asn1-ascii',
-    'font/otf',
-    'font/ttf',
-    'image/gznii',
-    'image/vnd.nikon.nd2',
-    'image/vnd.ome.xml+tiff',
-    'image/vnd.zeiss.czi',
-    'image/x-coreldraw',
-    'inode/directory',
-    'inode/vnd.abi.plot+thumbnail',
-    'model/obj',
-    'text/Tab-separated-values',
-    'text/css',
-    'text/h323',
-    'text/html',
-    'text/markdown',
-    'text/plain',
-    'text/tab-separated-values',
-    'text/x-c++src',
-    'text/x-chdr',
-    'text/x-python',
-    'text/x-sh',
-    'video/x-msvideo',
-]
-
 SKIPPED_OBJ_ATTRIBUTES = [
     'bytes',
     'checksums',
@@ -114,6 +65,8 @@ SKIPPED_OBJ_ATTRIBUTES = [
 
 
 def map_mime_type(mime_type, obj):
+    mime_type = mime_type.strip()
+
     if mime_type == '':
         return SKIP
 

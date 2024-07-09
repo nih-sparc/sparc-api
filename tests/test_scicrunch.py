@@ -134,6 +134,9 @@ def test_scicrunch_basic_search(client):
     r = client.get('/filter-search/Heart/?facet=All+Species&term=species')
     assert json.loads(r.data)['numberOfHits'] > 10
 
+def test_scicrunch_image_search(client):
+    r = client.get('/multiple_dataset_info/using_multiple_mimetype/?q="*jp2*+OR+*vnd.ome.xml*+OR+*jpx*"')
+    assert json.loads(r.data)['numberOfHits'] > 5
 
 def test_scicrunch_boolean_logic(client):
     r = client.get('/filter-search/?facet=All+Species&term=species&facet=male&term=gender&facet=female&term=gender')

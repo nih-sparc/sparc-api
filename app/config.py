@@ -89,3 +89,4 @@ class Config(object):
     CTF_HOMEPAGE_ID = os.environ.get("CTF_HOMEPAGE_ID", '4qJ9WUWXg09FAUvCnbGxBY')
     NUXT_TURNSTILE_SECRET_KEY = os.environ.get("NUXT_TURNSTILE_SECRET_KEY")
     TURNSTILE_URL = os.environ.get("TURNSTILE_URL", "https://challenges.cloudflare.com/turnstile/v0/siteverify")
+    PMR_HOST = os.environ.get("PMR_HOST", "https://models.physiomeproject.org")

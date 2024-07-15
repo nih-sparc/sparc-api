@@ -1,5 +1,8 @@
 # Overview
-This is the API service which is build as a Flask Application. It runs independent of the Nuxt.js web-application.
+This is the SPARC Portal API service which is built as a Flask Application. It runs independent of the [Nuxt.js web-application](https://github.com/nih-sparc/sparc-app-2).
+
+If you are looking for a Python client to use for accessing and using SPARC resources, please see [Python client for NIH SPARC](https://github.com/nih-sparc/sparc.client).
+
 # Requirements
 
 ## Python 3

@@ -613,6 +613,11 @@ def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     dataset_path = query_args.get('dataset_path')
 
     try:
+        # Check the header to see if too large
+        response = s3_header_check(dataset_path, s3BucketName)
+        # Check if file exists
+        if response[0] == 404:
+            abort(404, description=f'Provided path was not found on the s3 resource')
         response = s3.get_object(
             Bucket=s3BucketName,
             Key=dataset_path,

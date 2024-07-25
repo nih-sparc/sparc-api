@@ -435,8 +435,10 @@ def s3_header_check(path, bucket_name):
         # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
         if err.response["Error"]["Code"] == "404":
             return (404, f'Provided path was not found on the s3 resource')
+        elif err.response["Error"]["Code"] == "403":
+            return (403, f'There is a permission issue when accessing the file at specified path')
         else:
-            abort(err.response["Error"]["Code"], err.response["Error"]["Message"])
+            return abort(err.response["Error"]["Code"], err.response["Error"]["Message"])
     else:
         return (200, 'OK')
 
@@ -455,7 +457,7 @@ def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     response = s3_header_check(path, s3BucketName)
 
     # If the file does not exist, check if the name was mangled
-    if response[0] == 404:
+    if response[0] == 404 or response[0] == 403:
         s3_path_modified = get_path_from_mangled_list(path)
         if s3_path_modified == s3_path:
             abort(404, description=f'Provided path was not found on the s3 resource')  # Abort if path did not change
@@ -466,6 +468,8 @@ def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
             s3_path = s3_path_modified  # Modify the path if de-mangling was successful
         elif response2[0] == 404:
             abort(404, description=f'Provided path was not found on the s3 resource')
+        elif response2[0] == 403:
+            abort(403, description=f'There is a permission issue when accessing the file at specified path')
 
 
     response = s3.get_object(

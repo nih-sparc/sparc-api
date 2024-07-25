@@ -10,7 +10,7 @@ def client():
 
 
 def test_segmentation_info(client):
-    file_path = '43/5/files/derivative/sub-6384/sam-28_sub-6384_islet3/sub-6384_20x_MsGcg_RbCol4_SMACy3_islet3 (1).xml'
+    file_path = '43/files/derivative/sub-6384/sam-28_sub-6384_islet3/sub-6384_20x_MsGcg_RbCol4_SMACy3_islet3 (1).xml'
     r = client.get('/segmentation_info/', query_string={'dataset_path': file_path})
     assert r.status_code == 200
 
@@ -22,7 +22,7 @@ def test_segmentation_info(client):
 
 
 def test_segmentation_info_namespaced(client):
-    file_path = '230/1/files/primary/sub-dorsal-4/sam-CGRP-Mouse-Dorsal-4/3D_scaffold_-_CGRP-Mice-Dorsal-4.xml'
+    file_path = '230/files/primary/sub-dorsal-4/sam-CGRP-Mouse-Dorsal-4/3D_scaffold_-_CGRP-Mice-Dorsal-4.xml'
     r = client.get('/segmentation_info/', query_string={'dataset_path': file_path})
     assert r.status_code == 200
 

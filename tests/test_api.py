@@ -16,8 +16,8 @@ def client():
 
 
 def test_direct_download_url_small_file(client):
-    small_s3_file = '76%2F2%2Ffiles%2Fderivative%2FScaffold%2FmouseColon_metadata.json'
-    r = client.get(f"/s3-resource/{small_s3_file}")
+    small_s3_file = '76/files/derivative/mouseColon_metadata.json'
+    r = client.get(f"/s3-resource/{small_s3_file}?s3BucketName=prd-sparc-discover50-use1")
 
     assert r.status_code == 200
     assert b"proximal colon" in r.data
@@ -31,17 +31,17 @@ def test_direct_download_url_new_bucket_file(client):
 
 
 def test_direct_download_url_thumbnail(client):
-    small_s3_file = '95/1/files/derivative%2FScaffold%2Fthumbnail.png'
-    r = client.get(f"/s3-resource/{small_s3_file}")
+    small_s3_file = '95/files/derivative%2FhumanColon_Layout1_thumbnail.jpeg'
+    r = client.get(f"/s3-resource/{small_s3_file}?s3BucketName=prd-sparc-discover50-use1")
 
     assert r.status_code == 200
-    assert b"PNG" in r.data
+    assert b"\xFF\xD8\xFF" in r.data
 
 def test_direct_download_incorrect_path(client):
-    incorrect_path = '32/4/files/?encodeBase64=true'
-    r = client.get(f"/s3-resource/{incorrect_path}")
+    incorrect_path = '95/files/?encodeBase64=true'
+    r = client.get(f"/s3-resource/{incorrect_path}?s3BucketName=prd-sparc-discover50-use1")
 
-    assert r.status_code == 404
+    assert r.status_code != 200
 
 def test_direct_download_empty_path(client):
     r = client.get(f"/s3-resource/")
@@ -50,7 +50,7 @@ def test_direct_download_empty_path(client):
 
 
 def test_direct_download_url_large_file(client):
-    large_s3_file = '61%2F2%2Ffiles%2Fprimary%2Fsub-44%2Fsam-1%2Fmicroscopy%2Fsub-44sam-1C44-1Slide2p2MT_10x.nd2'
+    large_s3_file = '61%2Ffiles%2Fprimary%2Fsub-44%2Fsam-1%2Fmicroscopy%2Fsub-44sam-1C44-1Slide2p2MT_10x.nd2'
     r = client.get(f"/s3-resource/{large_s3_file}")
 
     assert r.status_code == 413

@@ -10,7 +10,7 @@ def client():
 
 
 def test_segmentation_thumbnail(client):
-    r = client.get('/thumbnail/segmentation?path=37/2/files/derivative/sub-54-5/TJU_3Scan_ratheart54-5_updated_06_11_19_Fiducials.xml')
+    r = client.get('/thumbnail/segmentation?path=37/files/derivative/sub-54-5/TJU_3Scan_ratheart54-5_updated_06_11_19_Fiducials.xml')
 
     assert r.data.decode('utf-8').startswith('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAFIElEQVR4nO1ZTYgcRRT+aiaaZTCXDegl')
 

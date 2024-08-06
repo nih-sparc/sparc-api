@@ -8,10 +8,12 @@ from sqlalchemy.orm import sessionmaker
 
 base = declarative_base()
 
+
 class MonthlyStatsState(base):  
     __tablename__ = Config.MONTHLYSTATS_TABLENAME
     sending_date = Column('sending_date', DATE, index=False, primary_key=True)
     data = Column('info', JSONB, index=False)
+
 
 class Table:
   def __init__(self, databaseURL, state):
@@ -39,8 +41,7 @@ class Table:
           self._session.rollback()
           return None
 
-
-  def pushState(self, dateIn, input, commit = False):
+  def pushState(self, dateIn, input, commit=False):
       #Push the provided date and data
       newState = self._state(sending_date=dateIn, data=input)
       self._session.add(newState)
@@ -63,6 +64,7 @@ class Table:
           (dateIn.year >= lastDate.year and dateIn.month > lastDate.month): 
             return True
       return False
+
 
 class MonthlyStatsTable(Table):
     def __init__(self, databaseURL):

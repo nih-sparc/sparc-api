@@ -69,7 +69,7 @@ def test_email():  # Note that this will send an email to the test_"email_recipi
 def test_full_run():  # For each recipient, this will send an email to the test_email for each email that would have been sent to a user
     #Only check with the DB if it  is set up
     responses = []
-    if Config.DATABASE_URL == None:
+    if Config.DATABASE_URL is None:
         responses = ms.run()
     else:
         #Test against a specified date, the entry in the database is set
@@ -78,10 +78,9 @@ def test_full_run():  # For each recipient, this will send an email to the test_
         responses = ms.monthly_stats_required_check(None, False)
     assert_true(False not in [r.status_code == 202 for r in responses])
 
-
 def test_next_year_run():  # For each recipient, this will send an email to the test_email for each email that would have been sent to a user
     #Only check with the DB if it  is set up
-    if Config.DATABASE_URL == None:
+    if Config.DATABASE_URL is None:
         pytest.skip('DATABASE not set for this run')
     else:
         #Test against a specified date, the entry in the database is set
@@ -91,7 +90,7 @@ def test_next_year_run():  # For each recipient, this will send an email to the 
         assert_true(False not in [r.status_code == 202 for r in responses])
 
 def test_same_month_run():
-    if Config.DATABASE_URL == None:
+    if Config.DATABASE_URL is None:
         pytest.skip('DATABASE not set for this run')
     else:
         #Test against a specified date, the entry in the database is set
@@ -101,7 +100,7 @@ def test_same_month_run():
         assert_true(len(responses) == 0)
 
 def test_earlier_month_run():
-    if Config.DATABASE_URL == None:
+    if Config.DATABASE_URL is None:
         pytest.skip('DATABASE not set for this run')
     else:
         #Test against a specified date, the entry in the database is set

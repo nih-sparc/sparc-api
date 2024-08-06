@@ -25,7 +25,6 @@ class Table:
       self._state = state
 
   def getNumberOfRow(self):
-
       rows = self._session.query(self._state).count()
       return rows
 

@@ -31,7 +31,7 @@ class MonthlyStats(object):
             self.logging_address = debug_email
         else:
             self.logging_address = Config.METRICS_EMAIL_ADDRESS
-        if Config.DATABASE_URL != None:
+        if Config.DATABASE_URL is not None:
             try:
                 self.monthlytable = MonthlyStatsTable(Config.DATABASE_URL)
             except AttributeError:
@@ -39,7 +39,7 @@ class MonthlyStats(object):
 
     # This will check against the database 
     def monthly_stats_required_check(self, timeNow=None, commit=True):
-        if timeNow == None:
+        if timeNow is None:
             timeNow = datetime.datetime.now().date()
         if self.monthlytable and self.monthlytable.sendingRequired(timeNow):
             sendgrid_responses = self.run()

@@ -39,6 +39,7 @@ class Config(object):
     MAPSTATE_TABLENAME = os.environ.get("MAPSTATE_TABLENAME", "mapstates")
     SCAFFOLDSTATE_TABLENAME = os.environ.get("SCAFFOLDSTATE_TABLENAME", "scaffoldstates")
     FEATURED_DATASET_ID_SELECTOR_TABLENAME = os.environ.get("FEATURED_DATASET_ID_SELECTOR_TABLENAME", "featured_dataset_selector_state")
+    MONTHLYSTATS_TABLENAME = os.environ.get("MONTHLYSTATS_TABLENAME", "monthlystats")
     WRIKE_TOKEN = os.environ.get("WRIKE_TOKEN")
     DRC_FEEDBACK_FOLDER_ID = os.environ.get("DRC_FEEDBACK_FOLDER_ID", "IEADBYQEI4MM37FH")
     DRC_WRIKE_CUSTOM_STATUS_ID = os.environ.get("DRC_WRIKE_CUSTOM_STATUS_ID", "IEADBYQEJMBJODZU")

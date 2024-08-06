@@ -16,6 +16,7 @@ def remove_duplicates(d_array):
     unique_list = [json.loads(d) for d in json_set]
     return unique_list
 
+
 class MonthlyStats(object):
     def __init__(self, debug_mode=False, debug_email=''):
         self.send_grid = EmailSender()
@@ -37,7 +38,7 @@ class MonthlyStats(object):
                 self.monthlytable = None
 
     # This will check against the database 
-    def monthly_stats_required_check(self, timeNow = None, commit = True):
+    def monthly_stats_required_check(self, timeNow=None, commit=True):
         if timeNow == None:
             timeNow = datetime.datetime.now().date()
         if self.monthlytable and self.monthlytable.sendingRequired(timeNow):
@@ -62,7 +63,6 @@ class MonthlyStats(object):
                                     f'Sent to: {[self.user_stats[orcid_id]["email"] for orcid_id in self.user_stats if "email" in self.user_stats[orcid_id].keys()]} \n'
                                     f'Send grid Responses: {sendgrid_responses}')
         return sendgrid_responses
-
 
     def get_stats(self):
         self._pennsieve_temp_api_key = self.pennsieve_login()
@@ -169,7 +169,6 @@ class MonthlyStats(object):
         for i in range(0, len(downloadInfo)):
             downloadInfo[i]['name'] = dataset['name']
         return downloadInfo
-
 
     # send email using sendgrid
     def send_email(self, email_address, email_body):

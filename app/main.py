@@ -154,8 +154,14 @@ if not featured_dataset_id_scheduler.running:
 if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler = BackgroundScheduler()
     ms = MonthlyStats()
+    #Check when app starts in case the api server is down on the first
+    #of the month
+    ms.monthly_stats_required_check()
     monthly_stats_email_scheduler.start()
-    monthly_stats_email_scheduler.add_job(ms.daily_run_check, 'interval', days=1)
+    #Check on the first of each month at 2am
+    monthly_stats_email_scheduler.add_job(ms.monthly_stats_required_check, 'cron', \
+        year='*', month='*', day='1', hour='2', minute=0, second=0)
+
 
 # Only need to run the update contentful entries scheduler on one environment, so dev was chosen to keep prod more responsive
 if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':

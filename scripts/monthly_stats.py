@@ -4,6 +4,7 @@ from app.config import Config
 from app.metrics.pennsieve import get_pennseive_download_metrics
 from scripts.monthly_downloads_html_template import create_html_template
 from scripts.email_sender import EmailSender
+from scripts.monthly_db import MonthlyStatsTable
 import requests
 import datetime
 import json
@@ -14,6 +15,7 @@ def remove_duplicates(d_array):
     json_set = set(json_list)
     unique_list = [json.loads(d) for d in json_set]
     return unique_list
+
 
 class MonthlyStats(object):
     def __init__(self, debug_mode=False, debug_email=''):
@@ -29,20 +31,24 @@ class MonthlyStats(object):
             self.logging_address = debug_email
         else:
             self.logging_address = Config.METRICS_EMAIL_ADDRESS
+        if Config.DATABASE_URL is not None:
+            try:
+                self.monthlytable = MonthlyStatsTable(Config.DATABASE_URL)
+            except AttributeError:
+                self.monthlytable = None
 
-    # daily_run_check runs on a set day of the month. However, since we do nt want to send two emails to users if the
-    #       app restarts on the first day of the month, We assume an email has already been sent if the app has just
-    #       started and set a cooldown period of 24h. This ensures we pass the 1 day trigger for sending the emails
-    def daily_run_check(self):
-        now = datetime.datetime.now()
-        if now.day == self.run_day:  # Check if current day is run day
-            if (now - self.created_at) > datetime.timedelta(days=1):  # Do not run if app was started within 24h
-                self.run()
-            else:
-                message = 'SPARC api has started in the last 24 hours. Waiting until 24h has passed before ' \
-                            'sending emails'
-                logging.warning(message)
-                self.send_logging_email(message)
+    # This will check against the database 
+    def monthly_stats_required_check(self, timeNow=None, commit=True):
+        if timeNow is None:
+            timeNow = datetime.datetime.now().date()
+        if self.monthlytable and self.monthlytable.sendingRequired(timeNow):
+            sendgrid_responses = self.run()
+            #Store the date and stats
+            self.monthlytable.pushState(timeNow, self.user_stats, commit)
+            return sendgrid_responses
+        #return an empty array when no action is taken, keeping it consistent with run()
+        #for testing
+        return []
 
     def run(self):
         sendgrid_responses = []
@@ -57,7 +63,6 @@ class MonthlyStats(object):
                                     f'Sent to: {[self.user_stats[orcid_id]["email"] for orcid_id in self.user_stats if "email" in self.user_stats[orcid_id].keys()]} \n'
                                     f'Send grid Responses: {sendgrid_responses}')
         return sendgrid_responses
-
 
     def get_stats(self):
         self._pennsieve_temp_api_key = self.pennsieve_login()
@@ -164,7 +169,6 @@ class MonthlyStats(object):
         for i in range(0, len(downloadInfo)):
             downloadInfo[i]['name'] = dataset['name']
         return downloadInfo
-
 
     # send email using sendgrid
     def send_email(self, email_address, email_body):

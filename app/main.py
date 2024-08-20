@@ -319,14 +319,14 @@ def thumbnail_from_neurolucida_file():
         if response.status_code == 200:
             if response.headers.get('Content-Type', 'unknown') == 'image/png':
                 return base64.b64encode(response.content)
+        abort(400, 'Failed to retrieve thumbnail.')
+    
     except requests.exceptions.ConnectionError:
         return abort(400, description="Unable to make a connection to NEUROLUCIDA_HOST.")
     except requests.exceptions.Timeout:
         return abort(504, 'Request to NEUROLUCIDA_HOST timed out.')
     except requests.exceptions.RequestException as e:
         return abort(502, f"Error while requesting NEUROLUCIDA_HOST: {str(e)}")
-
-    abort(400, 'Failed to retrieve thumbnail.')
 
 
 @app.route("/thumbnail/segmentation")

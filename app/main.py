@@ -313,12 +313,20 @@ def thumbnail_from_neurolucida_file():
         return abort(400, description=f"Query arguments are not valid.")
 
     url = f"{Config.NEUROLUCIDA_HOST}/thumbnail"
-    response = requests.get(url, params=query_args)
-    if response.status_code == 200:
-        if response.headers.get('Content-Type', 'unknown') == 'image/png':
-            return base64.b64encode(response.content)
-
-    abort(400, 'Failed to retrieve thumbnail.')
+    try:    
+        response = requests.get(url, params=query_args, timeout=5)
+        response.raise_for_status()
+        if response.status_code == 200:
+            if response.headers.get('Content-Type', 'unknown') == 'image/png':
+                return base64.b64encode(response.content)
+        abort(400, 'Failed to retrieve thumbnail.')
+    
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to NEUROLUCIDA_HOST.")
+    except requests.exceptions.Timeout:
+        return abort(504, 'Request to NEUROLUCIDA_HOST timed out.')
+    except requests.exceptions.RequestException as e:
+        return abort(502, f"Error while requesting NEUROLUCIDA_HOST: {str(e)}")
 
 
 @app.route("/thumbnail/segmentation")

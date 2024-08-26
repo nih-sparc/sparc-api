@@ -31,6 +31,7 @@ from pennsieve import Pennsieve
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
 from requests.auth import HTTPBasicAuth
+from flask_caching import Cache
 
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
@@ -55,6 +56,7 @@ logging.basicConfig()
 app = Flask(__name__)
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV
+cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
 
 CORS(app)
 
@@ -893,8 +895,8 @@ def datasets_by_project_id(project_id):
 def get_featured_datasets_identifiers():
     return {'identifiers': get_featured_datasets()}
 
-
 @app.route("/get_featured_dataset", methods=["GET"])
+@cache.cached(timeout=300)
 def get_featured_dataset():
     featured_dataset_id = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)["featured_dataset_id"]
     if featured_dataset_id == -1:

@@ -31,7 +31,7 @@ def test_direct_download_url_new_bucket_file(client):
 
 
 def test_direct_download_url_thumbnail(client):
-    small_s3_file = '95/files/derivative%2FhumanColon_Layout1_thumbnail.jpeg'
+    small_s3_file = '95/files/derivative%2FcolonHuman_Layout1_thumbnail.jpeg'
     r = client.get(f"/s3-resource/{small_s3_file}?s3BucketName=prd-sparc-discover50-use1")
 
     assert r.status_code == 200

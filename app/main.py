@@ -964,7 +964,7 @@ def thumbnail_by_image_id(image_id, recursive_call=False):
 
 @app.route("/image/<image_id>", methods=["GET"])
 def image_info_by_image_id(image_id):
-    url = Config.BIOLUCIDA_ENDPOINT + "/image/{0}".format(image_id)
+    url = Config.BIOLUCIDA_ENDPOINT + "/image/info/{0}".format(image_id)
     response = requests.request("GET", url)
     return process_biolucida_result(response.json())
 

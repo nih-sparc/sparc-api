@@ -5,6 +5,7 @@ from app.metrics.pennsieve import get_pennseive_download_metrics
 from scripts.monthly_downloads_html_template import create_html_template
 from scripts.email_sender import EmailSender
 from scripts.monthly_db import MonthlyStatsTable
+from operator import itemgetter
 import requests
 import datetime
 import json
@@ -70,7 +71,7 @@ class MonthlyStats(object):
         dataset_details_for_downloaded_datasets = self.get_dataset_details_from_pennsieve(metrics)
         self.user_stats = self.create_user_download_object(dataset_details_for_downloaded_datasets, metrics)
         self.pennsieve_user_details = self.get_emails_orcid_id_map_from_pennsieve()
-        self.add_emails_to_user_stats_object()
+        self.user_stats_object_post_processing()
         return self.user_stats
 
     def send_stats(self, user_stats):
@@ -124,12 +125,16 @@ class MonthlyStats(object):
         return r.json()
 
     # Add an emails field to the user stats object (which has a highest level of orcid id)
-    def add_emails_to_user_stats_object(self):
+    # Sort the dataset list by id then version
+    def user_stats_object_post_processing(self):
         for user in self.pennsieve_user_details:
             if 'orcid' in user.keys():
                 orcid_id = user['orcid']['orcid']
                 if orcid_id in self.user_stats.keys():
                     self.user_stats[orcid_id]['email'] = user['email']
+                    datasets = self.user_stats[orcid_id]['datasets']
+                    self.user_stats[orcid_id]['datasets'] = \
+                        sorted(datasets, key=itemgetter("datasetId", "version"), reverse=True)
 
     # Get details for a given metrics object
     def get_dataset_details_from_pennsieve(self, metrics):

@@ -459,7 +459,7 @@ def test_get_body_scaffold_info(client):
     result = json.loads(r.data)
     assert result['id'] == '307'
     assert result['path'] == 'derivative/human_body_metadata.json'
-    assert result['contextinfo'] == 'derivative/scaffold_context_info.json'
+    assert result['contextinfo'] == 'derivative/human_body_metadata_context_info.json'
     assert 'prd-sparc-discover50-use1' in result['s3uri']
 
 def test_getting_curies(client):

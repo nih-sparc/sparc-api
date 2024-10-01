@@ -430,11 +430,13 @@ def fetch_discover_file_information(uri):
 def get_discover_path():
     uri = request.args.get('uri')
 
-    json_response = fetch_discover_file_information(uri)
-    if 'totalCount' in json_response and json_response['totalCount'] == 1:
-        file_info = json_response['files'][0]
-        return file_info['path']
-
+    try:
+        json_response = fetch_discover_file_information(uri)
+        if 'totalCount' in json_response and json_response['totalCount'] == 1:
+            file_info = json_response['files'][0]
+            return file_info['path']
+    except Exception as ex:
+        logging.error('Failed to retrieve uri {uri}', ex)
     return abort(404, description=f'Failed to retrieve uri {uri}')
 
 def s3_header_check(path, bucket_name):
@@ -752,15 +754,18 @@ def get_facets(type_):
     results = []
     for path in type_map[type_]:
         data['aggregations'][f'{type_}']['terms']['field'] = path
-        response = requests.post(
-            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
-            json=data)
         try:
+            response = requests.post(
+                f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+                json=data)
             json_result = response.json()
             results.append(json_result)
         except json.JSONDecodeError:
             return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
                             'error': 'JSONDecodeError'}), 502
+        except Exception as ex:
+            logging.error(f"Could not search SciCrunch for path {path}", ex)
+
 
     # Select terms from the results
     terms = []
@@ -837,24 +842,31 @@ def build_filetypes_table(osparc_viewers):
 @app.route("/sim/dataset/<id_>")
 def sim_dataset(id_):
     if request.method == "GET":
-        req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
-        if req.ok:
-            json_data = req.json()
-            inject_markdown(json_data)
-            inject_template_data(json_data)
-            return jsonify(json_data)
-        abort(404, description="Resource not found")
+        try:
+            req = requests.get("{}/datasets/{}".format(Config.DISCOVER_API_HOST, id_))
+            if req.ok:
+                json_data = req.json()
+                inject_markdown(json_data)
+                inject_template_data(json_data)
+                return jsonify(json_data)
+        except Exception as ex:
+            logging.error(f"Could not fetch SIM dataset {id_}", ex)
+        return abort(404, description="Resource not found")
 
 @app.route("/sim/dataset/<id_>/versions/<version_>")
 def sim_dataset_versions(id_, version_):
     if request.method == "GET":
-        req = requests.get("{}/datasets/{}/versions/{}".format(Config.DISCOVER_API_HOST, id_, version_))
-        if req.ok:
-            json_data = req.json()
-            inject_markdown(json_data)
-            inject_template_data(json_data)
-            return jsonify(json_data)
-        abort(404, description="Resource not found")
+        try:
+            req = requests.get("{}/datasets/{}/versions/{}".format(Config.DISCOVER_API_HOST, id_, version_))
+            if req.ok:
+                json_data = req.json()
+                inject_markdown(json_data)
+                inject_template_data(json_data)
+                return jsonify(json_data)
+        except Exception as ex:
+            logging.error(f"Could not fetch SIM dataset {id_} version {version_}", ex)
+        return abort(404, description="Resource not found")
+
 
 
 @app.route("/get_osparc_data")
@@ -902,11 +914,16 @@ def get_featured_dataset():
     if featured_dataset_id == -1:
         # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
         featured_dataset_id = 32
-    response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
-    # in case the dataset has been unpublished, just return default
-    if response['datasets'] == []:
-        response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, 32)).json()
-    return response
+    try:
+        response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
+        # in case the dataset has been unpublished, just return default
+        if response['datasets'] == []:
+            response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, 32)).json()
+        return response
+    except Exception as ex:
+        logging.error(f"Could not get featured dataset {featured_dataset_id}", ex)
+    abort(404, description="An error occured while fetching the resource")
+
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
@@ -938,43 +955,54 @@ def get_body_scaffold_info(species):
 def thumbnail_by_image_id(image_id, recursive_call=False):
     bl = Biolucida()
 
-    with biolucida_lock:
-        if not bl.token():
-            authenticate_biolucida()
-
-    url = Config.BIOLUCIDA_ENDPOINT + "/thumbnail/{0}".format(image_id)
-    headers = {
-        'token': bl.token(),
-    }
-
-    response = requests.request("GET", url, headers=headers)
-    encoded_content = base64.b64encode(response.content)
-    # Response from this endpoint is binary on success so the easiest thing to do is
-    # check for an error response in encoded form.
-    if encoded_content == b'eyJzdGF0dXMiOiJBZG1pbiB1c2VyIGF1dGhlbnRpY2F0aW9uIHJlcXVpcmVkIHRvIHZpZXcvZWRpdCB1c2VyIGluZm8uIFlvdSBtYXkgbmVlZCB0byBsb2cgb3V0IGFuZCBsb2cgYmFjayBpbiB0byByZXZlcmlmeSB5b3VyIGNyZWRlbnRpYWxzLiJ9' \
-            and not recursive_call:
-        # Authentication failure, try again after resetting token.
+    try:
         with biolucida_lock:
-            bl.set_token('')
+            if not bl.token():
+                authenticate_biolucida()
 
-        encoded_content = thumbnail_by_image_id(image_id, True)
+        url = Config.BIOLUCIDA_ENDPOINT + "/thumbnail/{0}".format(image_id)
+        headers = {
+            'token': bl.token(),
+        }
 
-    return encoded_content
+        response = requests.request("GET", url, headers=headers)
+        encoded_content = base64.b64encode(response.content)
+        # Response from this endpoint is binary on success so the easiest thing to do is
+        # check for an error response in encoded form.
+        if encoded_content == b'eyJzdGF0dXMiOiJBZG1pbiB1c2VyIGF1dGhlbnRpY2F0aW9uIHJlcXVpcmVkIHRvIHZpZXcvZWRpdCB1c2VyIGluZm8uIFlvdSBtYXkgbmVlZCB0byBsb2cgb3V0IGFuZCBsb2cgYmFjayBpbiB0byByZXZlcmlmeSB5b3VyIGNyZWRlbnRpYWxzLiJ9' \
+                and not recursive_call:
+            # Authentication failure, try again after resetting token.
+            with biolucida_lock:
+                bl.set_token('')
+
+            encoded_content = thumbnail_by_image_id(image_id, True)
+
+        return encoded_content
+    except Exception as ex:
+        logging.error(f"Could not get the thumbnail for {image_id}", ex)
+    return abort(404, "An error occured while fetching the thumbnail")
 
 
 @app.route("/image/<image_id>", methods=["GET"])
 def image_info_by_image_id(image_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/image/info/{0}".format(image_id)
-    response = requests.request("GET", url)
-    return process_biolucida_result(response.json())
+    try:
+        response = requests.request("GET", url)
+        return process_biolucida_result(response.json())
+    except Exception as ex:
+        logging.error(f"Could not get image info for {image_id}", ex)
+    return abort(404, "An error occured while getting the image's info")
 
 
 @app.route("/image_search/<dataset_id>", methods=["GET"])
 def image_search_by_dataset_id(dataset_id):
     url = Config.BIOLUCIDA_ENDPOINT + "/imagemap/search_dataset/discover/{0}".format(dataset_id)
-    response = requests.request("GET", url)
-
-    return response.json()
+    try:
+        response = requests.request("GET", url)
+        return response.json()
+    except Exception as ex:
+        logging.error(f"Could not search images for dataset {dataset_id}", ex)
+    return {"error": "An error occured while searching images for dataset"}, 404
 
 
 @app.route("/image_xmp_info/<image_id>", methods=["GET"])
@@ -1081,18 +1109,21 @@ def get_scaffold_state():
 def create_wrike_task():
     form = request.form
     if "captcha_token" in form:
-        captchaReq = requests.post(
-            url=Config.TURNSTILE_URL,
-            json={
-                "secret": Config.NUXT_TURNSTILE_SECRET_KEY,
-                "response": form["captcha_token"]
-            }
-        )
-        captchaResp = captchaReq.json()
-        if "success" not in captchaResp or not captchaResp["success"]:
-            abort(409, description="Failed Captcha Validation")
-    # else:
-    #     abort(409, description="Missing Captcha Token")
+        try:
+            captchaReq = requests.post(
+                url=Config.TURNSTILE_URL,
+                json={
+                    "secret": Config.NUXT_TURNSTILE_SECRET_KEY,
+                    "response": form["captcha_token"]
+                }
+            )
+            captchaResp = captchaReq.json()
+            if "success" not in captchaResp or not captchaResp["success"]:
+                return { "error": "Failed Captcha Validation" }, 409
+        except Exception as ex:
+            logging.error("Could not validate captcha, bypassing validation", ex)
+    else:
+        return { "error": "Failed Captcha Validation" }, 409
     # captcha all good
     if form and 'title' in form and 'description' in form:
         title = form["title"]
@@ -1276,42 +1307,51 @@ def subscribe_to_mailchimp():
                 "LNAME": last_name
             }
         }
-        resp = requests.put(
-            url=url,
-            json=data,
-            auth=auth
-        )
+        try:
+            resp = requests.put(
+                url=url,
+                json=data,
+                auth=auth
+            )
 
-        if resp.status_code == 200:
-          return resp.json()
-        else:
-          return "Failed to subscribe user with response: " + resp.json()
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                return "Failed to subscribe user with response: " + resp.json()
+        except Exception as ex:
+            logging.error("Could not subscribe to newsletter", ex)
+        return {"error": "An error occured while trying to subscribe to the newsletter"}, 500
     else:
         abort(400, description="Missing email_address, first_name or last_name")
 
+
 @app.route("/mailchimp_unsubscribe", methods=["POST"])
 def unsubscribe_to_mailchimp():
-  json_data = request.get_json()
-  if json_data and 'email_address' in json_data:
-      email_address = json_data["email_address"]
-      auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-      url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
+    json_data = request.get_json()
+    if json_data and "email_address" in json_data:
+        email_address = json_data["email_address"]
+        auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
+        url = "https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/" + email_address
 
-      data = {
-        "status": "unsubscribed",
-      }
-      resp = requests.put(
-          url=url,
-          json=data,
-          auth=auth
-      )
+        data = {
+            "status": "unsubscribed",
+        }
+        try:
+            resp = requests.put(
+                url=url,
+                json=data,
+                auth=auth
+            )
 
-      if resp.status_code == 200:
-        return resp.json()
-      else:
-        return "Failed to unsubscribe user with response: " + resp.json()
-  else:
-      abort(400, description="Missing email_address")
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                return "Failed to unsubscribe user with response: " + resp.json()
+        except Exception as ex:
+            logging.error("Could not unsubscribe to newsletter", ex)
+        return {"error": "An error occured while trying to unsubscribe to the newsletter"}, 500
+    else:
+        abort(400, description="Missing email_address")
 
 @app.route("/mailchimp_member_info/<email_address>", methods=["GET"])
 def get_mailchimp_member_info(email_address):
@@ -1319,15 +1359,19 @@ def get_mailchimp_member_info(email_address):
         auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
         url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
 
-        resp = requests.get(
-            url=url,
-            auth=auth
-        )
+        try:
+            resp = requests.get(
+                url=url,
+                auth=auth
+            )
 
-        if resp.status_code == 200:
-          return resp.json()
-        else:
-          return "Failed to get member info with response: " + resp.json()
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                return "Failed to get member info with response: " + resp.json()
+        except Exception as ex:
+            logging.error(f"Failed to get member info for {email_address}", ex)
+        return {"error": "Could not get member info from MailChimp"}, 500
     else:
         abort(400, description="Missing email_address")
 
@@ -1341,14 +1385,17 @@ def get_available_uberonids():
 
     result = {}
 
-    response = requests.post(
-        f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
-        json=requestBody)
     try:
+        response = requests.post(
+            f'{Config.SCI_CRUNCH_HOST}/_search?api_key={Config.KNOWLEDGEBASE_KEY}',
+            json=requestBody)
         result = reform_curies_results(response.json())
-    except BaseException:
-        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
-                        'error': 'BaseException'}), 502
+    except BaseException as ex:
+        logging.error("Failed getting Uberon IDs", ex)
+        return {
+            "message": "Could not parse SciCrunch output, please try again later",
+            "error": "BaseException"
+        }, 502
 
     return jsonify(result)
 
@@ -1366,14 +1413,17 @@ def get_related_terms(query):
 
     result = {}
 
-    response = requests.get(
-        f'{Config.SCI_CRUNCH_SCIGRAPH_HOST}/graph/neighbors/{query}',
-        params=payload)
     try:
+        response = requests.get(
+            f'{Config.SCI_CRUNCH_SCIGRAPH_HOST}/graph/neighbors/{query}',
+            params=payload)
         result = reform_related_terms(response.json())
-    except BaseException:
-        return jsonify({'message': 'Could not parse SciCrunch output, please try again later',
-                        'error': 'BaseException'}), 502
+    except BaseException as ex:
+        logging.error(f"Failed getting related terms with payload {payload}", ex)
+        return {
+            "message": "Could not parse SciCrunch output, please try again later",
+            "error": "BaseException"
+        }, 502
 
     return jsonify(result)
 
@@ -1471,18 +1521,23 @@ def find_by_onto_term():
 
     query = create_onto_term_query(term)
 
-    response = requests.get(f'{Config.SCI_CRUNCH_INTERLEX_HOST}/_search', headers=headers, params=params, json=query)
+    try:
+        response = requests.get(f'{Config.SCI_CRUNCH_INTERLEX_HOST}/_search', headers=headers, params=params, json=query)
 
-    results = response.json()
-    hits = results['hits']['hits']
-    total = results['hits']['total']
-    if total == 1:
-        result = hits[0]
-        json_data = result['_source']
-    else:
-        json_data = {'label': 'not found'}
+        results = response.json()
+        hits = results['hits']['hits']
+        total = results['hits']['total']
+        if total == 1:
+            result = hits[0]
+            json_data = result['_source']
+        else:
+            json_data = {'label': 'not found'}
 
-    return json_data
+        return json_data
+    except Exception as ex:
+        logging.error("An error occured while fetching from SciCrunch", ex)
+    return abort(500)
+
 
 @app.route("/search-readme/<query>", methods=["GET"])
 def search_readme(query):
@@ -1497,7 +1552,10 @@ def search_readme(query):
         return response.json()
     except requests.exceptions.HTTPError as err:
         logging.error(err)
-        return jsonify({'error': str(err), 'message': 'Readme is not currently reachable, please try again later'}), 502
+        return {
+            "error": str(err),
+            "message": "Readme is not currently reachable, please try again later"
+        }, 502
 
 @app.route("/metrics", methods=["GET"])
 def metrics():

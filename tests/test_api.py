@@ -16,11 +16,11 @@ def client():
 
 
 def test_direct_download_url_small_file(client):
-    small_s3_file = '76/files/derivative/mouseColon_metadata.json'
+    small_s3_file = '217/files/derivative/brainstem_pig_metadata.json'
     r = client.get(f"/s3-resource/{small_s3_file}?s3BucketName=prd-sparc-discover50-use1")
 
     assert r.status_code == 200
-    assert b"proximal colon" in r.data
+    assert b"medulla" in r.data
 
 def test_direct_download_url_new_bucket_file(client):
     new_s3_file = '307%2Ffiles%2Fderivative%2Fhuman_body_metadata.json'

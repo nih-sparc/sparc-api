@@ -15,6 +15,7 @@ def remove_duplicates(d_array):
     json_list = [json.dumps(d) for d in d_array]
     json_set = set(json_list)
     unique_list = [json.loads(d) for d in json_set]
+    unique_list = sorted(unique_list, key=itemgetter("datasetId", "version"), reverse=True)
     return unique_list
 
 
@@ -132,9 +133,7 @@ class MonthlyStats(object):
                 orcid_id = user['orcid']['orcid']
                 if orcid_id in self.user_stats.keys():
                     self.user_stats[orcid_id]['email'] = user['email']
-                    datasets = self.user_stats[orcid_id]['datasets']
-                    self.user_stats[orcid_id]['datasets'] = \
-                        sorted(datasets, key=itemgetter("datasetId", "version"), reverse=True)
+                    self.user_stats[orcid_id]['datasets'] = self.user_stats[orcid_id]['datasets']
 
     # Get details for a given metrics object
     def get_dataset_details_from_pennsieve(self, metrics):

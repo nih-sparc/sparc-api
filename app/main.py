@@ -1122,8 +1122,8 @@ def create_wrike_task():
                 return { "error": "Failed Captcha Validation" }, 409
         except Exception as ex:
             logging.error("Could not validate captcha, bypassing validation", ex)
-    else:
-        return { "error": "Failed Captcha Validation" }, 409
+    # else:
+    #     return { "error": "Failed Captcha Validation" }, 409
     # captcha all good
     if form and 'title' in form and 'description' in form:
         title = form["title"]
@@ -1317,7 +1317,7 @@ def subscribe_to_mailchimp():
             if resp.status_code == 200:
                 return resp.json()
             else:
-                return "Failed to subscribe user with response: " + resp.json()
+                return { "error": "Failed to subscribe user", "response": resp.json() }
         except Exception as ex:
             logging.error("Could not subscribe to newsletter", ex)
         return {"error": "An error occured while trying to subscribe to the newsletter"}, 500
@@ -1346,7 +1346,7 @@ def unsubscribe_to_mailchimp():
             if resp.status_code == 200:
                 return resp.json()
             else:
-                return "Failed to unsubscribe user with response: " + resp.json()
+                return { "error": "Failed to unsubscribe user", "response": resp.json() }
         except Exception as ex:
             logging.error("Could not unsubscribe to newsletter", ex)
         return {"error": "An error occured while trying to unsubscribe to the newsletter"}, 500

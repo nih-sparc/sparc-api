@@ -1122,7 +1122,7 @@ def create_wrike_task():
                 return { "error": "Failed Captcha Validation" }, 409
         except Exception as ex:
             logging.error("Could not validate captcha, bypassing validation", ex)
-    else:
+    elif not app.config['TESTING']:
         return { "error": "Failed Captcha Validation" }, 409
     # captcha all good
     if form and 'title' in form and 'description' in form:

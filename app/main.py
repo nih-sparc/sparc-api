@@ -12,6 +12,10 @@ from app.osparc.services import OSparcServices
 
 import botocore
 import boto3
+import hashlib
+import hubspot
+from hubspot.crm.contacts import ApiException
+from hubspot.utils.signature import Signature
 import json
 import logging
 import re
@@ -1288,6 +1292,176 @@ def create_wrike_task():
     else:
         abort(400, description="Missing title or description")
 
+def get_contact_properties(object_id):
+    client = hubspot.Client.create(access_token=Config.HUBSPOT_API_TOKEN)
+    try:
+        contact_data = client.crm.contacts.basic_api.get_by_id(contact_id=str(object_id), properties_with_history=["firstname", "lastname", "email", "newsletter", "event_name"], archived=False)
+    except ApiException as e:
+        return abort(400, description=f"Exception thrown when getting contact properties: {e}")
+
+    if not contact_data:
+        return abort(400, description="Failed to retrieve contact data from HubSpot.")
+    if not contact_data.properties_with_history:
+        return abort(400, description="Contact properties not found")
+    if not contact_data.properties_with_history.get("email"):
+        return abort(400, description="Contact Email property not found")
+    if not contact_data.properties_with_history.get("firstname"):
+        return abort(400, description="Contact firstname property not found")
+    if not contact_data.properties_with_history.get("lastname"):
+        return abort(400, description="Contact lastname property not found")
+    if not contact_data.properties_with_history.get("newsletter"):
+        return abort(400, description="Contact Newsletter property not found")
+    if not contact_data.properties_with_history.get("event_name"):
+        return abort(400, description="Contact Event Name property not found")
+    email = contact_data.properties_with_history.get("email")[0].value
+    firstname_data = contact_data.properties_with_history.get("firstname", [{}])[0]
+    firstname = firstname_data.value if firstname_data else ""
+    lastname_data = contact_data.properties_with_history.get("lastname", [{}])[0]
+    lastname = lastname_data.value if lastname_data else ""
+    # The newsletter array contains tags where each one corresponds to a mailing list in EmailOctopus that a user can opt-in/out of
+    newsletter_tags_data = contact_data.properties_with_history.get("newsletter", [])[0]
+    newsletter_tags = newsletter_tags_data.value.split(";") if newsletter_tags_data else []
+    # The events array contains tags where each one corresponds to a mailing list in EmailOctopus that a user cannot opt-in/out of
+    events_tags_data = contact_data.properties_with_history.get("event_name", [])[0]
+    events_tags = events_tags_data.value.split(";") if events_tags_data else []
+    # Filter out empty strings from the combined list
+    subscribed_mailing_lists = [tag for tag in (newsletter_tags + events_tags) if tag]
+
+    return {
+      'email': email,
+      'firstname': firstname,
+      'lastname': lastname,
+      'subscribed_mailing_lists': subscribed_mailing_lists
+    }
+
+def get_emailoctopus_lists():
+    url = "https://api.emailoctopus.com/lists"
+    headers = {
+        "Content-Type": "application/json",
+        'Authorization': 'Bearer ' +  Config.EMAIL_OCTOPUS_API_KEY
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        if str(response.status_code).startswith('2'):
+            mailing_lists = response.json().get("data")
+            return mailing_lists
+        else:
+            logging.error(f"Failed to fetch mailing lists. Status Code: {response.status_code}, Error: {response.text}")
+            return []
+    except Exception as e:
+        logging.error(f"An error occured while getting all emailoctopus lists", ex)
+        return []
+        
+def create_emailoctopus_list(list_name):
+    url = "https://api.emailoctopus.com/lists"
+    payload = {"name": list_name}
+    headers = {
+        "Content-Type": "application/json",
+        'Authorization': 'Bearer ' +  Config.EMAIL_OCTOPUS_API_KEY
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if str(response.status_code).startswith('2'):
+            return response.json()
+        else:
+            logging.error(f"Failed to create list: {list_name}. Status Code: {response.status_code}, Error: {response.text}")
+            return None
+    except Exception as ex:
+        logging.error(f"Could not create emailoctopus list: {list_name}", ex)
+        return None
+
+def add_or_update_emailoctopus_contact(email, firstname, lastname, list_id, status):
+    url = f"https://api.emailoctopus.com/lists/{list_id}/contacts"
+    headers = {
+        "Content-Type": "application/json",
+        'Authorization': 'Bearer ' +  Config.EMAIL_OCTOPUS_API_KEY
+    }
+    payload = {
+        "email_address": email,
+        "fields": {"FirstName": firstname, "LastName": lastname},
+        "status": status
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if str(response.status_code).startswith('2'):
+            return response.json()
+        else:
+            logging.info(f"Failed to add/update contact with email: {email} to list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
+        return response.status_code
+    except Exception as ex:
+        logging.error(f"Could not add or update contact with email address: {email} in emailoctopus list: {list_id}", ex)
+
+def remove_emailoctopus_contact(email, list_id):
+    # In order to delete via email address you need to create an md5 hash of it as mentioned here: https://emailoctopus.com/api-documentation/v2#tag/Contact/operation/api_lists_list_idcontacts_contact_id_delete
+    email_lower = email.lower()
+    # Encode the email and compute the MD5 hash
+    md5_hash = hashlib.md5(email_lower.encode('utf-8')).hexdigest()
+    url = f"https://api.emailoctopus.com/lists/{list_id}/contacts/{md5_hash}"
+    headers = {
+        "Content-Type": "application/json",
+        'Authorization': 'Bearer ' +  Config.EMAIL_OCTOPUS_API_KEY
+    }
+    try:
+        response = requests.delete(url, headers=headers)
+        if str(response.status_code).startswith('2'):
+            return response.json()
+        else:
+            logging.info(f"Failed to delete {email} from list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text.detail}")
+    except Exception as ex:
+        logging.error(f"Could not remove contact with email address: {email} from emailoctopus list: {list_id}", ex)
+
+@app.route("/hubspot_webhook", methods=["POST"])
+def hubspot_webhook():
+    body = request.get_json()
+    if not body:
+        return jsonify({"error": "Invalid payload"}), 400
+
+    logging.info(f'Received Hubspot webhook subscription trigger: {body}')
+    if 'subscriptionType' not in body or 'objectId' not in body:
+        return jsonify({"error": "Required keys missing in payload"}), 400
+
+    if not Signature.is_valid(
+        signature=request.headers.get("X-HubSpot-Signature-V3"),
+        client_secret=Config.HUBSPOT_CLIENT_SECRET,
+        request_body=request.data.decode("utf-8"),
+        http_uri=request.base_url,
+        signature_version=request.headers["X-HubSpot-Signature-Version"],
+        timestamp=request.headers["X-HubSpot-Request-Timestamp"]
+    ):
+        return jsonify({"error": "Signature is invalid"}), 403
+    subscription_type = body["subscriptionType"]
+    object_id = body["objectId"]
+    # HubSpot only provides the contact id so we have to request the contact details seperately
+    contact_data = get_contact_properties(object_id)
+    firstname = contact_data["firstname"]
+    lastname = contact_data["lastname"]
+    email = contact_data["email"]
+    emailoctopus_lists = get_emailoctopus_lists()
+    emailoctopus_list_map = {lst["name"]: lst["id"] for lst in emailoctopus_lists}
+    # list names = emailoctopus_list_map.keys()
+    # list ids = emailoctopus_list_map.values()
+    if subscription_type in ["contact.creation","contact.propertyChange"]:
+        # Add to relevant mailing lists
+        for mailing_list in contact_data["subscribed_mailing_lists"]:
+            if mailing_list not in emailoctopus_list_map:
+                # Create the list if it doesn't exist
+                new_list = create_emailoctopus_list(mailing_list)
+                emailoctopus_list_map[mailing_list] = new_list["id"]
+            # Add the contact in the appropriate list
+            add_or_update_emailoctopus_contact(email, firstname, lastname, emailoctopus_list_map[mailing_list], 'subscribed')
+        # Now we must cycle through all the lists in order to see if the contact must be removed from them since we don't know what list values were added or removed
+        for emailoctopus_list_name in emailoctopus_list_map.keys():
+            # Check if the email octopus list name is in the contact's subscribe to list. If not, then remove the contact from the list
+            if emailoctopus_list_name not in contact_data["subscribed_mailing_lists"]:
+                list_id = emailoctopus_list_map[emailoctopus_list_name]
+                remove_emailoctopus_contact(email, list_id)
+    elif subscription_type == "contact.deletion":
+        # Remove the contact from all mailing lists
+        for list_id in emailoctopus_list_map.values():
+            remove_emailoctopus_contact(email, list_id)
+    else:
+        return jsonify({"error": f"Unsupported subscription type: {subscription_type}"}), 400
+    return jsonify({"status": "success", "email": email})
 
 @app.route("/mailchimp_subscribe", methods=["POST"])
 def subscribe_to_mailchimp():

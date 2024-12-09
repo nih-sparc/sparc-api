@@ -1419,16 +1419,23 @@ def hubspot_webhook():
     logging.info(f'Received Hubspot webhook subscription trigger: {body}')
     if 'subscriptionType' not in body or 'objectId' not in body:
         return jsonify({"error": "Required keys missing in payload"}), 400
-
-    if not Signature.is_valid(
-        signature=request.headers.get("X-HubSpot-Signature-V3"),
-        client_secret=Config.HUBSPOT_CLIENT_SECRET,
-        request_body=request.data.decode("utf-8"),
-        http_uri=request.base_url,
-        signature_version=request.headers["X-HubSpot-Signature-Version"],
-        timestamp=request.headers["X-HubSpot-Request-Timestamp"]
-    ):
-        return jsonify({"error": "Signature is invalid"}), 403
+    signature_timestamp = request.headers["X-HubSpot-Request-Timestamp"]
+    try:
+        signature_timestamp = float(signature_timestamp)
+    except ValueError:
+        return jsonify({"error": "Invalid signature timestamp"}), 400
+    try:
+        if not Signature.is_valid(
+            signature=request.headers.get("X-HubSpot-Signature-V3"),
+            client_secret=Config.HUBSPOT_CLIENT_SECRET,
+            request_body=request.data.decode("utf-8"),
+            http_uri=request.base_url,
+            signature_version=request.headers["X-HubSpot-Signature-Version"],
+            timestamp=signature_timestamp
+        ):
+            return jsonify({"error": "Signature is invalid"}), 403
+    except Exception as ex:
+        return jsonify({"error": f"Internal error when validating Hubspot webhook request signature: {ex}"}), 500
     subscription_type = body["subscriptionType"]
     object_id = body["objectId"]
     # HubSpot only provides the contact id so we have to request the contact details seperately

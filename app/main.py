@@ -1419,11 +1419,13 @@ def hubspot_webhook():
     logging.info(f'Received Hubspot webhook subscription trigger: {body}')
     if 'subscriptionType' not in body or 'objectId' not in body:
         return jsonify({"error": "Required keys missing in payload"}), 400
+    if ('X-HubSpot-Request-Timestamp' not in request.headers or 'X-HubSpot-Signature-Version' not in request.headers or 'X-HubSpot-Signature-V3' not in request.headers):
+      return jsonify({"error": f"Required signature header(s) not present in the following request headers: {request.headers}"}), 400
     signature_timestamp = request.headers["X-HubSpot-Request-Timestamp"]
     try:
         signature_timestamp = float(signature_timestamp)
     except ValueError:
-        return jsonify({"error": "Invalid signature timestamp"}), 400
+        return jsonify({"error": "Invalid signature timestamp format"}), 400
     try:
         if not Signature.is_valid(
             signature=request.headers.get("X-HubSpot-Signature-V3"),

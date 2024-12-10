@@ -27,7 +27,7 @@ class FeaturedDatasetIdSelectorState(base):
 
 class Table:
   def __init__(self, databaseURL, state):
-        db = create_engine(databaseURL)
+        db = create_engine(databaseURL, pool_pre_ping=True)
         global base
         base.metadata.create_all(db)
         Session = sessionmaker(db)
@@ -66,12 +66,12 @@ class Table:
   def pullState(self, id):
     try:
         result = self._session.query(self._state).filter_by(uuid=id).first()
+        if result:
+            return result.data
     except SQLAlchemyError:
         self._session.rollback()
-    if result:
-        return result.data
-    else:
-        return None
+    return None
+
 
 class MapTable(Table):
     def __init__(self, databaseURL):

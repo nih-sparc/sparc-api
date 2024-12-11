@@ -13,9 +13,11 @@ from app.osparc.services import OSparcServices
 import botocore
 import boto3
 import hashlib
+import hmac
+import base64
+import time
 import hubspot
 from hubspot.crm.contacts import ApiException
-from hubspot.utils.signature import Signature
 import json
 import logging
 import re
@@ -1305,28 +1307,21 @@ def get_contact_properties(object_id):
         return abort(400, description="Contact properties not found")
     if not contact_data.properties_with_history.get("email"):
         return abort(400, description="Contact Email property not found")
-    if not contact_data.properties_with_history.get("firstname"):
-        return abort(400, description="Contact firstname property not found")
-    if not contact_data.properties_with_history.get("lastname"):
-        return abort(400, description="Contact lastname property not found")
-    if not contact_data.properties_with_history.get("newsletter"):
-        return abort(400, description="Contact Newsletter property not found")
-    if not contact_data.properties_with_history.get("event_name"):
-        return abort(400, description="Contact Event Name property not found")
     email = contact_data.properties_with_history.get("email")[0].value
     firstname_data = contact_data.properties_with_history.get("firstname", [{}])[0]
     firstname = firstname_data.value if firstname_data else ""
     lastname_data = contact_data.properties_with_history.get("lastname", [{}])[0]
     lastname = lastname_data.value if lastname_data else ""
-    # The newsletter array contains tags where each one corresponds to a mailing list in EmailOctopus that a user can opt-in/out of
-    newsletter_tags_data = contact_data.properties_with_history.get("newsletter", [])[0]
+    # The newsletter array contains tags where each one corresponds to a mailing list in EmailOctopus that a user can opt-in/>    newsletter_tags_data = contact_data.properties_with_history.get("newsletter")
+    if len(newsletter_tags_data) > 0:
+        newsletter_tags_data = newsletter_tags_data[0]
     newsletter_tags = newsletter_tags_data.value.split(";") if newsletter_tags_data else []
-    # The events array contains tags where each one corresponds to a mailing list in EmailOctopus that a user cannot opt-in/out of
-    events_tags_data = contact_data.properties_with_history.get("event_name", [])[0]
+    # The events array contains tags where each one corresponds to a mailing list in EmailOctopus that a user cannot opt-in/o>    events_tags_data = contact_data.properties_with_history.get("event_name")
+    if len(events_tags_data) > 0:
+        events_tags_data = events_tags_data[0]
     events_tags = events_tags_data.value.split(";") if events_tags_data else []
     # Filter out empty strings from the combined list
     subscribed_mailing_lists = [tag for tag in (newsletter_tags + events_tags) if tag]
-
     return {
       'email': email,
       'firstname': firstname,
@@ -1406,13 +1401,18 @@ def remove_emailoctopus_contact(email, list_id):
         if str(response.status_code).startswith('2'):
             return response.json()
         else:
-            logging.info(f"Failed to delete {email} from list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text.detail}")
+            logging.info(f"Failed to delete {email} from list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
     except Exception as ex:
         logging.error(f"Could not remove contact with email address: {email} from emailoctopus list: {list_id}", ex)
 
 @app.route("/hubspot_webhook", methods=["POST"])
 def hubspot_webhook():
     body = request.get_json()
+    if isinstance(body, str):  # Check if body is still a string
+        try:
+            body = json.loads(body)  # Convert string to JSON
+        except json.JSONDecodeError as e:
+            return jsonify({"error": "Invalid JSON format"}), 400
     if not body:
         return jsonify({"error": "Invalid payload"}), 400
 
@@ -1421,21 +1421,35 @@ def hubspot_webhook():
         return jsonify({"error": "Required keys missing in payload"}), 400
     if ('X-HubSpot-Request-Timestamp' not in request.headers or 'X-HubSpot-Signature-Version' not in request.headers or 'X-HubSpot-Signature-V3' not in request.headers):
       return jsonify({"error": f"Required signature header(s) not present in the following request headers: {request.headers}"}), 400
-    signature_timestamp = request.headers["X-HubSpot-Request-Timestamp"]
+    signature_header = request.headers.get("X-HubSpot-Signature-V3")
+    timestamp_header = request.headers["X-HubSpot-Request-Timestamp"]
     try:
-        signature_timestamp = float(signature_timestamp)
+        signature_timestamp = int(timestamp_header)
     except ValueError:
         return jsonify({"error": "Invalid signature timestamp format"}), 400
     try:
-        if not Signature.is_valid(
-            signature=request.headers.get("X-HubSpot-Signature-V3"),
-            client_secret=Config.HUBSPOT_CLIENT_SECRET,
-            request_body=request.data.decode("utf-8"),
-            http_uri=request.base_url,
-            signature_version=request.headers["X-HubSpot-Signature-Version"],
-            timestamp=signature_timestamp
-        ):
-            return jsonify({"error": "Signature is invalid"}), 403
+        current_time = int(time.time())
+        if current_time - signature_timestamp > 300:
+            return 'Signature timestamp is older than 5 minutes', 400
+
+        # Concatenate request method, URI, body, and header timestamp
+        url = request.url
+        method = 'POST'
+        body = request.get_data(as_text=True)
+        raw_string = f"{method}{url}{json.dumps(body)}{timestamp_header}"
+
+        # Create HMAC SHA-256 hash from the raw string, then base64-encode it
+        hashed_signature = hmac.new(
+            Config.HUBSPOT_CLIENT_SECRET.encode('utf-8'),
+            raw_string.encode('utf-8'),
+            hashlib.sha256
+        ).digest()
+
+        base64_hashed_signature = base64.b64encode(hashed_signature).decode('utf-8')
+
+        # Validate the signature
+        if not hmac.compare_digest(base64_hashed_signature, signature_header):
+            return jsonify({"error": "Signature is invalid"}), 404
     except Exception as ex:
         return jsonify({"error": f"Internal error when validating Hubspot webhook request signature: {ex}"}), 500
     subscription_type = body["subscriptionType"]
@@ -1470,7 +1484,7 @@ def hubspot_webhook():
             remove_emailoctopus_contact(email, list_id)
     else:
         return jsonify({"error": f"Unsupported subscription type: {subscription_type}"}), 400
-    return jsonify({"status": "success", "email": email})
+    return jsonify({"status": "success", "email": email}), 200
 
 @app.route("/mailchimp_subscribe", methods=["POST"])
 def subscribe_to_mailchimp():

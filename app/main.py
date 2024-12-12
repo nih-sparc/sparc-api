@@ -60,6 +60,10 @@ from app.biolucida_process_results import process_results as process_biolucida_r
 logging.basicConfig()
 
 app = Flask(__name__)
+
+log_level = Config.LOG_LEVEL.upper()
+app.logger.setLevel(getattr(logging, log_level, logging.WARNING))
+
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
@@ -1348,7 +1352,7 @@ def get_emailoctopus_lists():
     except Exception as e:
         logging.error(f"An error occured while getting all emailoctopus lists", ex)
         return []
-        
+
 def create_emailoctopus_list(list_name):
     url = "https://api.emailoctopus.com/lists"
     payload = {"name": list_name}
@@ -1383,7 +1387,7 @@ def add_or_update_emailoctopus_contact(email, firstname, lastname, list_id, stat
         if str(response.status_code).startswith('2'):
             return response.json()
         else:
-            logging.info(f"Failed to add/update contact with email: {email} to list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
+            logging.warning(f"Failed to add/update contact with email: {email} to list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
         return response.status_code
     except Exception as ex:
         logging.error(f"Could not add or update contact with email address: {email} in emailoctopus list: {list_id}", ex)
@@ -1403,7 +1407,7 @@ def remove_emailoctopus_contact(email, list_id):
         if str(response.status_code).startswith('2'):
             return response.json()
         else:
-            logging.info(f"Failed to delete {email} from list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
+            logging.warning(f"Failed to delete {email} from list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
     except Exception as ex:
         logging.error(f"Could not remove contact with email address: {email} from emailoctopus list: {list_id}", ex)
 
@@ -1414,25 +1418,33 @@ def hubspot_webhook():
         try:
             body = json.loads(body)  # Convert string to JSON
         except json.JSONDecodeError as e:
+            logging.error(f'Webhook request body has invalid JSON format: {body}')
             return jsonify({"error": "Invalid JSON format"}), 400
     if not body:
+        logging.error('Webhook request does not contain a body')
         return jsonify({"error": "Invalid payload"}), 400
 
-    logging.info(f'Received Hubspot webhook subscription trigger: {body}')
+    logging.info(f'Received Hubspot webhook request: {request}')
+    logging.info(f'Hubspot webhook request body: {body}')
+    logging.info(f'Hubspot webhook request headers: {request.headers}')
     if 'subscriptionType' not in body or 'objectId' not in body:
+        logging.error(f'Required keys missing in the following body payload: {body}')
         return jsonify({"error": "Required keys missing in payload"}), 400
     if ('X-HubSpot-Request-Timestamp' not in request.headers or 'X-HubSpot-Signature-Version' not in request.headers or 'X-HubSpot-Signature-V3' not in request.headers):
-      return jsonify({"error": f"Required signature header(s) not present in the following request headers: {request.headers}"}), 400
+        logging.error(f'Required signature header(s) not present in the following request headers: {request.headers}')
+        return jsonify({"error": f"Required signature header(s) not present in the following request headers: {request.headers}"}), 400
     signature_header = request.headers.get("X-HubSpot-Signature-V3")
     timestamp_header = request.headers["X-HubSpot-Request-Timestamp"]
     try:
         signature_timestamp = int(timestamp_header)
     except ValueError:
+        logging.error(f'Invalid signature timestamp format: {timestamp_header}')
         return jsonify({"error": "Invalid signature timestamp format"}), 400
     try:
         current_time = int(time.time())
         if current_time - signature_timestamp > 300:
-            return 'Signature timestamp is older than 5 minutes', 400
+            logging.error(f'Signature timestamp is older than 5 minutes: current time = {current-time}, signature time = {signature_timestamp}')
+            return jsonify({'Signature timestamp is older than 5 minutes'}), 400
 
         # Concatenate request method, URI, body, and header timestamp
         url = request.url
@@ -1450,8 +1462,10 @@ def hubspot_webhook():
 
         # Validate the signature
         if not hmac.compare_digest(base64_hashed_signature, signature_header):
+            logging.error(f'Signature is invalid')
             return jsonify({"error": "Signature is invalid"}), 404
     except Exception as ex:
+        logging.error(f'Internal error when validating Hubspot webhook request signature: {ex}')
         return jsonify({"error": f"Internal error when validating Hubspot webhook request signature: {ex}"}), 500
     subscription_type = body["subscriptionType"]
     object_id = body["objectId"]
@@ -1484,6 +1498,7 @@ def hubspot_webhook():
         for list_id in emailoctopus_list_map.values():
             remove_emailoctopus_contact(email, list_id)
     else:
+        logging.error(f'Unsupported subscription type: {subscription_type}')
         return jsonify({"error": f"Unsupported subscription type: {subscription_type}"}), 400
     return jsonify({"status": "success", "email": email}), 200
 

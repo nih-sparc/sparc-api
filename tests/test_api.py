@@ -4,6 +4,11 @@ from app.config import Config
 import requests
 import random
 import string
+import hmac
+import hashlib
+import base64
+import time
+import json
 
 from requests.auth import HTTPBasicAuth
 
@@ -151,6 +156,39 @@ def test_create_wrike_task(client):
     )
     assert resp.status_code == 200
 
+def test_hubspot_webhook(client):
+    http_method = "POST"
+    endpoint = "/hubspot_webhook"
+    base_url = "http://localhost"  # Default for Flask test client
+    full_url = f"{base_url}{endpoint}"
+    # mock a property changed event firing for test Hubspot contact
+    mock_body = '{"subscriptionType": "contact.propertyChange", "objectId": "83944215465"}'
+    # The timestamp must be a Unix epoch time within 5 minutes (300 seconds) of the current time when the webhook request is received.
+    valid_timestamp = int(time.time())
+    # Concatenate the string as HubSpot does
+    data_to_sign = f'{http_method}{full_url}{mock_body}{valid_timestamp}'
+    # Generate the HMAC SHA256 signature
+    signature = hmac.new(
+        key=Config.HUBSPOT_CLIENT_SECRET.encode('utf-8'),
+        msg=data_to_sign.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).digest()
+
+    # Encode the signature in Base64
+    mock_signature = base64.b64encode(signature).decode()
+    # Send a mock POST request
+    response = client.post(
+        endpoint,
+        json=mock_body,
+        headers={
+            "Content-Type": "application/json",
+            "X-HubSpot-Signature-Version": "v3",
+            "X-Hubspot-Signature-v3": mock_signature,
+            "X-HubSpot-Request-Timestamp": str(valid_timestamp),
+        }
+    )
+
+    assert response.status_code == 200
 
 def test_subscribe_to_mailchimp(client):
     r = client.post(f"/mailchimp_subscribe", json={})

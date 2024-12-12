@@ -1435,7 +1435,6 @@ def hubspot_webhook():
         # Concatenate request method, URI, body, and header timestamp
         url = request.url
         method = 'POST'
-        body = request.get_data(as_text=True)
         raw_string = f"{method}{url}{json.dumps(body)}{timestamp_header}"
 
         # Create HMAC SHA-256 hash from the raw string, then base64-encode it

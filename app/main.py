@@ -1312,11 +1312,13 @@ def get_contact_properties(object_id):
     firstname = firstname_data.value if firstname_data else ""
     lastname_data = contact_data.properties_with_history.get("lastname", [{}])[0]
     lastname = lastname_data.value if lastname_data else ""
-    # The newsletter array contains tags where each one corresponds to a mailing list in EmailOctopus that a user can opt-in/>    newsletter_tags_data = contact_data.properties_with_history.get("newsletter")
+    # The newsletter array contains tags where each one corresponds to a mailing list in EmailOctopus that a user can opt-in/out of  
+    newsletter_tags_data = contact_data.properties_with_history.get("newsletter")
     if len(newsletter_tags_data) > 0:
         newsletter_tags_data = newsletter_tags_data[0]
     newsletter_tags = newsletter_tags_data.value.split(";") if newsletter_tags_data else []
-    # The events array contains tags where each one corresponds to a mailing list in EmailOctopus that a user cannot opt-in/o>    events_tags_data = contact_data.properties_with_history.get("event_name")
+    # The events array contains tags where each one corresponds to a mailing list in EmailOctopus that a user cannot opt-in/out of
+    events_tags_data = contact_data.properties_with_history.get("event_name")
     if len(events_tags_data) > 0:
         events_tags_data = events_tags_data[0]
     events_tags = events_tags_data.value.split(";") if events_tags_data else []

@@ -22,6 +22,7 @@ import json
 import logging
 import re
 import requests
+import threading
 from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -60,6 +61,10 @@ from app.biolucida_process_results import process_results as process_biolucida_r
 logging.basicConfig()
 
 app = Flask(__name__)
+
+log_level = Config.LOG_LEVEL.upper()
+app.logger.setLevel(getattr(logging, log_level, logging.WARNING))
+
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})
@@ -1348,7 +1353,7 @@ def get_emailoctopus_lists():
     except Exception as e:
         logging.error(f"An error occured while getting all emailoctopus lists", ex)
         return []
-        
+
 def create_emailoctopus_list(list_name):
     url = "https://api.emailoctopus.com/lists"
     payload = {"name": list_name}
@@ -1383,10 +1388,11 @@ def add_or_update_emailoctopus_contact(email, firstname, lastname, list_id, stat
         if str(response.status_code).startswith('2'):
             return response.json()
         else:
-            logging.info(f"Failed to add/update contact with email: {email} to list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
+            logging.warning(f"Failed to add/update contact with email: {email} to list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
         return response.status_code
     except Exception as ex:
         logging.error(f"Could not add or update contact with email address: {email} in emailoctopus list: {list_id}", ex)
+        return abort(500, description=f"Could not add/update contact with email address: {email} from emailoctopus list with ID: {list_id} due to the following error: {ex}")
 
 def remove_emailoctopus_contact(email, list_id):
     # In order to delete via email address you need to create an md5 hash of it as mentioned here: https://emailoctopus.com/api-documentation/v2#tag/Contact/operation/api_lists_list_idcontacts_contact_id_delete
@@ -1400,12 +1406,12 @@ def remove_emailoctopus_contact(email, list_id):
     }
     try:
         response = requests.delete(url, headers=headers)
-        if str(response.status_code).startswith('2'):
-            return response.json()
-        else:
-            logging.info(f"Failed to delete {email} from list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
+        if not str(response.status_code).startswith('2'):
+            logging.warning(f"Failed to delete {email} from emailoctopus list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
+        return response.json()      
     except Exception as ex:
         logging.error(f"Could not remove contact with email address: {email} from emailoctopus list: {list_id}", ex)
+        return abort(500, description=f"Could not remove contact with email address: {email} from emailoctopus list: {list_id} due to the following error: {ex}")
 
 @app.route("/hubspot_webhook", methods=["POST"])
 def hubspot_webhook():
@@ -1414,30 +1420,39 @@ def hubspot_webhook():
         try:
             body = json.loads(body)  # Convert string to JSON
         except json.JSONDecodeError as e:
+            logging.error(f'Webhook request body has invalid JSON format: {body}')
             return jsonify({"error": "Invalid JSON format"}), 400
     if not body:
+        logging.error('Webhook request does not contain a body')
         return jsonify({"error": "Invalid payload"}), 400
 
-    logging.info(f'Received Hubspot webhook subscription trigger: {body}')
-    if 'subscriptionType' not in body or 'objectId' not in body:
+    app.logger.info(f'Received Hubspot webhook request: {request}')
+    app.logger.info(f'Hubspot webhook request body: {body}')
+    app.logger.info(f'Hubspot webhook request headers: {request.headers}')
+    if 'subscriptionType' not in body[0] or 'objectId' not in body[0]:
+        logging.error(f'Required keys missing in the following body payload: {body}')
         return jsonify({"error": "Required keys missing in payload"}), 400
-    if ('X-HubSpot-Request-Timestamp' not in request.headers or 'X-HubSpot-Signature-Version' not in request.headers or 'X-HubSpot-Signature-V3' not in request.headers):
-      return jsonify({"error": f"Required signature header(s) not present in the following request headers: {request.headers}"}), 400
+    if ('X-HubSpot-Request-Timestamp' not in request.headers or 'X-HubSpot-Signature-V3' not in request.headers):
+        logging.error(f'Required signature header(s) not present in the following request headers: {request.headers}')
+        return jsonify({"error": f"Required signature header(s) not present in the following request headers: {request.headers}"}), 400
     signature_header = request.headers.get("X-HubSpot-Signature-V3")
     timestamp_header = request.headers["X-HubSpot-Request-Timestamp"]
     try:
         signature_timestamp = int(timestamp_header)
     except ValueError:
+        logging.error(f'Invalid signature timestamp format: {timestamp_header}')
         return jsonify({"error": "Invalid signature timestamp format"}), 400
     try:
         current_time = int(time.time())
         if current_time - signature_timestamp > 300:
-            return 'Signature timestamp is older than 5 minutes', 400
+            logging.error(f'Signature timestamp is older than 5 minutes: current time = {current-time}, signature time = {signature_timestamp}')
+            return jsonify({'Signature timestamp is older than 5 minutes'}), 400
 
         # Concatenate request method, URI, body, and header timestamp
         url = request.url
         method = 'POST'
-        raw_string = f"{method}{url}{json.dumps(body)}{timestamp_header}"
+        stringified_body = json.dumps(body, separators=(",", ":"))
+        raw_string = f"{method}{url}{stringified_body}{timestamp_header}"
 
         # Create HMAC SHA-256 hash from the raw string, then base64-encode it
         hashed_signature = hmac.new(
@@ -1450,42 +1465,69 @@ def hubspot_webhook():
 
         # Validate the signature
         if not hmac.compare_digest(base64_hashed_signature, signature_header):
+            logging.error(f'Signature is invalid')
             return jsonify({"error": "Signature is invalid"}), 404
     except Exception as ex:
+        logging.error(f'Internal error when validating Hubspot webhook request signature: {ex}')
         return jsonify({"error": f"Internal error when validating Hubspot webhook request signature: {ex}"}), 500
+    # We needed to maintain the array structure in order to validate the signature, but now we can drop it
+    body = body[0]
     subscription_type = body["subscriptionType"]
     object_id = body["objectId"]
     # HubSpot only provides the contact id so we have to request the contact details seperately
-    contact_data = get_contact_properties(object_id)
-    firstname = contact_data["firstname"]
-    lastname = contact_data["lastname"]
-    email = contact_data["email"]
-    emailoctopus_lists = get_emailoctopus_lists()
-    emailoctopus_list_map = {lst["name"]: lst["id"] for lst in emailoctopus_lists}
-    # list names = emailoctopus_list_map.keys()
-    # list ids = emailoctopus_list_map.values()
-    if subscription_type in ["contact.creation","contact.propertyChange"]:
-        # Add to relevant mailing lists
-        for mailing_list in contact_data["subscribed_mailing_lists"]:
-            if mailing_list not in emailoctopus_list_map:
-                # Create the list if it doesn't exist
-                new_list = create_emailoctopus_list(mailing_list)
-                emailoctopus_list_map[mailing_list] = new_list["id"]
-            # Add the contact in the appropriate list
-            add_or_update_emailoctopus_contact(email, firstname, lastname, emailoctopus_list_map[mailing_list], 'subscribed')
-        # Now we must cycle through all the lists in order to see if the contact must be removed from them since we don't know what list values were added or removed
-        for emailoctopus_list_name in emailoctopus_list_map.keys():
-            # Check if the email octopus list name is in the contact's subscribe to list. If not, then remove the contact from the list
-            if emailoctopus_list_name not in contact_data["subscribed_mailing_lists"]:
-                list_id = emailoctopus_list_map[emailoctopus_list_name]
-                remove_emailoctopus_contact(email, list_id)
-    elif subscription_type == "contact.deletion":
-        # Remove the contact from all mailing lists
-        for list_id in emailoctopus_list_map.values():
-            remove_emailoctopus_contact(email, list_id)
-    else:
-        return jsonify({"error": f"Unsupported subscription type: {subscription_type}"}), 400
-    return jsonify({"status": "success", "email": email}), 200
+    contact_data = None
+    # execute this in a seperate thread so that we can send the acknowledgement response to HubSpot asap and do not block the api server
+    def execute_webhook():
+        with app.app_context():
+            try:
+                contact_data = get_contact_properties(object_id)
+            except Exception as ex:
+                logging.error(f'Could not retrieve contact information for ID: {object_id} due to the following error: {ex}')
+                return
+            firstname = contact_data["firstname"]
+            lastname = contact_data["lastname"]
+            email = contact_data["email"]
+            emailoctopus_lists = get_emailoctopus_lists()
+            emailoctopus_list_map = {lst["name"]: lst["id"] for lst in emailoctopus_lists}
+            # list names = emailoctopus_list_map.keys()
+            # list ids = emailoctopus_list_map.values()
+            if subscription_type in ["contact.creation","contact.propertyChange"]:
+                # Add to relevant mailing lists
+                for mailing_list in contact_data["subscribed_mailing_lists"]:
+                    if mailing_list not in emailoctopus_list_map:
+                        # Create the list if it doesn't exist
+                        new_list = create_emailoctopus_list(mailing_list)
+                        emailoctopus_list_map[mailing_list] = new_list["id"]
+                    try:
+                        # Add the contact in the appropriate list
+                        add_or_update_emailoctopus_contact(email, firstname, lastname, emailoctopus_list_map[mailing_list], 'subscribed')
+                    except Exception as ex:
+                        logging.error(f"Could not add or update contact with email: {email} in emailoctopus list with name: {mailing_list} due to the following error: {ex}")
+                        return
+                # Now we must cycle through all the lists in order to see if the contact must be removed from them since we don't know what list values were added or removed
+                for emailoctopus_list_name in emailoctopus_list_map.keys():
+                    # Check if the email octopus list name is in the contact's subscribe to list. If not, then remove the contact from the list
+                    if emailoctopus_list_name not in contact_data["subscribed_mailing_lists"]:
+                        list_id = emailoctopus_list_map[emailoctopus_list_name]
+                        try:
+                            remove_emailoctopus_contact(email, list_id)
+                        except Exception as ex:
+                            logging.error(f"Could not remove email: {email} from Emailoctopus list name: {emailoctopus_list_name} due to the following error: {ex}")
+                            return
+            elif subscription_type == "contact.deletion":
+                # Remove the contact from all mailing lists
+                for list_id in emailoctopus_list_map.values():
+                    try:
+                        remove_emailoctopus_contact(email, list_id)
+                    except Exception as ex:
+                        logging.error(f"Could not remove email: {email} from Emailoctopus list with id: {list_id} due to the following error: {ex}")
+                        return
+            else:
+                logging.error(f'Unsupported subscription type: {subscription_type}')
+                return
+            return jsonify({"status": "success", "message": "Webhook processed successfully"}), 200
+    threading.Thread(target=execute_webhook).start()
+    return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 204
 
 @app.route("/mailchimp_subscribe", methods=["POST"])
 def subscribe_to_mailchimp():

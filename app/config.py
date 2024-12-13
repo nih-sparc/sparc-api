@@ -78,6 +78,7 @@ class Config(object):
     HUBSPOT_API_TOKEN = os.environ.get("HUBSPOT_API_TOKEN")
     HUBSPOT_CLIENT_SECRET = os.environ.get("HUBSPOT_CLIENT_SECRET")
     EMAIL_OCTOPUS_API_KEY = os.environ.get("EMAIL_OCTOPUS_API_KEY")
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "WARNING")
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")
     GOOGLE_API_GA_KEY_PATH = os.environ.get("GOOGLE_API_GA_KEY_PATH")

@@ -1370,7 +1370,7 @@ def create_emailoctopus_list(list_name):
             return None
     except Exception as ex:
         logging.error(f"Could not create emailoctopus list: {list_name}", ex)
-        return None
+        return abort(500, description=f"Could not create emailoctopus mailing list: {list_name} due to the following error: {ex}")
 
 def add_or_update_emailoctopus_contact(email, firstname, lastname, list_id, status):
     url = f"https://api.emailoctopus.com/lists/{list_id}/contacts"
@@ -1386,10 +1386,10 @@ def add_or_update_emailoctopus_contact(email, firstname, lastname, list_id, stat
     try:
         response = requests.post(url, json=payload, headers=headers)
         if str(response.status_code).startswith('2'):
-            return response.json()
+            return
         else:
             logging.warning(f"Failed to add/update contact with email: {email} to list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
-        return response.status_code
+        return
     except Exception as ex:
         logging.error(f"Could not add or update contact with email address: {email} in emailoctopus list: {list_id}", ex)
         return abort(500, description=f"Could not add/update contact with email address: {email} from emailoctopus list with ID: {list_id} due to the following error: {ex}")
@@ -1408,7 +1408,7 @@ def remove_emailoctopus_contact(email, list_id):
         response = requests.delete(url, headers=headers)
         if not str(response.status_code).startswith('2'):
             logging.warning(f"Failed to delete {email} from emailoctopus list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
-        return response.json()      
+        return 
     except Exception as ex:
         logging.error(f"Could not remove contact with email address: {email} from emailoctopus list: {list_id}", ex)
         return abort(500, description=f"Could not remove contact with email address: {email} from emailoctopus list: {list_id} due to the following error: {ex}")
@@ -1496,8 +1496,12 @@ def hubspot_webhook():
                 for mailing_list in contact_data["subscribed_mailing_lists"]:
                     if mailing_list not in emailoctopus_list_map:
                         # Create the list if it doesn't exist
-                        new_list = create_emailoctopus_list(mailing_list)
-                        emailoctopus_list_map[mailing_list] = new_list["id"]
+                        try:
+                          new_list = create_emailoctopus_list(mailing_list)
+                          emailoctopus_list_map[mailing_list] = new_list["id"]
+                        except Exception as ex:
+                          logging.error(f"Could not create emailoctopus list with name: {mailing_list} due to the following error: {ex}")
+                          return
                     try:
                         # Add the contact in the appropriate list
                         add_or_update_emailoctopus_contact(email, firstname, lastname, emailoctopus_list_map[mailing_list], 'subscribed')

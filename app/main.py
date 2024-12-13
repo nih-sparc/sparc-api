@@ -22,6 +22,7 @@ import json
 import logging
 import re
 import requests
+import threading
 from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -1475,50 +1476,58 @@ def hubspot_webhook():
     object_id = body["objectId"]
     # HubSpot only provides the contact id so we have to request the contact details seperately
     contact_data = None
-    try:
-        contact_data = get_contact_properties(object_id)
-    except Exception as ex:
-        logging.error(f'Could not retrieve contact information for ID: {object_id} due to the following error: {ex}')
-        return jsonify({"error": f"Could not retrieve contact information for ID: {object_id} due to the following error: {ex}"}), 500
-    firstname = contact_data["firstname"]
-    lastname = contact_data["lastname"]
-    email = contact_data["email"]
-    emailoctopus_lists = get_emailoctopus_lists()
-    emailoctopus_list_map = {lst["name"]: lst["id"] for lst in emailoctopus_lists}
-    # list names = emailoctopus_list_map.keys()
-    # list ids = emailoctopus_list_map.values()
-    if subscription_type in ["contact.creation","contact.propertyChange"]:
-        # Add to relevant mailing lists
-        for mailing_list in contact_data["subscribed_mailing_lists"]:
-            if mailing_list not in emailoctopus_list_map:
-                # Create the list if it doesn't exist
-                new_list = create_emailoctopus_list(mailing_list)
-                emailoctopus_list_map[mailing_list] = new_list["id"]
+    # execute this in a seperate thread so that we can send the acknowledgement response to HubSpot asap and do not block the api server
+    def execute_webhook():
+        with app.app_context():
             try:
-                # Add the contact in the appropriate list
-                add_or_update_emailoctopus_contact(email, firstname, lastname, emailoctopus_list_map[mailing_list], 'subscribed')
+                contact_data = get_contact_properties(object_id)
             except Exception as ex:
-                return jsonify({"error": f"Could not add or update contact with email: {email} in emailoctopus list with name: {mailing_list} due to the following error: {ex}"})
-        # Now we must cycle through all the lists in order to see if the contact must be removed from them since we don't know what list values were added or removed
-        for emailoctopus_list_name in emailoctopus_list_map.keys():
-            # Check if the email octopus list name is in the contact's subscribe to list. If not, then remove the contact from the list
-            if emailoctopus_list_name not in contact_data["subscribed_mailing_lists"]:
-                list_id = emailoctopus_list_map[emailoctopus_list_name]
-                try:
-                    remove_emailoctopus_contact(email, list_id)
-                except Exception as ex:
-                    return jsonify({"error": f"Could not remove email: {email} from emailoctopus list name: {emailoctopus_list_name} due to the following error: {ex}"})
-    elif subscription_type == "contact.deletion":
-        # Remove the contact from all mailing lists
-        for list_id in emailoctopus_list_map.values():
-            try:
-                remove_emailoctopus_contact(email, list_id)
-            except Exception as ex:
-                return jsonify({"error": f"Could not remove email: {email} from emailoctopus list with id: {list_id} due to the following error: {ex}"})
-    else:
-        logging.error(f'Unsupported subscription type: {subscription_type}')
-        return jsonify({"error": f"Unsupported subscription type: {subscription_type}"}), 400
-    return jsonify({"status": "success", "message": "Webhook processed successfully"}), 200
+                logging.error(f'Could not retrieve contact information for ID: {object_id} due to the following error: {ex}')
+                return
+            firstname = contact_data["firstname"]
+            lastname = contact_data["lastname"]
+            email = contact_data["email"]
+            emailoctopus_lists = get_emailoctopus_lists()
+            emailoctopus_list_map = {lst["name"]: lst["id"] for lst in emailoctopus_lists}
+            # list names = emailoctopus_list_map.keys()
+            # list ids = emailoctopus_list_map.values()
+            if subscription_type in ["contact.creation","contact.propertyChange"]:
+                # Add to relevant mailing lists
+                for mailing_list in contact_data["subscribed_mailing_lists"]:
+                    if mailing_list not in emailoctopus_list_map:
+                        # Create the list if it doesn't exist
+                        new_list = create_emailoctopus_list(mailing_list)
+                        emailoctopus_list_map[mailing_list] = new_list["id"]
+                    try:
+                        # Add the contact in the appropriate list
+                        add_or_update_emailoctopus_contact(email, firstname, lastname, emailoctopus_list_map[mailing_list], 'subscribed')
+                    except Exception as ex:
+                        logging.error(f"Could not add or update contact with email: {email} in emailoctopus list with name: {mailing_list} due to the following error: {ex}")
+                        return
+                # Now we must cycle through all the lists in order to see if the contact must be removed from them since we don't know what list values were added or removed
+                for emailoctopus_list_name in emailoctopus_list_map.keys():
+                    # Check if the email octopus list name is in the contact's subscribe to list. If not, then remove the contact from the list
+                    if emailoctopus_list_name not in contact_data["subscribed_mailing_lists"]:
+                        list_id = emailoctopus_list_map[emailoctopus_list_name]
+                        try:
+                            remove_emailoctopus_contact(email, list_id)
+                        except Exception as ex:
+                            logging.error(f"Could not remove email: {email} from Emailoctopus list name: {emailoctopus_list_name} due to the following error: {ex}")
+                            return
+            elif subscription_type == "contact.deletion":
+                # Remove the contact from all mailing lists
+                for list_id in emailoctopus_list_map.values():
+                    try:
+                        remove_emailoctopus_contact(email, list_id)
+                    except Exception as ex:
+                        logging.error(f"Could not remove email: {email} from Emailoctopus list with id: {list_id} due to the following error: {ex}")
+                        return
+            else:
+                logging.error(f'Unsupported subscription type: {subscription_type}')
+                return
+            return jsonify({"status": "success", "message": "Webhook processed successfully"}), 200
+    threading.Thread(target=execute_webhook).start()
+    return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 204
 
 @app.route("/mailchimp_subscribe", methods=["POST"])
 def subscribe_to_mailchimp():

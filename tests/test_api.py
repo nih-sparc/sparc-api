@@ -162,7 +162,7 @@ def test_hubspot_webhook(client):
     base_url = "http://localhost"  # Default for Flask test client
     full_url = f"{base_url}{endpoint}"
     # mock a property changed event firing for test Hubspot contact
-    mock_body = '{"subscriptionType": "contact.propertyChange", "objectId": "83944215465"}'
+    mock_body = '[{"subscriptionType":"contact.propertyChange","objectId":"83944215465"}]'
     # The timestamp must be a Unix epoch time within 5 minutes (300 seconds) of the current time when the webhook request is received.
     valid_timestamp = int(time.time())
     # Concatenate the string as HubSpot does
@@ -188,7 +188,7 @@ def test_hubspot_webhook(client):
         }
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 204
 
 def test_subscribe_to_mailchimp(client):
     r = client.post(f"/mailchimp_subscribe", json={})

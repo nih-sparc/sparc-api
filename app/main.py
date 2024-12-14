@@ -1362,12 +1362,8 @@ def create_emailoctopus_list(list_name):
         'Authorization': 'Bearer ' +  Config.EMAIL_OCTOPUS_API_KEY
     }
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        if str(response.status_code).startswith('2'):
-            return response.json()
-        else:
-            logging.error(f"Failed to create list: {list_name}. Status Code: {response.status_code}, Error: {response.text}")
-            return None
+        requests.post(url, json=payload, headers=headers)
+        return
     except Exception as ex:
         logging.error(f"Could not create emailoctopus list: {list_name}", ex)
         return abort(500, description=f"Could not create emailoctopus mailing list: {list_name} due to the following error: {ex}")
@@ -1384,11 +1380,7 @@ def add_or_update_emailoctopus_contact(email, firstname, lastname, list_id, stat
         "status": status
     }
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        if str(response.status_code).startswith('2'):
-            return
-        else:
-            logging.warning(f"Failed to add/update contact with email: {email} to list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
+        requests.post(url, json=payload, headers=headers)
         return
     except Exception as ex:
         logging.error(f"Could not add or update contact with email address: {email} in emailoctopus list: {list_id}", ex)
@@ -1405,10 +1397,8 @@ def remove_emailoctopus_contact(email, list_id):
         'Authorization': 'Bearer ' +  Config.EMAIL_OCTOPUS_API_KEY
     }
     try:
-        response = requests.delete(url, headers=headers)
-        if not str(response.status_code).startswith('2'):
-            logging.warning(f"Failed to delete {email} from emailoctopus list with id: {list_id}. Status Code: {response.status_code}, Error: {response.text}")
-        return 
+        requests.delete(url, headers=headers)
+        return
     except Exception as ex:
         logging.error(f"Could not remove contact with email address: {email} from emailoctopus list: {list_id}", ex)
         return abort(500, description=f"Could not remove contact with email address: {email} from emailoctopus list: {list_id} due to the following error: {ex}")

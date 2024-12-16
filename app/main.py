@@ -1362,8 +1362,9 @@ def create_emailoctopus_list(list_name):
         'Authorization': 'Bearer ' +  Config.EMAIL_OCTOPUS_API_KEY
     }
     try:
-        requests.post(url, json=payload, headers=headers)
-        return
+        response = requests.post(url, json=payload, headers=headers)
+        app.logger.info(f"Created emailoctopus list: {response}")
+        return response.json()
     except Exception as ex:
         logging.error(f"Could not create emailoctopus list: {list_name}", ex)
         return abort(500, description=f"Could not create emailoctopus mailing list: {list_name} due to the following error: {ex}")
@@ -1418,7 +1419,6 @@ def hubspot_webhook():
 
     app.logger.info(f'Received Hubspot webhook request: {request}')
     app.logger.info(f'Hubspot webhook request body: {body}')
-    app.logger.info(f'Hubspot webhook request headers: {request.headers}')
     if 'subscriptionType' not in body[0] or 'objectId' not in body[0]:
         logging.error(f'Required keys missing in the following body payload: {body}')
         return jsonify({"error": "Required keys missing in payload"}), 400

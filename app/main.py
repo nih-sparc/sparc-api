@@ -35,6 +35,8 @@ from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
+from pennsieve2 import Pennsieve as Pennsieve2
+from pennsieve2.direct import new_client
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
 from requests.auth import HTTPBasicAuth
@@ -152,6 +154,13 @@ def connect_to_pennsieve():
         logging.error("Unknown Error")
         logging.error(err)
 
+@app.before_first_request
+def connect_to_pennsieve2():
+    global ps2
+    try:
+        ps2 = new_client(api_key=Config.PENNSIEVE_API_TOKEN, api_secret=Config.PENNSIEVE_API_SECRET, api_host=Config.PENNSIEVE_API_HOST, api2_host=None)
+    except Exception as err:
+        logging.error(f"Error connecting to pennsieve 2 agent: {err}")
 
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
@@ -935,6 +944,103 @@ def get_featured_dataset():
         logging.error(f"Could not get featured dataset {featured_dataset_id}", ex)
     abort(404, description="An error occured while fetching the resource")
 
+@app.route("/reva/subject-ids", methods=["GET"])
+def getRevaSubjectIds():
+    try:
+        primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
+        primary_children = primary_folder['children']
+        subject_ids = []
+        for child in primary_children:
+            if child['content']['packageType'] == 'Collection':
+                subject_ids.append(child['content']['name'])
+        return jsonify({"status": "success", "ids": subject_ids}), 200
+    except Exception as e:
+        logging.error(f"Error while getting REVA subject id files: {e}")
+        return jsonify({"status": "Error while getting REVA subject id files: ", "message": e}), 500
+
+@app.route("/reva/tracing-files/<subject_id>", methods=["GET"])
+def getRevaTracingFiles(subject_id):
+    coordinates_folder_name = 'Coordinates-Data'
+    in_situ_folder_name = 'InSitu'
+    vagus_nerve_folder_name = 'Vagus-nerve'
+
+    try:
+        primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
+        primary_children = primary_folder['children']
+        subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
+        if subject_child is None:
+            logging.error(f"REVA tracing folder not found with subject id: {subject_id}")
+            return jsonify({"status": "ERROR", "message": f"Folder not found with subject id: {subject_id}"}), 404
+        subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
+        subject_children = subject_folder['children']
+        coordinates_child = next((child for child in subject_children if child['content']['name'] == coordinates_folder_name), None)
+        if coordinates_child is None:
+            logging.error(f"REVA tracing folder {coordinates_folder_name} not found for subject: {subject_id}")
+            return jsonify({"status": "ERROR", "message": f"{coordinates_folder_name} folder not found for subject: {subject_id}"}), 404
+        coordinates_folder = ps2.get(f"/packages/{coordinates_child['content']['id']}")
+        coordinates_children = coordinates_folder['children']
+        in_situ_child = next((child for child in coordinates_children if child['content']['name'] == in_situ_folder_name), None)
+        if in_situ_child is None:
+            logging.error(f"REVA tracing folder {in_situ_folder_name} not found for subject: {subject_id}")
+            return jsonify({"status": "ERROR", "message": f"{in_situ_folder_name} folder not found for subject: {subject_id}"}), 404
+        in_situ_folder = ps2.get(f"/packages/{in_situ_child['content']['id']}")
+        in_situ_children = in_situ_folder['children']
+        vagus_nerve_child = next((child for child in in_situ_children if child['content']['name'] == vagus_nerve_folder_name), None)
+        if vagus_nerve_child is None:
+            logging.error(f"REVA tracing folder {vagus_nerve_folder_name} not found for subject: {subject_id}")
+            return jsonify({"status": "ERROR", "message": f"{vagus_nerve_folder_name} folder not found for subject: {subject_id}"}), 404
+        vagus_nerve_folder = ps2.get(f"/packages/{vagus_nerve_child['content']['id']}")
+        vagus_nerve_children = vagus_nerve_folder['children']
+        vagus_tracing_files = []
+        for vagus_region_child in vagus_nerve_children:
+            vagus_region_folder = ps2.get(f"/packages/{vagus_region_child['content']['id']}")
+            # get file and use id and package id for getting the presigned url https://api.pennsieve.io/packages/{id}/view
+            vagus_region_children = vagus_region_folder['children']
+            for vagus_file_child in vagus_region_children:
+                file_package_id = vagus_file_child['content']['id']
+                vagus_file = ps2.get(f"/packages/{file_package_id}/view")
+                vagus_file_id = vagus_file[0]['content']['id']
+                vagus_file_presigned_url = ps2.get(f"/packages/{file_package_id}/files/{vagus_file_id}")['url']
+                vagus_tracing_files.append({'name':str(vagus_file_child['content']['name']), 's3Url':str(vagus_file_presigned_url)})
+        return jsonify({"status": "success", "files": vagus_tracing_files}), 200
+    except Exception as e:
+        logging.error(f"Error while getting REVA tracing files {e}")
+        return jsonify({"status": "Error while getting tracing files: ", "message": e}), 500
+
+@app.route("/reva/micro-ct-files/<subject_id>", methods=["GET"])
+def getRevaMicroCtFiles(subject_id):
+    micro_ct_visualization_folder_name = f'{subject_id}-MicroCTVisualization'
+
+    try:
+        primary_folder = ps2.get(f'/packages/{Config.REVA_MICRO_CT_PRIMARY_FOLDER_COLLECTION_ID}')
+        primary_children = primary_folder['children']
+        subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
+        if subject_child is None:
+            logging.error(f'REVA microCT folder not found with subject id: {subject_id}')
+            return jsonify({"status": "ERROR", "message": f"MicroCT folder not found with subject id: {subject_id}"}), 404
+        subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
+        subject_children = subject_folder['children']
+        micro_ct_child = next((child for child in subject_children if child['content']['name'] == micro_ct_visualization_folder_name), None)
+        if micro_ct_child is None:
+            logging.error(f'REVA microCT {micro_ct_visualization_folder_name} folder not found for subject: {subject_id}')
+            return jsonify({"status": "ERROR", "message": f"{micro_ct_visualization_folder_name} folder not found for subject: {subject_id}"}), 404
+        micro_ct_visualization_folder = ps2.get(f"/packages/{micro_ct_child['content']['id']}")
+        micro_ct_children = micro_ct_visualization_folder['children']
+        micro_ct_files = []
+        for micro_child in micro_ct_children:
+            file_package_id = micro_child['content']['id']
+            micro_child_file = ps2.get(f"/packages/{file_package_id}/view")
+            micro_child_file_id = micro_child_file[0]['content']['id']
+            micro_file_presigned_url = ps2.get(f"/packages/{file_package_id}/files/{micro_child_file_id}")['url']
+            file_name = micro_child['content']['name']
+            file_size = micro_child['storage']
+            package_type = micro_child['content']['packageType']
+            file_type = micro_child_file[0]['content']['fileType']
+            micro_ct_files.append({'name':str(file_name), 's3Url':str(micro_file_presigned_url), 'type':str(file_type), 'packageType':str(package_type), 'size':str(file_size)})
+        return jsonify({"status": "success", "files": micro_ct_files}), 200
+    except Exception as e:
+        logging.error(f"Error while getting REVA microCT files {e}")
+        return jsonify({"status": "Error while getting microCT files: ", "message": e}), 500
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):

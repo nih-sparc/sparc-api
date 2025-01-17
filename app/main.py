@@ -1405,6 +1405,22 @@ def create_wrike_task():
     else:
         abort(400, description="Missing title or description")
 
+@app.route("/hubspot_contact_properties/<email>", methods=["GET"])
+def get_hubspot_contact_properties(email):
+    url = f"https://api.hubapi.com/crm/v3/objects/contacts/{email}?archived=false&idProperty=email&properties=firstname,lastname,email,newsletter,event_name"
+    headers = {
+        "Content-Type": "application/json",
+        'Authorization': 'Bearer ' +  Config.HUBSPOT_API_TOKEN
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        if str(response.status_code).startswith('2'):
+          return response.json()
+        else:
+          return abort(response.status_code) 
+    except Exception as ex:
+        return abort(500, description=f"Could not get contact with email address: {email} from Hubspot due to the following error: {ex}")
+
 def get_contact_properties(object_id):
     client = hubspot.Client.create(access_token=Config.HUBSPOT_API_TOKEN)
     try:

@@ -156,6 +156,10 @@ def test_create_wrike_task(client):
     )
     assert resp.status_code == 200
 
+def test_get_hubspot_contact(client):
+    r = client.get(f"/hubspot_contact_properties/hubspot_webhook_test@test.com")
+    assert r.status_code == 200
+
 def test_hubspot_webhook(client):
     http_method = "POST"
     endpoint = "/hubspot_webhook"

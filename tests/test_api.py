@@ -156,6 +156,25 @@ def test_create_wrike_task(client):
     )
     assert resp.status_code == 200
 
+def test_get_hubspot_contact(client):
+    r = client.get(f"/hubspot_contact_properties/hubspot_webhook_test@test.com")
+    assert r.status_code == 200
+
+def test_subscribe_to_newsletter(client):
+    http_method = "POST"
+    endpoint = "/subscribe_to_newsletter"
+    base_url = "http://localhost"  # Default for Flask test client
+    full_url = f"{base_url}{endpoint}"
+    mock_body = {"email_address":"hubspot_webhook_test@test.com","first_name":"Test Hubspot Webhook","last_name":"Do Not Delete"}
+    response = client.post(
+        endpoint,
+        json=mock_body,
+        headers={
+            "Content-Type": "application/json"
+        }
+    )
+    assert response.status_code == 200
+
 def test_hubspot_webhook(client):
     http_method = "POST"
     endpoint = "/hubspot_webhook"

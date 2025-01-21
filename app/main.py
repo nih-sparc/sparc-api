@@ -1405,6 +1405,104 @@ def create_wrike_task():
     else:
         abort(400, description="Missing title or description")
 
+@app.route("/hubspot_contact_properties/<email>", methods=["GET"])
+def get_hubspot_contact_properties(email):
+    url = f"https://api.hubapi.com/crm/v3/objects/contacts/{email}?archived=false&idProperty=email&properties=firstname,lastname,email,newsletter,event_name"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        # Handle successful responses (2xx)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        # Handle not found (404)
+        elif response.status_code == 404:
+            return jsonify({
+                "error": "Contact not found",
+                "message": f"No contact with the email '{email}' was found in HubSpot."
+            }), 404
+        # Handle other non-success status codes
+        else:
+            return jsonify({
+                "error": "Failed to fetch contact",
+                "message": f"HubSpot API responded with status code {response.status_code}.",
+                "details": response.json() if response.headers.get("Content-Type") == "application/json" else response.text
+            }), response.status_code
+    except requests.RequestException as ex:
+        # Handle exceptions raised by the requests library
+        return jsonify({
+            "error": "RequestException",
+            "message": f"Could not get contact with email '{email}' due to a request error.",
+            "details": str(ex)
+        }), 500
+    except Exception as ex:
+        # Handle other unexpected exceptions
+        return jsonify({
+            "error": "Internal Server Error",
+            "message": f"An unexpected error occurred while fetching the contact with email '{email}'.",
+            "details": str(ex)
+        }), 500
+
+@app.route("/subscribe_to_newsletter", methods=["POST"])
+def subscribe_to_newsletter():
+    data = request.json
+    email = data.get('email_address')
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+
+    # Ensure the required `email` field is present
+    if not email:
+        return jsonify({'error': 'Email is required'}), 400
+
+    newsletter_property = ''
+    try:
+        contact_properties, status_code = get_hubspot_contact_properties(email)
+        if status_code == 200:
+            newsletter_property = contact_properties['properties'].get('newsletter', None)
+        else:
+            logging.error(f"Unexpected response from HubSpot: {contact_properties}")
+            raise Exception(f"Unexpected error: {contact_properties}")
+    except Exception as e:
+        logging.error(f"Error while retrieving contact properties for email {email}: {e}")
+
+    if isinstance(newsletter_property, str):
+        current_newsletter_values = newsletter_property.split(';')
+        # remove possible empty string
+        current_newsletter_values = list(filter(None, current_newsletter_values))
+
+    # Append the Newsletter value if it's not already in the array
+    if 'Newsletter' not in current_newsletter_values:
+        current_newsletter_values.append('Newsletter')
+    payload = {
+      "inputs": [
+        {
+          "properties": {
+            "email": email,
+            "firstname": first_name,
+            "lastname": last_name,
+            "newsletter": ';'.join(current_newsletter_values)
+          },
+          "id": email,
+          "idProperty": "email"
+        }
+      ]
+    }
+    url = "https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert"
+    headers = {
+        "Content-Type": "application/json",
+        'Authorization': 'Bearer ' +  Config.HUBSPOT_API_TOKEN
+    }
+
+    # Send request to HubSpot API
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx or 5xx)
+        return jsonify(response.json()), 200
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
+
 def get_contact_properties(object_id):
     client = hubspot.Client.create(access_token=Config.HUBSPOT_API_TOKEN)
     try:

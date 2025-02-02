@@ -297,3 +297,10 @@ def test_get_reva_micro_ct_files(client):
     json = r.get_json()
     assert 'files' in json
     assert type(json['files']) == list
+
+def test_get_reva_landmarks_files(client):
+    r = client.get('/reva/anatomical-landmarks-files/sub-SR005')
+    assert r.status_code == 200
+    json = r.get_json()
+    assert 'folders' in json
+    assert type(json['folders']) == list

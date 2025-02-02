@@ -958,33 +958,68 @@ def getRevaSubjectIds():
         logging.error(f"Error while getting REVA subject id files: {e}")
         return jsonify({"status": "Error while getting REVA subject id files: ", "message": e}), 500
 
-@app.route("/reva/tracing-files/<subject_id>", methods=["GET"])
-def getRevaTracingFiles(subject_id):
-    coordinates_folder_name = 'Coordinates-Data'
-    in_situ_folder_name = 'InSitu'
-    vagus_nerve_folder_name = 'Vagus-nerve'
-
+def getRevaTracingInSituFolderChildren(subject_id):
     try:
+        coordinates_folder_name = 'Coordinates-Data'
+        in_situ_folder_name = 'InSitu'
         primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
         primary_children = primary_folder['children']
         subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
         if subject_child is None:
             logging.error(f"REVA tracing folder not found with subject id: {subject_id}")
-            return jsonify({"status": "ERROR", "message": f"Folder not found with subject id: {subject_id}"}), 404
+            return abort(404, description=f"Folder not found with subject id: {subject_id}")
         subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
         subject_children = subject_folder['children']
         coordinates_child = next((child for child in subject_children if child['content']['name'] == coordinates_folder_name), None)
         if coordinates_child is None:
             logging.error(f"REVA tracing folder {coordinates_folder_name} not found for subject: {subject_id}")
-            return jsonify({"status": "ERROR", "message": f"{coordinates_folder_name} folder not found for subject: {subject_id}"}), 404
+            return abort(404, description=f"{coordinates_folder_name} folder not found with subject id: {subject_id}")
         coordinates_folder = ps2.get(f"/packages/{coordinates_child['content']['id']}")
         coordinates_children = coordinates_folder['children']
         in_situ_child = next((child for child in coordinates_children if child['content']['name'] == in_situ_folder_name), None)
         if in_situ_child is None:
             logging.error(f"REVA tracing folder {in_situ_folder_name} not found for subject: {subject_id}")
-            return jsonify({"status": "ERROR", "message": f"{in_situ_folder_name} folder not found for subject: {subject_id}"}), 404
+            return abort(404, description=f"{in_situ_folder_name} folder not found with subject id: {subject_id}")
         in_situ_folder = ps2.get(f"/packages/{in_situ_child['content']['id']}")
-        in_situ_children = in_situ_folder['children']
+        return in_situ_folder['children']
+    except Exception as e:
+        return abort(500, description=f"Exception thrown when getting Reva InSitu Folder: {e}")
+
+@app.route("/reva/anatomical-landmarks-files/<subject_id>", methods=["GET"])
+def getRevaAnatomicalLandmarksFiles(subject_id):
+    try:
+        anatomical_landmarks_folder_name = 'Anatomical-landmarks'
+        in_situ_children = getRevaTracingInSituFolderChildren(subject_id)
+        anatomical_landmarks_child = next((child for child in in_situ_children if child['content']['name'] == anatomical_landmarks_folder_name), None)
+        if anatomical_landmarks_child is None:
+            logging.error(f"REVA tracing folder {anatomical_landmarks_folder_name} not found for subject: {subject_id}")
+            return jsonify({"status": "ERROR", "message": f"{anatomical_landmarks_folder_name} folder not found for subject: {subject_id}"}), 404
+        anatomical_landmarks_folder = ps2.get(f"/packages/{anatomical_landmarks_child['content']['id']}")
+        anatomical_landmarks_children = anatomical_landmarks_folder['children']
+        anatomical_landmarks_folders = []
+        for anatomical_landmark_child in anatomical_landmarks_children:
+            landmark_folder_name = anatomical_landmark_child['content']['name']
+            landmark_folder_id = anatomical_landmark_child['content']['id']
+            anatomical_landmark_folder = ps2.get(f"/packages/{landmark_folder_id}")
+            landmark_children = anatomical_landmark_folder['children']
+            landmark_files = []
+            for landmark_child in landmark_children:
+                landmark_file_package_id = landmark_child['content']['id']
+                landmark_file = ps2.get(f"/packages/{landmark_file_package_id}/view")
+                landmark_file_id = landmark_file[0]['content']['id']
+                landmark_file_presigned_url = ps2.get(f"/packages/{landmark_file_package_id}/files/{landmark_file_id}")['url']
+                landmark_files.append({'name':str(landmark_child['content']['name']), 's3Url':str(landmark_file_presigned_url)})
+            anatomical_landmarks_folders.append({'name':str(landmark_folder_name), 'files':landmark_files})
+        return jsonify({"status": "success", "folders": anatomical_landmarks_folders}), 200
+    except Exception as e:
+        logging.error(f"Error while getting REVA anatomical landmarks files {e}")
+        return jsonify({"status": "Error while getting anatomical landmarks files: ", "message": e}), 500
+
+@app.route("/reva/tracing-files/<subject_id>", methods=["GET"])
+def getRevaTracingFiles(subject_id):
+    try:
+        vagus_nerve_folder_name = 'Vagus-nerve'
+        in_situ_children = getRevaTracingInSituFolderChildren(subject_id)
         vagus_nerve_child = next((child for child in in_situ_children if child['content']['name'] == vagus_nerve_folder_name), None)
         if vagus_nerve_child is None:
             logging.error(f"REVA tracing folder {vagus_nerve_folder_name} not found for subject: {subject_id}")

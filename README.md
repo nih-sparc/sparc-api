@@ -80,12 +80,6 @@ pytest
 **Used on sparc-api for:** Creates tickets from user feedback to be managed \
 **Critical:** no
 
-#### Mail Chimp
-**Source:** https://mailchimp.com/ \
-**Summary:**  Email service \
-**Used on sparc-api for:** Email subscriptions from sparc-app \
-**Critical:** no
-
 #### oSparc
 **Source:** https://osparc.io/ \
 **Summary:**  Biomedeical Modelling and simulation software \

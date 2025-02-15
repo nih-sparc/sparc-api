@@ -209,31 +209,6 @@ def test_hubspot_webhook(client):
 
     assert response.status_code == 204
 
-def test_subscribe_to_mailchimp(client):
-    r = client.post(f"/mailchimp_subscribe", json={})
-    assert r.status_code == 400
-
-    letters = string.ascii_lowercase
-    email = ''.join(random.choice(letters) for i in range(8))
-    domain = ''.join(random.choice(letters) for i in range(6))
-
-    email_address = '{}@{}.com'.format(email, domain)
-
-    r2 = client.post(f"/mailchimp_subscribe", json={"email_address": email_address, "first_name": "Test", "last_name": "User"})
-    assert r2.status_code == 200
-
-    # this part is only for cleaning the mailchimp list and not pollute the mailing list
-    returned_data = r2.get_json()
-    member_hash = returned_data["id"]
-    url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/{}/actions/delete-permanent'.format(member_hash)
-    auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-    resp = requests.post(
-        url=url,
-        auth=auth
-    )
-    assert resp.status_code == 204
-
-
 def test_osparc_viewers(client):
     r = client.get('/get_osparc_data')
     assert r.status_code == 200

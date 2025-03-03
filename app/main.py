@@ -960,7 +960,7 @@ def getRevaSubjectIds():
 
 def getRevaTracingInSituFolderChildren(subject_id):
     try:
-        coordinates_folder_name = 'Coordinates-Data'
+        coordinates_folder_name = 'CoordinatesData'
         in_situ_folder_name = 'InSitu'
         primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
         primary_children = primary_folder['children']
@@ -988,7 +988,7 @@ def getRevaTracingInSituFolderChildren(subject_id):
 @app.route("/reva/anatomical-landmarks-files/<subject_id>", methods=["GET"])
 def getRevaAnatomicalLandmarksFiles(subject_id):
     try:
-        anatomical_landmarks_folder_name = 'Anatomical-landmarks'
+        anatomical_landmarks_folder_name = 'AnatomicalLandmarks'
         in_situ_children = getRevaTracingInSituFolderChildren(subject_id)
         anatomical_landmarks_child = next((child for child in in_situ_children if child['content']['name'] == anatomical_landmarks_folder_name), None)
         if anatomical_landmarks_child is None:
@@ -1018,7 +1018,7 @@ def getRevaAnatomicalLandmarksFiles(subject_id):
 @app.route("/reva/tracing-files/<subject_id>", methods=["GET"])
 def getRevaTracingFiles(subject_id):
     try:
-        vagus_nerve_folder_name = 'Vagus-nerve'
+        vagus_nerve_folder_name = 'VagusNerve'
         in_situ_children = getRevaTracingInSituFolderChildren(subject_id)
         vagus_nerve_child = next((child for child in in_situ_children if child['content']['name'] == vagus_nerve_folder_name), None)
         if vagus_nerve_child is None:
@@ -1036,7 +1036,7 @@ def getRevaTracingFiles(subject_id):
                 vagus_file = ps2.get(f"/packages/{file_package_id}/view")
                 vagus_file_id = vagus_file[0]['content']['id']
                 vagus_file_presigned_url = ps2.get(f"/packages/{file_package_id}/files/{vagus_file_id}")['url']
-                vagus_tracing_files.append({'name':str(vagus_file_child['content']['name']), 's3Url':str(vagus_file_presigned_url)})
+                vagus_tracing_files.append({'name':str(vagus_file_child['content']['name']), 'region':str(vagus_region_child['content']['name']), 's3Url':str(vagus_file_presigned_url)})
         return jsonify({"status": "success", "files": vagus_tracing_files}), 200
     except Exception as e:
         logging.error(f"Error while getting REVA tracing files {e}")

@@ -64,7 +64,6 @@ SKIPPED_MIME_TYPES = [
     'text/x-chdr',
     'text/x-python',
     'text/x-sh',
-    'text/x.vnd.abi.plot+csv',
     'text/xml',
     'video/x-msvideo',
 ]

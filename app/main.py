@@ -1,5 +1,4 @@
 import atexit
-import base64
 
 from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
@@ -35,7 +34,6 @@ from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
-from pennsieve2 import Pennsieve as Pennsieve2
 from pennsieve2.direct import new_client
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
@@ -307,6 +305,7 @@ def contact():
     email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({ 'message': message }))
 
     return json.dumps({"status": "sent"})
+
 
 def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
     response = s3.generate_presigned_url(

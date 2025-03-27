@@ -957,33 +957,68 @@ def getRevaSubjectIds():
         logging.error(f"Error while getting REVA subject id files: {e}")
         return jsonify({"status": "Error while getting REVA subject id files: ", "message": e}), 500
 
-@app.route("/reva/tracing-files/<subject_id>", methods=["GET"])
-def getRevaTracingFiles(subject_id):
-    coordinates_folder_name = 'Coordinates-Data'
-    in_situ_folder_name = 'InSitu'
-    vagus_nerve_folder_name = 'Vagus-nerve'
-
+def getRevaTracingInSituFolderChildren(subject_id):
     try:
+        coordinates_folder_name = 'CoordinatesData'
+        in_situ_folder_name = 'InSitu'
         primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
         primary_children = primary_folder['children']
         subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
         if subject_child is None:
             logging.error(f"REVA tracing folder not found with subject id: {subject_id}")
-            return jsonify({"status": "ERROR", "message": f"Folder not found with subject id: {subject_id}"}), 404
+            return abort(404, description=f"Folder not found with subject id: {subject_id}")
         subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
         subject_children = subject_folder['children']
         coordinates_child = next((child for child in subject_children if child['content']['name'] == coordinates_folder_name), None)
         if coordinates_child is None:
             logging.error(f"REVA tracing folder {coordinates_folder_name} not found for subject: {subject_id}")
-            return jsonify({"status": "ERROR", "message": f"{coordinates_folder_name} folder not found for subject: {subject_id}"}), 404
+            return abort(404, description=f"{coordinates_folder_name} folder not found with subject id: {subject_id}")
         coordinates_folder = ps2.get(f"/packages/{coordinates_child['content']['id']}")
         coordinates_children = coordinates_folder['children']
         in_situ_child = next((child for child in coordinates_children if child['content']['name'] == in_situ_folder_name), None)
         if in_situ_child is None:
             logging.error(f"REVA tracing folder {in_situ_folder_name} not found for subject: {subject_id}")
-            return jsonify({"status": "ERROR", "message": f"{in_situ_folder_name} folder not found for subject: {subject_id}"}), 404
+            return abort(404, description=f"{in_situ_folder_name} folder not found with subject id: {subject_id}")
         in_situ_folder = ps2.get(f"/packages/{in_situ_child['content']['id']}")
-        in_situ_children = in_situ_folder['children']
+        return in_situ_folder['children']
+    except Exception as e:
+        return abort(500, description=f"Exception thrown when getting Reva InSitu Folder: {e}")
+
+@app.route("/reva/anatomical-landmarks-files/<subject_id>", methods=["GET"])
+def getRevaAnatomicalLandmarksFiles(subject_id):
+    try:
+        anatomical_landmarks_folder_name = 'AnatomicalLandmarks'
+        in_situ_children = getRevaTracingInSituFolderChildren(subject_id)
+        anatomical_landmarks_child = next((child for child in in_situ_children if child['content']['name'] == anatomical_landmarks_folder_name), None)
+        if anatomical_landmarks_child is None:
+            logging.error(f"REVA tracing folder {anatomical_landmarks_folder_name} not found for subject: {subject_id}")
+            return jsonify({"status": "ERROR", "message": f"{anatomical_landmarks_folder_name} folder not found for subject: {subject_id}"}), 404
+        anatomical_landmarks_folder = ps2.get(f"/packages/{anatomical_landmarks_child['content']['id']}")
+        anatomical_landmarks_children = anatomical_landmarks_folder['children']
+        anatomical_landmarks_folders = []
+        for anatomical_landmark_child in anatomical_landmarks_children:
+            landmark_folder_name = anatomical_landmark_child['content']['name']
+            landmark_folder_id = anatomical_landmark_child['content']['id']
+            anatomical_landmark_folder = ps2.get(f"/packages/{landmark_folder_id}")
+            landmark_children = anatomical_landmark_folder['children']
+            landmark_files = []
+            for landmark_child in landmark_children:
+                landmark_file_package_id = landmark_child['content']['id']
+                landmark_file = ps2.get(f"/packages/{landmark_file_package_id}/view")
+                landmark_file_id = landmark_file[0]['content']['id']
+                landmark_file_presigned_url = ps2.get(f"/packages/{landmark_file_package_id}/files/{landmark_file_id}")['url']
+                landmark_files.append({'name':str(landmark_child['content']['name']), 's3Url':str(landmark_file_presigned_url)})
+            anatomical_landmarks_folders.append({'name':str(landmark_folder_name), 'files':landmark_files})
+        return jsonify({"status": "success", "folders": anatomical_landmarks_folders}), 200
+    except Exception as e:
+        logging.error(f"Error while getting REVA anatomical landmarks files {e}")
+        return jsonify({"status": "Error while getting anatomical landmarks files: ", "message": e}), 500
+
+@app.route("/reva/tracing-files/<subject_id>", methods=["GET"])
+def getRevaTracingFiles(subject_id):
+    try:
+        vagus_nerve_folder_name = 'VagusNerve'
+        in_situ_children = getRevaTracingInSituFolderChildren(subject_id)
         vagus_nerve_child = next((child for child in in_situ_children if child['content']['name'] == vagus_nerve_folder_name), None)
         if vagus_nerve_child is None:
             logging.error(f"REVA tracing folder {vagus_nerve_folder_name} not found for subject: {subject_id}")
@@ -1000,7 +1035,7 @@ def getRevaTracingFiles(subject_id):
                 vagus_file = ps2.get(f"/packages/{file_package_id}/view")
                 vagus_file_id = vagus_file[0]['content']['id']
                 vagus_file_presigned_url = ps2.get(f"/packages/{file_package_id}/files/{vagus_file_id}")['url']
-                vagus_tracing_files.append({'name':str(vagus_file_child['content']['name']), 's3Url':str(vagus_file_presigned_url)})
+                vagus_tracing_files.append({'name':str(vagus_file_child['content']['name']), 'region':str(vagus_region_child['content']['name']), 's3Url':str(vagus_file_presigned_url)})
         return jsonify({"status": "success", "files": vagus_tracing_files}), 200
     except Exception as e:
         logging.error(f"Error while getting REVA tracing files {e}")
@@ -1404,6 +1439,104 @@ def create_wrike_task():
     else:
         abort(400, description="Missing title or description")
 
+@app.route("/hubspot_contact_properties/<email>", methods=["GET"])
+def get_hubspot_contact_properties(email):
+    url = f"https://api.hubapi.com/crm/v3/objects/contacts/{email}?archived=false&idProperty=email&properties=firstname,lastname,email,newsletter,event_name"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        # Handle successful responses (2xx)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        # Handle not found (404)
+        elif response.status_code == 404:
+            return jsonify({
+                "error": "Contact not found",
+                "message": f"No contact with the email '{email}' was found in HubSpot."
+            }), 404
+        # Handle other non-success status codes
+        else:
+            return jsonify({
+                "error": "Failed to fetch contact",
+                "message": f"HubSpot API responded with status code {response.status_code}.",
+                "details": response.json() if response.headers.get("Content-Type") == "application/json" else response.text
+            }), response.status_code
+    except requests.RequestException as ex:
+        # Handle exceptions raised by the requests library
+        return jsonify({
+            "error": "RequestException",
+            "message": f"Could not get contact with email '{email}' due to a request error.",
+            "details": str(ex)
+        }), 500
+    except Exception as ex:
+        # Handle other unexpected exceptions
+        return jsonify({
+            "error": "Internal Server Error",
+            "message": f"An unexpected error occurred while fetching the contact with email '{email}'.",
+            "details": str(ex)
+        }), 500
+
+@app.route("/subscribe_to_newsletter", methods=["POST"])
+def subscribe_to_newsletter():
+    data = request.json
+    email = data.get('email_address')
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+
+    # Ensure the required `email` field is present
+    if not email:
+        return jsonify({'error': 'Email is required'}), 400
+
+    newsletter_property = ''
+    try:
+        contact_properties, status_code = get_hubspot_contact_properties(email)
+        if status_code == 200:
+            newsletter_property = contact_properties['properties'].get('newsletter', None)
+        else:
+            logging.error(f"Unexpected response from HubSpot: {contact_properties}")
+            raise Exception(f"Unexpected error: {contact_properties}")
+    except Exception as e:
+        logging.error(f"Error while retrieving contact properties for email {email}: {e}")
+
+    if isinstance(newsletter_property, str):
+        current_newsletter_values = newsletter_property.split(';')
+        # remove possible empty string
+        current_newsletter_values = list(filter(None, current_newsletter_values))
+
+    # Append the Newsletter value if it's not already in the array
+    if 'Newsletter' not in current_newsletter_values:
+        current_newsletter_values.append('Newsletter')
+    payload = {
+      "inputs": [
+        {
+          "properties": {
+            "email": email,
+            "firstname": first_name,
+            "lastname": last_name,
+            "newsletter": ';'.join(current_newsletter_values)
+          },
+          "id": email,
+          "idProperty": "email"
+        }
+      ]
+    }
+    url = "https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert"
+    headers = {
+        "Content-Type": "application/json",
+        'Authorization': 'Bearer ' +  Config.HUBSPOT_API_TOKEN
+    }
+
+    # Send request to HubSpot API
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx or 5xx)
+        return jsonify(response.json()), 200
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
+
 def get_contact_properties(object_id):
     client = hubspot.Client.create(access_token=Config.HUBSPOT_API_TOKEN)
     try:
@@ -1556,93 +1689,6 @@ def hubspot_webhook():
             return jsonify({"status": "success", "message": "Webhook processed successfully"}), 200
     threading.Thread(target=execute_webhook).start()
     return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 204
-
-@app.route("/mailchimp_subscribe", methods=["POST"])
-def subscribe_to_mailchimp():
-    json_data = request.get_json()
-    if json_data and 'email_address' in json_data and 'first_name' in json_data and 'last_name' in json_data:
-        email_address = json_data["email_address"]
-        first_name = json_data['first_name']
-        last_name = json_data['last_name']
-        auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
-
-        data = {
-            "email_address": email_address,
-            "status": "subscribed",
-            "merge_fields": {
-                "FNAME": first_name,
-                "LNAME": last_name
-            }
-        }
-        try:
-            resp = requests.put(
-                url=url,
-                json=data,
-                auth=auth
-            )
-
-            if resp.status_code == 200:
-                return resp.json()
-            else:
-                return "Failed to subscribe user with response: " + resp.json()
-        except Exception as ex:
-            logging.error("Could not subscribe to newsletter", ex)
-        return {"error": "An error occured while trying to subscribe to the newsletter"}, 500
-    else:
-        abort(400, description="Missing email_address, first_name or last_name")
-
-
-@app.route("/mailchimp_unsubscribe", methods=["POST"])
-def unsubscribe_to_mailchimp():
-    json_data = request.get_json()
-    if json_data and "email_address" in json_data:
-        email_address = json_data["email_address"]
-        auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-        url = "https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/" + email_address
-
-        data = {
-            "status": "unsubscribed",
-        }
-        try:
-            resp = requests.put(
-                url=url,
-                json=data,
-                auth=auth
-            )
-
-            if resp.status_code == 200:
-                return resp.json()
-            else:
-                return "Failed to unsubscribe user with response: " + resp.json()
-        except Exception as ex:
-            logging.error("Could not unsubscribe to newsletter", ex)
-        return {"error": "An error occured while trying to unsubscribe to the newsletter"}, 500
-    else:
-        abort(400, description="Missing email_address")
-
-@app.route("/mailchimp_member_info/<email_address>", methods=["GET"])
-def get_mailchimp_member_info(email_address):
-    if email_address:
-        auth = HTTPBasicAuth('AnyUser', Config.MAILCHIMP_API_KEY)
-        url = 'https://us2.api.mailchimp.com/3.0/lists/c81a347bd8/members/' + email_address
-
-        try:
-            resp = requests.get(
-                url=url,
-                auth=auth
-            )
-
-            if resp.status_code == 200:
-                return resp.json()
-            else:
-                return "Failed to get member info with response: " + resp.json()
-        except Exception as ex:
-            logging.error(f"Failed to get member info for {email_address}", ex)
-        return {"error": "Could not get member info from MailChimp"}, 500
-    else:
-        abort(400, description="Missing email_address")
-
 
 # Get list of available name / curie pair
 @app.route("/get-organ-curies/")

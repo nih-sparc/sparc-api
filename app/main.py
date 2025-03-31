@@ -1,5 +1,4 @@
 import atexit
-import base64
 
 from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
@@ -35,7 +34,6 @@ from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
-from pennsieve2 import Pennsieve as Pennsieve2
 from pennsieve2.direct import new_client
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
 from PIL import Image
@@ -154,6 +152,7 @@ def connect_to_pennsieve():
         logging.error("Unknown Error")
         logging.error(err)
 
+
 @app.before_first_request
 def connect_to_pennsieve2():
     global ps2
@@ -161,6 +160,7 @@ def connect_to_pennsieve2():
         ps2 = new_client(api_key=Config.PENNSIEVE_API_TOKEN, api_secret=Config.PENNSIEVE_API_SECRET, api_host=Config.PENNSIEVE_API_HOST, api2_host=None)
     except Exception as err:
         logging.error(f"Error connecting to pennsieve 2 agent: {err}")
+
 
 viewers_scheduler = BackgroundScheduler()
 metrics_scheduler = BackgroundScheduler()
@@ -176,14 +176,13 @@ if not featured_dataset_id_scheduler.running:
 if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler = BackgroundScheduler()
     ms = MonthlyStats()
-    #Check when app starts in case the api server is down on the first
-    #of the month
+    # Check when app starts in case the api server is down on the first
+    # of the month
     ms.monthly_stats_required_check()
     monthly_stats_email_scheduler.start()
-    #Check on the first of each month at 2am
-    monthly_stats_email_scheduler.add_job(ms.monthly_stats_required_check, 'cron', \
-        year='*', month='*', day='1', hour='2', minute=0, second=0)
-
+    # Check on the first of each month at 2am
+    monthly_stats_email_scheduler.add_job(ms.monthly_stats_required_check, 'cron',
+                                          year='*', month='*', day='1', hour='2', minute=0, second=0)
 
 # Only need to run the update contentful entries scheduler on one environment, so dev was chosen to keep prod more responsive
 if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
@@ -193,8 +192,8 @@ if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
     # Update the contentful entries daily at 2 AM EST
     update_contentful_event_entries_scheduler.add_job(update_all_events_sort_order, 'cron', hour=2, timezone='US/Eastern')
 
-
 osparc_data = {}
+
 
 @app.before_first_request
 def get_osparc_file_viewers():
@@ -242,7 +241,9 @@ def get_metrics():
         logging.info('Starting scheduler for metrics acquisition')
         metrics_scheduler.start()
 
+
 osparc_services = OSparcServices()
+
 
 @app.before_first_request
 def get_services():
@@ -267,6 +268,7 @@ metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 # Update the featured dataset id on deploy and then every hour
 featured_dataset_id_trigger = OrTrigger([DateTrigger(), IntervalTrigger(hours=1)])
 featured_dataset_id_scheduler.add_job(lambda: set_featured_dataset_id(featuredDatasetIdSelectorTable), featured_dataset_id_trigger)
+
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -304,9 +306,10 @@ def contact():
     message = contact_request["message"]
 
     email_sender.send_email(name, email, message)
-    email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({ 'message': message }))
+    email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({'message': message}))
 
     return json.dumps({"status": "sent"})
+
 
 def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
     response = s3.generate_presigned_url(
@@ -335,14 +338,14 @@ def thumbnail_from_neurolucida_file():
         return abort(400, description=f"Query arguments are not valid.")
 
     url = f"{Config.NEUROLUCIDA_HOST}/thumbnail"
-    try:    
+    try:
         response = requests.get(url, params=query_args, timeout=5)
         response.raise_for_status()
         if response.status_code == 200:
             if response.headers.get('Content-Type', 'unknown') == 'image/png':
                 return base64.b64encode(response.content)
         abort(400, 'Failed to retrieve thumbnail.')
-    
+
     except requests.exceptions.ConnectionError:
         return abort(400, description="Unable to make a connection to NEUROLUCIDA_HOST.")
     except requests.exceptions.Timeout:
@@ -416,7 +419,6 @@ def extract_thumbnail_from_xml_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
 
 @app.route("/exists/<path:path>")
 def url_exists(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
-
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
 
@@ -459,6 +461,7 @@ def get_discover_path():
         logging.error('Failed to retrieve uri {uri}', ex)
     return abort(404, description=f'Failed to retrieve uri {uri}')
 
+
 def s3_header_check(path, bucket_name):
     try:
         head_response = s3.head_object(
@@ -467,8 +470,8 @@ def s3_header_check(path, bucket_name):
             RequestPayer="requester"
         )
         content_length = head_response.get('ContentLength', Config.DIRECT_DOWNLOAD_LIMIT)
-        if content_length and not content_length < Config.DIRECT_DOWNLOAD_LIMIT :  # 20 MB
-            return abort(413, description= f"File too big to download: {content_length}")
+        if content_length and not content_length < Config.DIRECT_DOWNLOAD_LIMIT:  # 20 MB
+            return abort(413, description=f"File too big to download: {content_length}")
     except botocore.exceptions.ClientError as err:
         # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
         if err.response["Error"]["Code"] == "404":
@@ -480,13 +483,13 @@ def s3_header_check(path, bucket_name):
     else:
         return (200, 'OK')
 
+
 # Reverse proxy for objects from S3, a simple get object
 # operation. This is used by scaffoldvuer and its
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
-
     query_args = request.args
     s3BucketName = query_args.get("s3BucketName", bucket_name)
     s3_path = path  # Will modify s3_path if we find name mangling
@@ -508,7 +511,6 @@ def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
             abort(404, description=f'Provided path was not found on the s3 resource')
         elif response2[0] == 403:
             abort(403, description=f'There is a permission issue when accessing the file at specified path')
-
 
     response = s3.get_object(
         Bucket=s3BucketName,
@@ -582,6 +584,7 @@ def get_dataset_info_doi():
 
     return dataset_search(query)
 
+
 @app.route("/dataset_info/using_multiple_dois")
 @app.route("/dataset_info/using_multiple_dois/")
 def get_dataset_info_dois():
@@ -589,6 +592,7 @@ def get_dataset_info_dois():
     query = create_multiple_doi_query(dois)
 
     return process_results(dataset_search(query))
+
 
 @app.route("/multiple_dataset_info/using_multiple_mimetype")
 @app.route("/multiple_dataset_info/using_multiple_mimetype/")
@@ -786,7 +790,6 @@ def get_facets(type_):
         except Exception as ex:
             logging.error(f"Could not search SciCrunch for path {path}", ex)
 
-
     # Select terms from the results
     terms = []
     for result in results:
@@ -859,6 +862,7 @@ def build_filetypes_table(osparc_viewers):
         table[filetype].append(viewer)
     return table
 
+
 @app.route("/sim/dataset/<id_>")
 def sim_dataset(id_):
     if request.method == "GET":
@@ -873,6 +877,7 @@ def sim_dataset(id_):
             logging.error(f"Could not fetch SIM dataset {id_}", ex)
         return abort(404, description="Resource not found")
 
+
 @app.route("/sim/dataset/<id_>/versions/<version_>")
 def sim_dataset_versions(id_, version_):
     if request.method == "GET":
@@ -886,7 +891,6 @@ def sim_dataset_versions(id_, version_):
         except Exception as ex:
             logging.error(f"Could not fetch SIM dataset {id_} version {version_}", ex)
         return abort(404, description="Resource not found")
-
 
 
 @app.route("/get_osparc_data")
@@ -927,6 +931,7 @@ def datasets_by_project_id(project_id):
 def get_featured_datasets_identifiers():
     return {'identifiers': get_featured_datasets()}
 
+
 @app.route("/get_featured_dataset", methods=["GET"])
 @cache.cached(timeout=300)
 def get_featured_dataset():
@@ -944,6 +949,7 @@ def get_featured_dataset():
         logging.error(f"Could not get featured dataset {featured_dataset_id}", ex)
     abort(404, description="An error occured while fetching the resource")
 
+
 @app.route("/reva/subject-ids", methods=["GET"])
 def getRevaSubjectIds():
     try:
@@ -957,6 +963,7 @@ def getRevaSubjectIds():
     except Exception as e:
         logging.error(f"Error while getting REVA subject id files: {e}")
         return jsonify({"status": "Error while getting REVA subject id files: ", "message": e}), 500
+
 
 def getRevaTracingInSituFolderChildren(subject_id):
     try:
@@ -985,6 +992,7 @@ def getRevaTracingInSituFolderChildren(subject_id):
     except Exception as e:
         return abort(500, description=f"Exception thrown when getting Reva InSitu Folder: {e}")
 
+
 @app.route("/reva/anatomical-landmarks-files/<subject_id>", methods=["GET"])
 def getRevaAnatomicalLandmarksFiles(subject_id):
     try:
@@ -1008,12 +1016,13 @@ def getRevaAnatomicalLandmarksFiles(subject_id):
                 landmark_file = ps2.get(f"/packages/{landmark_file_package_id}/view")
                 landmark_file_id = landmark_file[0]['content']['id']
                 landmark_file_presigned_url = ps2.get(f"/packages/{landmark_file_package_id}/files/{landmark_file_id}")['url']
-                landmark_files.append({'name':str(landmark_child['content']['name']), 's3Url':str(landmark_file_presigned_url)})
-            anatomical_landmarks_folders.append({'name':str(landmark_folder_name), 'files':landmark_files})
+                landmark_files.append({'name': str(landmark_child['content']['name']), 's3Url': str(landmark_file_presigned_url)})
+            anatomical_landmarks_folders.append({'name': str(landmark_folder_name), 'files': landmark_files})
         return jsonify({"status": "success", "folders": anatomical_landmarks_folders}), 200
     except Exception as e:
         logging.error(f"Error while getting REVA anatomical landmarks files {e}")
         return jsonify({"status": "Error while getting anatomical landmarks files: ", "message": e}), 500
+
 
 @app.route("/reva/tracing-files/<subject_id>", methods=["GET"])
 def getRevaTracingFiles(subject_id):
@@ -1036,11 +1045,13 @@ def getRevaTracingFiles(subject_id):
                 vagus_file = ps2.get(f"/packages/{file_package_id}/view")
                 vagus_file_id = vagus_file[0]['content']['id']
                 vagus_file_presigned_url = ps2.get(f"/packages/{file_package_id}/files/{vagus_file_id}")['url']
-                vagus_tracing_files.append({'name':str(vagus_file_child['content']['name']), 'region':str(vagus_region_child['content']['name']), 's3Url':str(vagus_file_presigned_url)})
+                vagus_tracing_files.append(
+                    {'name': str(vagus_file_child['content']['name']), 'region': str(vagus_region_child['content']['name']), 's3Url': str(vagus_file_presigned_url)})
         return jsonify({"status": "success", "files": vagus_tracing_files}), 200
     except Exception as e:
         logging.error(f"Error while getting REVA tracing files {e}")
         return jsonify({"status": "Error while getting tracing files: ", "message": e}), 500
+
 
 @app.route("/reva/micro-ct-files/<subject_id>", methods=["GET"])
 def getRevaMicroCtFiles(subject_id):
@@ -1071,11 +1082,13 @@ def getRevaMicroCtFiles(subject_id):
             file_size = micro_child['storage']
             package_type = micro_child['content']['packageType']
             file_type = micro_child_file[0]['content']['fileType']
-            micro_ct_files.append({'name':str(file_name), 's3Url':str(micro_file_presigned_url), 'type':str(file_type), 'packageType':str(package_type), 'size':str(file_size)})
+            micro_ct_files.append(
+                {'name': str(file_name), 's3Url': str(micro_file_presigned_url), 'type': str(file_type), 'packageType': str(package_type), 'size': str(file_size)})
         return jsonify({"status": "success", "files": micro_ct_files}), 200
     except Exception as e:
         logging.error(f"Error while getting REVA microCT files {e}")
         return jsonify({"status": "Error while getting microCT files: ", "message": e}), 500
+
 
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
@@ -1088,6 +1101,7 @@ def get_owner_email(owner_id):
         abort(404, description="Owner not found")
     else:
         return jsonify({"email": res[0].email})
+
 
 # Get information of the latest body scaffold for species.
 # This endpoint returns the metadata file path, bucket,
@@ -1102,6 +1116,7 @@ def get_body_scaffold_info(species):
             return result
 
     return abort(404, description=f"Whole body info not found for {species}")
+
 
 @app.route("/thumbnail/<image_id>", methods=["GET"])
 def thumbnail_by_image_id(image_id, recursive_call=False):
@@ -1271,22 +1286,24 @@ def create_wrike_task():
             )
             captchaResp = captchaReq.json()
             if "success" not in captchaResp or not captchaResp["success"]:
-                return { "error": "Failed Captcha Validation" }, 409
+                return {"error": "Failed Captcha Validation"}, 409
         except Exception as ex:
             logging.error("Could not validate captcha, bypassing validation", ex)
     elif not app.config['TESTING']:
-        return { "error": "Failed Captcha Validation" }, 409
+        return {"error": "Failed Captcha Validation"}, 409
     # captcha all good
     if form and 'title' in form and 'description' in form:
         title = form["title"]
         description = form["description"]
         newTaskDescription = form["description"]
 
-        hed = { 'Authorization': 'Bearer ' + Config.WRIKE_TOKEN }
+        hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
         ## Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
         url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'
-        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
-        responsibles = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID, Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
+        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID,
+                     Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
+        responsibles = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID,
+                        Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
         customStatus = Config.DRC_WRIKE_CUSTOM_STATUS_ID
         taskType = ""
         templateTaskId = ""
@@ -1294,42 +1311,42 @@ def create_wrike_task():
         if form and 'type' in form:
             taskType = form["type"]
         if (taskType == "news"):
-          url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
-          followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-          responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-          customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
-          templateTaskId = Config.NEWS_TEMPLATE_TASK_ID
+            url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
+            followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+            responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+            customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+            templateTaskId = Config.NEWS_TEMPLATE_TASK_ID
         if (taskType == "event"):
-          url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
-          followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-          responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-          customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
-          templateTaskId = Config.EVENT_TEMPLATE_TASK_ID
+            url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
+            followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+            responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+            customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+            templateTaskId = Config.EVENT_TEMPLATE_TASK_ID
         elif (taskType == "toolsAndResources"):
-          url = 'https://www.wrike.com/api/v4/folders/' + Config.TOOLS_AND_RESOURCES_FOLDER_ID + '/tasks'
-          followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-          responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-          customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
-          templateTaskId = Config.TOOLS_AND_RESOURCES_TEMPLATE_TASK_ID
+            url = 'https://www.wrike.com/api/v4/folders/' + Config.TOOLS_AND_RESOURCES_FOLDER_ID + '/tasks'
+            followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+            responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+            customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+            templateTaskId = Config.TOOLS_AND_RESOURCES_TEMPLATE_TASK_ID
         elif (taskType == "communitySpotlight"):
-          url = 'https://www.wrike.com/api/v4/folders/' + Config.COMMUNITY_SPOTLIGHT_FOLDER_ID + '/tasks'
-          followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-          responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-          customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
-          templateTaskId = Config.COMMUNITY_SPOTLIGHT_TEMPLATE_TASK_ID
+            url = 'https://www.wrike.com/api/v4/folders/' + Config.COMMUNITY_SPOTLIGHT_FOLDER_ID + '/tasks'
+            followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+            responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
+            customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
+            templateTaskId = Config.COMMUNITY_SPOTLIGHT_TEMPLATE_TASK_ID
         elif (taskType == "research"):
-          followers.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
-          responsibles.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
+            followers.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
+            responsibles.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
 
         if (templateTaskId != ""):
-          templateUrl = 'https://www.wrike.com/api/v4/tasks/' + templateTaskId
-          templateResp = requests.get(
-            url=templateUrl,
-            headers=hed
-          )
-          if 'data' in templateResp.json() and templateResp.json()["data"] != []:
-            newTaskDescription = templateResp.json()["data"][0]["description"] + description
-            templateSubTaskIds = templateResp.json()["data"][0]["subTaskIds"]
+            templateUrl = 'https://www.wrike.com/api/v4/tasks/' + templateTaskId
+            templateResp = requests.get(
+                url=templateUrl,
+                headers=hed
+            )
+            if 'data' in templateResp.json() and templateResp.json()["data"] != []:
+                newTaskDescription = templateResp.json()["data"][0]["description"] + description
+                templateSubTaskIds = templateResp.json()["data"][0]["subTaskIds"]
 
         data = {
             "title": title,
@@ -1350,95 +1367,96 @@ def create_wrike_task():
         # add the file as an attachment to the newly created ticket
         files = request.files
         if 'data' in resp.json() and resp.json()["data"] != []:
-          new_task_id = resp.json()["data"][0]["id"]
-          if files and 'attachment' in files:
-              attachment = files['attachment']
-              file_data = attachment.read()
-              file_name = attachment.filename
-              content_type = attachment.content_type
-              headers = {
-                  'Authorization': 'Bearer ' +  Config.WRIKE_TOKEN,
-                  'X-File-Name': file_name,
-                  'content-type': content_type,
-                  'X-Requested-With': 'XMLHttpRequest'
+            new_task_id = resp.json()["data"][0]["id"]
+            if files and 'attachment' in files:
+                attachment = files['attachment']
+                file_data = attachment.read()
+                file_name = attachment.filename
+                content_type = attachment.content_type
+                headers = {
+                    'Authorization': 'Bearer ' + Config.WRIKE_TOKEN,
+                    'X-File-Name': file_name,
+                    'content-type': content_type,
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
-              attachment_url = "https://www.wrike.com/api/v4/tasks/" + new_task_id + "/attachments"
+                attachment_url = "https://www.wrike.com/api/v4/tasks/" + new_task_id + "/attachments"
 
-              try:
-                requests.post(
-                  url=attachment_url,
-                  data=file_data,
-                  headers=headers
+                try:
+                    requests.post(
+                        url=attachment_url,
+                        data=file_data,
+                        headers=headers
+                    )
+                except Exception as e:
+                    print(e)
+
+            # create copies of all the templates subtasks and add them to the newly created ticket
+            for subTaskId in templateSubTaskIds:
+                subTaskTemplateUrl = 'https://www.wrike.com/api/v4/tasks/' + subTaskId
+                subTaskTemplateResp = requests.get(
+                    url=subTaskTemplateUrl,
+                    headers=hed
                 )
-              except Exception as e:
-                print(e)
-
-          # create copies of all the templates subtasks and add them to the newly created ticket
-          for subTaskId in templateSubTaskIds:
-            subTaskTemplateUrl = 'https://www.wrike.com/api/v4/tasks/' + subTaskId
-            subTaskTemplateResp = requests.get(
-              url = subTaskTemplateUrl,
-              headers=hed
-            )
-            if 'data' in subTaskTemplateResp.json() and subTaskTemplateResp.json()["data"] != []:
-              subTaskData = {
-                "title": subTaskTemplateResp.json()["data"][0]["title"],
-                "description": subTaskTemplateResp.json()["data"][0]["description"],
-                "customStatus": subTaskTemplateResp.json()["data"][0]["customStatusId"],
-                "followers": subTaskTemplateResp.json()["data"][0]["followerIds"],
-                "responsibles": subTaskTemplateResp.json()["data"][0]["responsibleIds"],
-                "follow": False,
-                "superTasks": [new_task_id],
-                "dates": {"type": "Backlog"}
-              }
-              requests.post(
-                url=url,
-                json=subTaskData,
-                headers=hed
-              )
+                if 'data' in subTaskTemplateResp.json() and subTaskTemplateResp.json()["data"] != []:
+                    subTaskData = {
+                        "title": subTaskTemplateResp.json()["data"][0]["title"],
+                        "description": subTaskTemplateResp.json()["data"][0]["description"],
+                        "customStatus": subTaskTemplateResp.json()["data"][0]["customStatusId"],
+                        "followers": subTaskTemplateResp.json()["data"][0]["followerIds"],
+                        "responsibles": subTaskTemplateResp.json()["data"][0]["responsibleIds"],
+                        "follow": False,
+                        "superTasks": [new_task_id],
+                        "dates": {"type": "Backlog"}
+                    }
+                    requests.post(
+                        url=url,
+                        json=subTaskData,
+                        headers=hed
+                    )
 
         if (resp.status_code == 200):
-          if 'userEmail' in form and form['userEmail'] and 'sendCopy' in form and form['sendCopy'] == 'true':
-            # default to bug form if task type not specified
-            subject = 'SPARC Reported Error/Issue Submission'
-            body = issue_reporting_email.substitute({ 'message': description })
-            if (taskType == "feedback"):
-              subject = 'SPARC Feedback Submission'
-              body = feedback_email.substitute({ 'message': description })
-            elif (taskType == "interest"):
-              subject = 'SPARC Service Interest Submission'
-              body = service_interest_email.substitute({ 'message': description })
-            elif (taskType == "general"):
-              subject = 'SPARC Question or Inquiry Submission'
-              body = general_interest_email.substitute({ 'message': description })
-            elif (taskType == "research"):
-              subject = 'SPARC Research Submission'
-              body = creation_request_confirmation_email.substitute({ 'message': description })
-            elif (taskType == "news"):
-              subject = 'SPARC News Submission'
-              body = creation_request_confirmation_email.substitute({ 'message': description })
-            elif (taskType == "event"):
-              subject = 'SPARC Event Submission'
-              body = creation_request_confirmation_email.substitute({ 'message': description })
-            elif (taskType == "toolsAndResources"):
-              subject = 'SPARC Tool/Resource Submission'
-              body = creation_request_confirmation_email.substitute({ 'message': description })
-            elif (taskType == "communitySpotlight"):
-              subject = 'SPARC Story Submission'
-              body = creation_request_confirmation_email.substitute({ 'message': description })
-            userEmail = form['userEmail']
-            if len(userEmail) > 0:
-              email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], subject, body)
+            if 'userEmail' in form and form['userEmail'] and 'sendCopy' in form and form['sendCopy'] == 'true':
+                # default to bug form if task type not specified
+                subject = 'SPARC Reported Error/Issue Submission'
+                body = issue_reporting_email.substitute({'message': description})
+                if (taskType == "feedback"):
+                    subject = 'SPARC Feedback Submission'
+                    body = feedback_email.substitute({'message': description})
+                elif (taskType == "interest"):
+                    subject = 'SPARC Service Interest Submission'
+                    body = service_interest_email.substitute({'message': description})
+                elif (taskType == "general"):
+                    subject = 'SPARC Question or Inquiry Submission'
+                    body = general_interest_email.substitute({'message': description})
+                elif (taskType == "research"):
+                    subject = 'SPARC Research Submission'
+                    body = creation_request_confirmation_email.substitute({'message': description})
+                elif (taskType == "news"):
+                    subject = 'SPARC News Submission'
+                    body = creation_request_confirmation_email.substitute({'message': description})
+                elif (taskType == "event"):
+                    subject = 'SPARC Event Submission'
+                    body = creation_request_confirmation_email.substitute({'message': description})
+                elif (taskType == "toolsAndResources"):
+                    subject = 'SPARC Tool/Resource Submission'
+                    body = creation_request_confirmation_email.substitute({'message': description})
+                elif (taskType == "communitySpotlight"):
+                    subject = 'SPARC Story Submission'
+                    body = creation_request_confirmation_email.substitute({'message': description})
+                userEmail = form['userEmail']
+                if len(userEmail) > 0:
+                    email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], subject, body)
 
-          return jsonify(
-            title=title,
-            description=description,
-            task_id=resp.json()["data"][0]["id"]
-          )
+            return jsonify(
+                title=title,
+                description=description,
+                task_id=resp.json()["data"][0]["id"]
+            )
         else:
             return resp.json()
     else:
         abort(400, description="Missing title or description")
+
 
 @app.route("/hubspot_contact_properties/<email>", methods=["GET"])
 def get_hubspot_contact_properties(email):
@@ -1480,6 +1498,7 @@ def get_hubspot_contact_properties(email):
             "details": str(ex)
         }), 500
 
+
 @app.route("/subscribe_to_newsletter", methods=["POST"])
 def subscribe_to_newsletter():
     data = request.json
@@ -1502,6 +1521,7 @@ def subscribe_to_newsletter():
     except Exception as e:
         logging.error(f"Error while retrieving contact properties for email {email}: {e}")
 
+    current_newsletter_values = []
     if isinstance(newsletter_property, str):
         current_newsletter_values = newsletter_property.split(';')
         # remove possible empty string
@@ -1511,23 +1531,23 @@ def subscribe_to_newsletter():
     if 'Newsletter' not in current_newsletter_values:
         current_newsletter_values.append('Newsletter')
     payload = {
-      "inputs": [
-        {
-          "properties": {
-            "email": email,
-            "firstname": first_name,
-            "lastname": last_name,
-            "newsletter": ';'.join(current_newsletter_values)
-          },
-          "id": email,
-          "idProperty": "email"
-        }
-      ]
+        "inputs": [
+            {
+                "properties": {
+                    "email": email,
+                    "firstname": first_name,
+                    "lastname": last_name,
+                    "newsletter": ';'.join(current_newsletter_values)
+                },
+                "id": email,
+                "idProperty": "email"
+            }
+        ]
     }
     url = "https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert"
     headers = {
         "Content-Type": "application/json",
-        'Authorization': 'Bearer ' +  Config.HUBSPOT_API_TOKEN
+        'Authorization': 'Bearer ' + Config.HUBSPOT_API_TOKEN
     }
 
     # Send request to HubSpot API
@@ -1538,10 +1558,12 @@ def subscribe_to_newsletter():
     except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 500
 
+
 def get_contact_properties(object_id):
     client = hubspot.Client.create(access_token=Config.HUBSPOT_API_TOKEN)
     try:
-        contact_data = client.crm.contacts.basic_api.get_by_id(contact_id=str(object_id), properties_with_history=["firstname", "lastname", "email", "newsletter", "event_name"], archived=False)
+        contact_data = client.crm.contacts.basic_api.get_by_id(contact_id=str(object_id), properties_with_history=["firstname", "lastname", "email", "newsletter", "event_name"],
+                                                               archived=False)
     except ApiException as e:
         return abort(400, description=f"Exception thrown when getting contact properties: {e}")
 
@@ -1569,10 +1591,10 @@ def get_contact_properties(object_id):
     # Filter out empty strings from the combined list
     tags = [tag for tag in (newsletter_tags + events_tags) if tag]
     return {
-      'email': email,
-      'firstname': firstname,
-      'lastname': lastname,
-      'tags': tags
+        'email': email,
+        'firstname': firstname,
+        'lastname': lastname,
+        'tags': tags
     }
 
 
@@ -1580,7 +1602,7 @@ def add_or_update_emailoctopus_contact(list_id, email, firstname, lastname, tags
     url = f"https://api.emailoctopus.com/lists/{list_id}/contacts"
     headers = {
         "Content-Type": "application/json",
-        'Authorization': 'Bearer ' +  Config.EMAIL_OCTOPUS_API_KEY
+        'Authorization': 'Bearer ' + Config.EMAIL_OCTOPUS_API_KEY
     }
     payload = {
         "email_address": email,
@@ -1596,6 +1618,7 @@ def add_or_update_emailoctopus_contact(list_id, email, firstname, lastname, tags
     except Exception as ex:
         logging.error(f"Could not add or update contact with email address: {email} in emailoctopus list: {list_id}", ex)
         return abort(500, description=f"Could not add/update contact with email address: {email} from emailoctopus list with ID: {list_id} due to the following error: {ex}")
+
 
 @app.route("/hubspot_webhook", methods=["POST"])
 def hubspot_webhook():
@@ -1628,7 +1651,7 @@ def hubspot_webhook():
     try:
         current_time = int(time.time())
         if current_time - signature_timestamp > 300:
-            logging.error(f'Signature timestamp is older than 5 minutes: current time = {current-time}, signature time = {signature_timestamp}')
+            logging.error(f'Signature timestamp is older than 5 minutes: current time = {current_time}, signature time = {signature_timestamp}')
             return jsonify({'Signature timestamp is older than 5 minutes'}), 400
 
         # Concatenate request method, URI, body, and header timestamp
@@ -1657,9 +1680,10 @@ def hubspot_webhook():
     body = body[0]
     subscription_type = body["subscriptionType"]
     object_id = body["objectId"]
-    # HubSpot only provides the contact id so we have to request the contact details seperately
+    # HubSpot only provides the contact id so we have to request the contact details separately
     contact_data = None
-    # execute this in a seperate thread so that we can send the acknowledgement response to HubSpot asap and do not block the api server
+
+    # execute this in a separate thread so that we can send the acknowledgement response to HubSpot asap and do not block the api server
     def execute_webhook():
         with app.app_context():
             try:
@@ -1688,8 +1712,10 @@ def hubspot_webhook():
                 logging.error(f'Unsupported subscription type: {subscription_type}')
                 return
             return jsonify({"status": "success", "message": "Webhook processed successfully"}), 200
+
     threading.Thread(target=execute_webhook).start()
     return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 204
+
 
 # Get list of available name / curie pair
 @app.route("/get-organ-curies/")
@@ -1718,11 +1744,10 @@ def get_available_uberonids():
 # Get list of terms a level up/down from
 @app.route("/get-related-terms/<query>")
 def get_related_terms(query):
-
     payload = {
         'direction': request.args.get('direction', default='OUTGOING'),
         'relationshipType': request.args.get('relationshipType', default='BFO:0000050'),
-        'entail':  request.args.get('entail', default='true'),
+        'entail': request.args.get('entail', default='true'),
         'api_key': Config.KNOWLEDGEBASE_KEY
     }
 
@@ -1742,9 +1767,9 @@ def get_related_terms(query):
 
     return jsonify(result)
 
+
 @app.route("/simulation_ui_file/<identifier>")
 def simulation_ui_file(identifier):
-
     results = process_results(dataset_search(create_pennsieve_identifier_query(identifier)))
     results_json = json.loads(results.data)
 
@@ -1857,12 +1882,12 @@ def find_by_onto_term():
 @app.route("/search-readme/<query>", methods=["GET"])
 def search_readme(query):
     url = 'https://dash.readme.com/api/v1/docs/search?search=' + query
-    headers = { 'Authorization': 'Basic ' + Config.README_API_KEY }
+    headers = {'Authorization': 'Basic ' + Config.README_API_KEY}
 
     try:
         response = requests.post(
-          url = url,
-          headers = headers
+            url=url,
+            headers=headers
         )
         return response.json()
     except requests.exceptions.HTTPError as err:
@@ -1872,9 +1897,11 @@ def search_readme(query):
             "message": "Readme is not currently reachable, please try again later"
         }, 502
 
+
 @app.route("/metrics", methods=["GET"])
 def metrics():
     return usage_metrics
+
 
 # Callback endpoint for contentful event updated webhook that gets triggered when an event is updated in Contentful
 @app.route("/event_updated", methods=["POST"])
@@ -1892,6 +1919,7 @@ def event_updated():
                 abort(400, description=f'Invalid event data: {event}')
         else:
             abort(400, description="Missing event data")
+
 
 @app.route("/all_dataset_ids", methods=["GET"])
 def all_dataset_ids():

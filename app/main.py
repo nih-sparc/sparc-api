@@ -1623,21 +1623,18 @@ def add_or_update_emailoctopus_contact(list_id, email, firstname, lastname, tags
 @app.route("/hubspot_webhook", methods=["POST"])
 def hubspot_webhook():
     body = request.get_json()
-    if isinstance(body, str):  # Check if body is still a string
-        try:
-            body = json.loads(body)  # Convert string to JSON
-        except json.JSONDecodeError as e:
-            logging.error(f'Webhook request body has invalid JSON format: {body}')
-            return jsonify({"error": "Invalid JSON format"}), 400
-    if not body:
-        logging.error('Webhook request does not contain a body')
-        return jsonify({"error": "Invalid payload"}), 400
+    try:
+        body = request.get_json(force=True)
+    except Exception as e:
+        logging.error(f"Invalid JSON body: {e}")
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    if not isinstance(body, list) or not body:
+        logging.error(f'Expected an array of webhook events: {body}')
+        return jsonify({"error": "Expected a non-empty JSON array"}), 400
 
     app.logger.info(f'Received Hubspot webhook request: {request}')
     app.logger.info(f'Hubspot webhook request body: {body}')
-    if 'subscriptionType' not in body[0] or 'objectId' not in body[0]:
-        logging.error(f'Required keys missing in the following body payload: {body}')
-        return jsonify({"error": "Required keys missing in payload"}), 400
     if 'X-HubSpot-Request-Timestamp' not in request.headers or 'X-HubSpot-Signature-V3' not in request.headers:
         logging.error(f'Required signature header(s) not present in the following request headers: {request.headers}')
         return jsonify({"error": f"Required signature header(s) not present in the following request headers: {request.headers}"}), 400
@@ -1676,45 +1673,52 @@ def hubspot_webhook():
     except Exception as ex:
         logging.error(f'Internal error when validating Hubspot webhook request signature: {ex}')
         return jsonify({"error": f"Internal error when validating Hubspot webhook request signature: {ex}"}), 500
-    # We needed to maintain the array structure in order to validate the signature, but now we can drop it
-    body = body[0]
-    subscription_type = body["subscriptionType"]
-    object_id = body["objectId"]
-    # HubSpot only provides the contact id so we have to request the contact details separately
-    contact_data = None
 
     # execute this in a separate thread so that we can send the acknowledgement response to HubSpot asap and do not block the api server
-    def execute_webhook():
+    def process_event(event):
         with app.app_context():
+            subscription_type = event.get("subscriptionType")
+            object_id = event.get("objectId")
+            if not subscription_type or not object_id:
+                logging.error(f"Missing required keys in event: {event}")
+                return
+            contact_data = None
             try:
+                # HubSpot only provides the contact id so we have to request the contact details separately
                 contact_data = get_contact_properties(object_id)
             except Exception as ex:
                 logging.error(f'Could not retrieve contact information for ID: {object_id} due to the following error: {ex}')
                 return
-            firstname = contact_data["firstname"]
-            lastname = contact_data["lastname"]
-            email = contact_data["email"]
-            emailoctopus_contact = add_or_update_emailoctopus_contact(Config.EMAIL_OCTOPUS_MASTER_LIST_ID, email, firstname, lastname, [], 'subscribed')
-            if subscription_type == "contact.propertyChange":
-                tags_to_add = []
-                for tag in contact_data["tags"]:
-                    if tag not in emailoctopus_contact["tags"]:
-                        tags_to_add.append(tag)
-                # Now we must cycle through all the tags in order to see if any must be removed since we don't know what tags were added or removed in hubspot
-                tags_to_remove = []
-                for tag in emailoctopus_contact["tags"]:
-                    if tag not in contact_data["tags"]:
-                        tags_to_remove.append(tag)
-                updated_contact_tags = {tag: True for tag in tags_to_add}
-                updated_contact_tags.update({tag: False for tag in tags_to_remove})
-                add_or_update_emailoctopus_contact(Config.EMAIL_OCTOPUS_MASTER_LIST_ID, email, firstname, lastname, updated_contact_tags, 'subscribed')
-            else:
-                logging.error(f'Unsupported subscription type: {subscription_type}')
-                return
-            return jsonify({"status": "success", "message": "Webhook processed successfully"}), 200
+            try:
+                firstname = contact_data["firstname"]
+                lastname = contact_data["lastname"]
+                email = contact_data["email"]
+                emailoctopus_contact = add_or_update_emailoctopus_contact(Config.EMAIL_OCTOPUS_MASTER_LIST_ID, email, firstname, lastname, [], 'subscribed')
+                if subscription_type == "contact.propertyChange":
+                    tags_to_add = []
+                    for tag in contact_data["tags"]:
+                        if tag not in emailoctopus_contact["tags"]:
+                            tags_to_add.append(tag)
+                    # Now we must cycle through all the tags in order to see if any must be removed since we don't know what tags were added or removed in hubspot
+                    tags_to_remove = []
+                    for tag in emailoctopus_contact["tags"]:
+                        if tag not in contact_data["tags"]:
+                            tags_to_remove.append(tag)
+                    updated_contact_tags = {tag: True for tag in tags_to_add}
+                    updated_contact_tags.update({tag: False for tag in tags_to_remove})
+                    add_or_update_emailoctopus_contact(Config.EMAIL_OCTOPUS_MASTER_LIST_ID, email, firstname, lastname, updated_contact_tags, 'subscribed')
+                else:
+                    logging.error(f'Unsupported subscription type: {subscription_type}')
+            except Exception as ex:
+                logging.error(f"Error processing event {event}: {ex}")
 
-    threading.Thread(target=execute_webhook).start()
-    return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 204
+    for event in body:
+        if not isinstance(event, dict):
+            logging.warning(f"Skipping non-dict event: {event}")
+            continue
+        threading.Thread(target=process_event, args=(event,)).start()
+
+    return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 200
 
 
 # Get list of available name / curie pair

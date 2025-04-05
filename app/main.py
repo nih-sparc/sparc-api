@@ -1622,7 +1622,7 @@ def add_or_update_emailoctopus_contact(list_id, email, firstname, lastname, tags
 
 @app.route("/hubspot_webhook", methods=["POST"])
 def hubspot_webhook():
-    body = request.get_json()
+    body = None
     try:
         body = request.get_json(force=True)
     except Exception as e:
@@ -1679,7 +1679,7 @@ def hubspot_webhook():
         with app.app_context():
             subscription_type = event.get("subscriptionType")
             object_id = event.get("objectId")
-            if not subscription_type or not object_id:
+            if subscription_type is None or object_id is None:
                 logging.error(f"Missing required keys in event: {event}")
                 return
             contact_data = None

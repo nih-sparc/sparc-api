@@ -207,7 +207,7 @@ def test_hubspot_webhook(client):
         }
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
 
 def test_osparc_viewers(client):
     r = client.get('/get_osparc_data')

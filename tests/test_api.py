@@ -181,11 +181,13 @@ def test_hubspot_webhook(client):
     base_url = "http://localhost"  # Default for Flask test client
     full_url = f"{base_url}{endpoint}"
     # mock a property changed event firing for test Hubspot contact
-    mock_body = '[{"subscriptionType":"contact.propertyChange","objectId":"83944215465"}]'
+    mock_body = [{"subscriptionType":"contact.propertyChange","objectId":"83944215465"}]
     # The timestamp must be a Unix epoch time within 5 minutes (300 seconds) of the current time when the webhook request is received.
     valid_timestamp = int(time.time())
     # Concatenate the string as HubSpot does
-    data_to_sign = f'{http_method}{full_url}{mock_body}{valid_timestamp}'
+    stringified_body = json.dumps(mock_body, separators=(",", ":"))
+    data_to_sign = f'{http_method}{full_url}{stringified_body}{valid_timestamp}'
+
     # Generate the HMAC SHA256 signature
     signature = hmac.new(
         key=Config.HUBSPOT_CLIENT_SECRET.encode('utf-8'),

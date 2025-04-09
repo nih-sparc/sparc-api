@@ -29,6 +29,7 @@ from apscheduler.triggers.combining import OrTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from botocore.exceptions import ClientError
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
@@ -64,6 +65,8 @@ app = Flask(__name__)
 
 log_level = Config.LOG_LEVEL.upper()
 app.logger.setLevel(getattr(logging, log_level, logging.WARNING))
+
+executor = ThreadPoolExecutor(max_workers=8)
 
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV
@@ -970,27 +973,57 @@ def getRevaTracingInSituFolderChildren(subject_id):
         coordinates_folder_name = 'CoordinatesData'
         in_situ_folder_name = 'InSitu'
         primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
-        primary_children = primary_folder['children']
+        if not primary_folder:
+            msg = f"Primary folder not found: {Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        primary_children = primary_folder.get('children', [])
         subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
         if subject_child is None:
-            logging.error(f"REVA tracing folder not found with subject id: {subject_id}")
-            return abort(404, description=f"Folder not found with subject id: {subject_id}")
+            msg = f"Subject folder not found for subject id: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
         subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
-        subject_children = subject_folder['children']
+        if not subject_folder:
+            msg = f"Subject folder could not be fetched for id: {subject_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        subject_children = subject_folder.get('children', [])
         coordinates_child = next((child for child in subject_children if child['content']['name'] == coordinates_folder_name), None)
         if coordinates_child is None:
-            logging.error(f"REVA tracing folder {coordinates_folder_name} not found for subject: {subject_id}")
-            return abort(404, description=f"{coordinates_folder_name} folder not found with subject id: {subject_id}")
+            msg = f"CoordinatesData folder not found for subject: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
         coordinates_folder = ps2.get(f"/packages/{coordinates_child['content']['id']}")
-        coordinates_children = coordinates_folder['children']
+        if not coordinates_folder:
+            msg = f"CoordinatesData folder could not be fetched for id: {coordinates_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        coordinates_children = coordinates_folder.get('children', [])
         in_situ_child = next((child for child in coordinates_children if child['content']['name'] == in_situ_folder_name), None)
         if in_situ_child is None:
-            logging.error(f"REVA tracing folder {in_situ_folder_name} not found for subject: {subject_id}")
-            return abort(404, description=f"{in_situ_folder_name} folder not found with subject id: {subject_id}")
+            msg = f"InSitu folder not found for subject: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        # Get in situ folder
         in_situ_folder = ps2.get(f"/packages/{in_situ_child['content']['id']}")
-        return in_situ_folder['children']
+        if not in_situ_folder:
+            msg = f"InSitu folder could not be fetched for id: {in_situ_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        return in_situ_folder.get('children', [])
+
     except Exception as e:
-        return abort(500, description=f"Exception thrown when getting Reva InSitu Folder: {e}")
+        msg = f"Exception thrown when getting Reva InSitu Folder: {e}"
+        logging.error(msg)
+        return abort(500, description=msg)
 
 
 @app.route("/reva/anatomical-landmarks-files/<subject_id>", methods=["GET"])
@@ -1649,7 +1682,7 @@ def hubspot_webhook():
         current_time = int(time.time())
         if current_time - signature_timestamp > 300:
             logging.error(f'Signature timestamp is older than 5 minutes: current time = {current_time}, signature time = {signature_timestamp}')
-            return jsonify({'Signature timestamp is older than 5 minutes'}), 400
+            return jsonify({'error': 'Signature timestamp is older than 5 minutes'}), 400
 
         # Concatenate request method, URI, body, and header timestamp
         url = request.url
@@ -1669,7 +1702,7 @@ def hubspot_webhook():
         # Validate the signature
         if not hmac.compare_digest(base64_hashed_signature, signature_header):
             logging.error(f'Signature is invalid')
-            return jsonify({"error": "Signature is invalid"}), 404
+            return jsonify({"error": "Signature is invalid"}), 401
     except Exception as ex:
         logging.error(f'Internal error when validating Hubspot webhook request signature: {ex}')
         return jsonify({"error": f"Internal error when validating Hubspot webhook request signature: {ex}"}), 500
@@ -1716,7 +1749,7 @@ def hubspot_webhook():
         if not isinstance(event, dict):
             logging.warning(f"Skipping non-dict event: {event}")
             continue
-        threading.Thread(target=process_event, args=(event,)).start()
+        executor.submit(process_event, event)
 
     return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 200
 

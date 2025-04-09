@@ -974,48 +974,56 @@ def getRevaTracingInSituFolderChildren(subject_id):
         in_situ_folder_name = 'InSitu'
         primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
         if not primary_folder:
-            logging.error(f"Primary folder not found: {Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}")
-            return abort(404, description="Primary folder not found.")
+            msg = f"Primary folder not found: {Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}"
+            logging.error(msg)
+            return abort(404, description=msg)
 
         primary_children = primary_folder.get('children', [])
         subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
         if subject_child is None:
-            logging.error(f"Subject folder not found for subject id: {subject_id}")
-            return abort(404, description=f"Folder not found for subject id: {subject_id}")
+            msg = f"Subject folder not found for subject id: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
 
         subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
         if not subject_folder:
-            logging.error(f"Subject folder could not be fetched for id: {subject_child['content']['id']}")
-            return abort(404, description="Subject folder could not be fetched.")
+            msg = f"Subject folder could not be fetched for id: {subject_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
 
         subject_children = subject_folder.get('children', [])
         coordinates_child = next((child for child in subject_children if child['content']['name'] == coordinates_folder_name), None)
         if coordinates_child is None:
-            logging.error(f"CoordinatesData folder not found for subject: {subject_id}")
-            return abort(404, description=f"{coordinates_folder_name} folder not found with subject id: {subject_id}")
+            msg = f"CoordinatesData folder not found for subject: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
 
         coordinates_folder = ps2.get(f"/packages/{coordinates_child['content']['id']}")
         if not coordinates_folder:
-            logging.error(f"CoordinatesData folder could not be fetched for id: {coordinates_child['content']['id']}")
-            return abort(404, description="CoordinatesData folder could not be fetched.")
+            msg = f"CoordinatesData folder could not be fetched for id: {coordinates_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
 
         coordinates_children = coordinates_folder.get('children', [])
         in_situ_child = next((child for child in coordinates_children if child['content']['name'] == in_situ_folder_name), None)
         if in_situ_child is None:
-            logging.error(f"InSitu folder not found for subject: {subject_id}")
-            return abort(404, description=f"{in_situ_folder_name} folder not found with subject id: {subject_id}")
+            msg = f"InSitu folder not found for subject: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
 
         # Get in situ folder
         in_situ_folder = ps2.get(f"/packages/{in_situ_child['content']['id']}")
         if not in_situ_folder:
-            logging.error(f"InSitu folder could not be fetched for id: {in_situ_child['content']['id']}")
-            return abort(404, description="InSitu folder could not be fetched.")
+            msg = f"InSitu folder could not be fetched for id: {in_situ_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
 
         return in_situ_folder.get('children', [])
 
     except Exception as e:
-        logging.error(f"Exception thrown when getting Reva InSitu Folder: {e}")
-        return abort(500, description=f"Exception thrown when getting Reva InSitu Folder: {e}")
+        msg = f"Exception thrown when getting Reva InSitu Folder: {e}"
+        logging.error(msg)
+        return abort(500, description=msg)
 
 
 @app.route("/reva/anatomical-landmarks-files/<subject_id>", methods=["GET"])

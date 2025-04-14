@@ -185,8 +185,8 @@ def test_hubspot_webhook(client):
     # The timestamp must be a Unix epoch time within 5 minutes (300 seconds) of the current time when the webhook request is received.
     valid_timestamp = int(time.time())
     # Concatenate the string as HubSpot does
-    stringified_body = json.dumps(mock_body, separators=(",", ":"))
-    data_to_sign = f'{http_method}{full_url}{stringified_body}{valid_timestamp}'
+    raw_json = json.dumps(mock_body, separators=(",", ":"))
+    data_to_sign = f'{http_method}{full_url}{raw_json}{valid_timestamp}'
 
     # Generate the HMAC SHA256 signature
     signature = hmac.new(
@@ -200,7 +200,7 @@ def test_hubspot_webhook(client):
     # Send a mock POST request
     response = client.post(
         endpoint,
-        json=mock_body,
+        data=raw_json,
         headers={
             "Content-Type": "application/json",
             "X-HubSpot-Signature-Version": "v3",

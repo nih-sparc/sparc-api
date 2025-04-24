@@ -87,21 +87,24 @@ s3 = boto3.client(
 
 biolucida_lock = Lock()
 
+db_url = Config.DATABASE_URL
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 try:
-    maptable = MapTable(Config.DATABASE_URL)
+    maptable = MapTable(db_url)
 except AttributeError:
     maptable = None
 
 try:
-    scaffoldtable = ScaffoldTable(Config.DATABASE_URL)
+    scaffoldtable = ScaffoldTable(db_url)
 except AttributeError:
     scaffoldtable = None
 
 try:
-    featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(Config.DATABASE_URL)
+    featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(db_url)
 except AttributeError:
     featuredDatasetIdSelectorTable = None
-
 
 class Biolucida(object):
     _token = ''

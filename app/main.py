@@ -941,20 +941,19 @@ def get_featured_datasets_identifiers():
 @app.route("/get_featured_dataset", methods=["GET"])
 @cache.cached(timeout=300)
 def get_featured_dataset():
-    #  featured_dataset_id = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)["featured_dataset_id"]
-    #  if featured_dataset_id == -1:
-    #      # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
-    #      featured_dataset_id = 32
-    #  try:
-    #      response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
-    #      # in case the dataset has been unpublished, just return default
-    #      if response['datasets'] == []:
-    #          response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, 32)).json()
-    #      return response
-    #  except Exception as ex:
-    #      logging.error(f"Could not get featured dataset {featured_dataset_id}", ex)
-    #  abort(404, description="An error occured while fetching the resource")
-    return []
+    featured_dataset_id = get_featured_dataset_id_table_state(featuredDatasetIdSelectorTable)["featured_dataset_id"]
+    if featured_dataset_id == -1:
+        # In case there was an error while setting the id, just return a default dataset so the homepage does not break.
+        featured_dataset_id = 32
+    try:
+        response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, featured_dataset_id)).json()
+        # in case the dataset has been unpublished, just return default
+        if response['datasets'] == []:
+            response = requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, 32)).json()
+        return response
+    except Exception as ex:
+        logging.error(f"Could not get featured dataset {featured_dataset_id}", ex)
+    abort(404, description="An error occured while fetching the resource")
 
 
 @app.route("/reva/subject-ids", methods=["GET"])

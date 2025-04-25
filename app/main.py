@@ -954,7 +954,7 @@ def get_featured_dataset():
     #  except Exception as ex:
     #      logging.error(f"Could not get featured dataset {featured_dataset_id}", ex)
     #  abort(404, description="An error occured while fetching the resource")
-    return requests.get("{}/datasets?ids={}".format(Config.DISCOVER_API_HOST, 32)).json()
+    return []
 
 
 @app.route("/reva/subject-ids", methods=["GET"])

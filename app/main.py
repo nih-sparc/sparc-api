@@ -10,6 +10,7 @@ from scripts.update_featured_dataset_id import set_featured_dataset_id, get_feat
 from app.osparc.services import OSparcServices
 
 import botocore
+import markdown
 import boto3
 import hashlib
 import hmac
@@ -1307,6 +1308,85 @@ def get_scaffold_share_link():
 def get_scaffold_state():
     return get_saved_state(scaffoldtable)
 
+def verify_recaptcha(token):
+    try:
+        captchaReq = requests.post(
+            url=Config.TURNSTILE_URL,
+            json={
+                "secret": Config.NUXT_TURNSTILE_SECRET_KEY,
+                "response": token
+            }
+        )
+        captchaResp = captchaReq.json()
+        if "success" not in captchaResp or not captchaResp["success"]:
+            return {"error": "Failed Captcha Validation"}, 409
+        return captchaResp.get('success', False)
+    except Exception as ex:
+        logging.error("Could not validate captcha, bypassing validation", ex)
+
+def create_github_issue(title, body, labels=None, assignees=None):
+    url = f"https://api.github.com/repos/{Config.GITHUB_ORG}/{Config.GITHUB_REPO}/issues"
+    headers = {
+        "Authorization": f"Bearer {Config.GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    data = {
+        "title": title,
+        "body": body,
+    }
+
+    if labels:
+        data["labels"] = labels
+
+    if assignees:
+        data["assignees"] = assignees
+
+    response = requests.post(url, json=data, headers=headers)
+
+    if response.status_code == 201:
+        return response.json()["html_url"]
+    else:
+        raise Exception(f"GitHub Issue creation failed: {response.text}")
+
+@app.route("/create_issue", methods=["POST"])
+def create_issue():
+    form = request.form
+    recaptcha_token = request.form.get('captcha_token')
+    if not app.config['TESTING'] and (not recaptcha_token or not verify_recaptcha(recaptcha_token)):
+        return jsonify({'error': 'Invalid reCAPTCHA'}), 400
+
+    task_type = form.get("type", "bug")
+    title = form.get("title")
+    issue_body = form.get("body")
+    if not title or not issue_body:
+        abort(400, description="Missing title or body")
+    email = form.get("email", "").strip()
+    sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
+    
+    match task_type:
+        case "bug" | "feedback":
+            try:
+                issue_url = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
+                try:
+                    if (issue_url):
+                        if sendCopy:
+                            # default to bug form if task type not specified
+                            subject = 'SPARC Reported Issue Submission'
+                            email_body = issue_reporting_email.substitute({'message': issue_body})
+                            if (task_type == "feedback"):
+                                subject = 'SPARC Reported Feedback Submission'
+                                email_body = feedback_email.substitute({'message': issue_body})
+                            email_body += f"\n\nYour ticket creation can be found at the following link: {issue_url}"
+                            html_body = markdown.markdown(email_body)
+                            email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)
+                            return jsonify({"message": "Github issue was created successfully and confirmation email was sent to the user", "url": issue_url}), 201
+                except Exception as e:
+                    return jsonify({"message": "GitHub issue was created successfully, but confirmation email was not sent to the user.", "url": issue_url}), 202
+                return jsonify({"message": "Github issue was created successfully", "url": issue_url}), 201
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+    abort(400, description="Invalid task type")
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():

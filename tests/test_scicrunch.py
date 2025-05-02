@@ -528,3 +528,13 @@ def test_undefined_version_dataset_search(client):
     assert len(json_data['result']) == 1
     assert 'dataset_identifier' in json_data['result'][0]
     assert json_data['result'][0]['dataset_identifier'] == '17'
+
+def test_dataset_citations_search(client):
+    # Testing with dataset 9
+    identifier = 9
+    doi = "10.26275/mlua-o9oj"
+    r = client.get('/dataset_citations/9')
+    data = r.data.decode('utf-8')
+    json_data = json.loads(data)
+    assert 'id' in json_data
+    assert json_data['id'] == identifier

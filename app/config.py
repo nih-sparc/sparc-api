@@ -70,6 +70,7 @@ class Config(object):
     NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")
     SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://scicrunch.org/api/1/elastic/Interlex_pr")
     SCI_CRUNCH_SCIGRAPH_HOST = os.environ.get("SCI_CRUNCH_SCIGRAPH_HOST", "https://scicrunch.org/api/1/sparc-scigraph")
+    SCI_CRUNCH_CITATIONS_HOST = os.environ.get("SCI_CRUNCH_CITATIONS_HOST", "https://api.scicrunch.io/elastic/v2/SPARC_Citations_pr")
     SENDGRID_API_KEY =  os.environ.get("SENDGRID_API_KEY")
     SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP = os.environ.get("SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP", '')
     SEND_MONTHLY_STATS = os.environ.get("SEND_MONTHLY_STATS", "FALSE")

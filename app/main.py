@@ -44,7 +44,7 @@ from flask_caching import Cache
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id, \
-    create_multiple_mimetype_query
+    create_multiple_mimetype_query, create_citations_query
 from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, service_interest_email
 from threading import Lock
 from xml.etree import ElementTree
@@ -1912,6 +1912,35 @@ def find_by_onto_term():
             json_data = result['_source']
         else:
             json_data = {'label': 'not found'}
+
+        return json_data
+    except Exception as ex:
+        logging.error("An error occured while fetching from SciCrunch", ex)
+    return abort(500)
+
+@app.route("/dataset_citations/<dataset_id>")
+def get_dataset_citations(dataset_id):
+    headers = {
+        'Accept': 'application/json',
+    }
+
+    params = {
+        "api_key": Config.KNOWLEDGEBASE_KEY
+    }
+
+    query = create_citations_query(dataset_id)
+
+    try:
+        response = requests.get(f'{Config.SCI_CRUNCH_CITATIONS_HOST}/_search', headers=headers, params=params, json=query)
+
+        results = response.json()
+        hits = results['hits']['hits']
+        total = results['hits']['total']['value']
+        if total == 1:
+            result = hits[0]
+            json_data = result['_source']
+        else:
+            json_data = {'dataset id': 'not found'}
 
         return json_data
     except Exception as ex:

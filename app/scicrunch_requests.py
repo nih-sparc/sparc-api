@@ -152,6 +152,14 @@ def create_onto_term_query(term, existing_id_type='iri'):
         }
     }
 
+def create_citations_query(id):
+    return {
+        "query": {
+            "term": {
+                "id": f"{id}"
+            }
+        }
+    }
 
 def create_doi_aggregate(size=1000):
     return {

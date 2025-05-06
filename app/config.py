@@ -37,6 +37,7 @@ class Config(object):
     SPARC_APP_HOST = os.environ.get("SPARC_APP_HOST", "https://sparc-app.herokuapp.com")
     SCI_CRUNCH_HOST = os.environ.get("SCICRUNCH_HOST", "https://scicrunch.org/api/1/elastic/SPARC_PortalDatasets_pr")
     MAPSTATE_TABLENAME = os.environ.get("MAPSTATE_TABLENAME", "mapstates")
+    ANNOTATIONSTATE_TABLENAME = os.environ.get("ANNOTATION_TABLENAME", "annotationstates")
     SCAFFOLDSTATE_TABLENAME = os.environ.get("SCAFFOLDSTATE_TABLENAME", "scaffoldstates")
     FEATURED_DATASET_ID_SELECTOR_TABLENAME = os.environ.get("FEATURED_DATASET_ID_SELECTOR_TABLENAME", "featured_dataset_selector_state")
     MONTHLYSTATS_TABLENAME = os.environ.get("MONTHLYSTATS_TABLENAME", "monthlystats")

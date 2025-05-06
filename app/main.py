@@ -50,7 +50,7 @@ from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
-from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
+from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
     reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
@@ -90,6 +90,11 @@ biolucida_lock = Lock()
 db_url = Config.DATABASE_URL
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+try:
+    annotationtable = AnnotationTable(db_url)
+except AttributeError:
+    annotationtable = None
 
 try:
     maptable = MapTable(db_url)
@@ -1283,6 +1288,15 @@ def get_saved_state(table):
     else:
         abort(404, description="Database not available")
 
+# Get the share link for the current map content.
+@app.route("/annotation/getshareid", methods=["POST"])
+def get_annotation_share_link():
+    return get_share_link(annotationtable)
+
+# Get the map state using the share link id.
+@app.route("/annotation/getstate", methods=["POST"])
+def get_annotation_state():
+    return get_saved_state(annotationtable)
 
 # Get the share link for the current map content.
 @app.route("/map/getshareid", methods=["POST"])

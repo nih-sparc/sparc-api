@@ -1,5 +1,5 @@
 from app.config import Config
-from sqlalchemy import create_engine  
+from sqlalchemy import create_engine, asc
 from sqlalchemy import Column, String
 from sqlalchemy.dialects.postgresql import DATE, JSONB
 from sqlalchemy.ext.declarative import declarative_base  
@@ -113,23 +113,21 @@ class AnnotationTable(Table):
         if self.getNumberOfRow() == 0:
           return True
         try:
-            results = self._session.query(self._state).order_by(desc(self._state.sending_date)).limit(100).all()
+            results = self._session.query(self._state).order_by(asc(self._state.sending_date)).limit(200).all()
             if results:
                 now = datetime.now().date()
                 for result in results:
                     time_diff = now - result.sending_date
                     if time_diff.days > self._expiryDuration:
-                        result.delete()
-                        #item = self._session.query(self._state).filter_by(uuid==result.uuid).first()
-                        #self._session.delete(item)
+                        item = self._session.query(self._state).filter_by(uuid=result.uuid).first()
+                        self._session.delete(item)
                     else:
                         break
             self._session.commit()
         except SQLAlchemyError:
             self._session.rollback()
             return None
-        
-    
+
 
 class MapTable(Table):
     def __init__(self, databaseURL):

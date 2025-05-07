@@ -183,7 +183,6 @@ if not featured_dataset_id_scheduler.running:
     logging.info('Starting scheduler for featured dataset id acquisition')
     featured_dataset_id_scheduler.start()
 
-# Run monthly stats email schedule on production
 if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler = BackgroundScheduler()
     ms = MonthlyStats()
@@ -194,6 +193,14 @@ if Config.DEPLOY_ENV == 'production':
     # Check on the first of each month at 2am
     monthly_stats_email_scheduler.add_job(ms.monthly_stats_required_check, 'cron',
                                           year='*', month='*', day='1', hour='2', minute=0, second=0)
+
+# Run monthly annotation states clean up
+if annotationtable:
+    annotation_cleanup_scheduler = BackgroundScheduler()
+    annotation_cleanup_scheduler.start()
+    # Check on the second of each month at 2am
+    annotation_cleanup_scheduler.add_job(annotationtable.removeExpiredState, 'cron',
+                                          year='*', month='*', day='2', hour='2', minute=0, second=0)
 
 # Only need to run the update contentful entries scheduler on one environment, so dev was chosen to keep prod more responsive
 if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
@@ -1288,15 +1295,18 @@ def get_saved_state(table):
     else:
         abort(404, description="Database not available")
 
+
 # Get the share link for the current map content.
 @app.route("/annotation/getshareid", methods=["POST"])
 def get_annotation_share_link():
     return get_share_link(annotationtable)
 
+
 # Get the map state using the share link id.
 @app.route("/annotation/getstate", methods=["POST"])
 def get_annotation_state():
     return get_saved_state(annotationtable)
+
 
 # Get the share link for the current map content.
 @app.route("/map/getshareid", methods=["POST"])

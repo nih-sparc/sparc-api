@@ -1328,7 +1328,7 @@ def verify_recaptcha(token):
 def create_github_issue(title, body, labels=None, assignees=None):
     url = f"https://api.github.com/repos/{Config.SPARC_GITHUB_ORG}/{Config.SPARC_GITHUB_REPO}/issues"
     headers = {
-        "Authorization": f"Bearer {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
+        "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
     }
 
@@ -1349,7 +1349,8 @@ def create_github_issue(title, body, labels=None, assignees=None):
         response_json = response.json()
         return {
           "html_url": response_json["html_url"],
-          "comments_url": response_json["comments_url"]
+          "comments_url": response_json["comments_url"],
+          "issue_api_url": response_json["url"]
         }
     else:
         raise Exception(f"GitHub Issue creation failed: {response.text}")
@@ -1370,12 +1371,14 @@ def create_issue():
     sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
     issue_url = None
     comments_url = None
+    issue_api_url = None
     match task_type:
         case "bug" | "feedback":
             try:
                 issue = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
                 issue_url = issue['html_url']
                 comments_url = issue['comments_url']
+                issue_api_url = issue['issue_api_url']
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
         case _:
@@ -1461,7 +1464,7 @@ def create_issue():
                 response_message += 'Confirmation email sent to user unsuccessful. '
                 status_code = 201
                 response_status = 'warning'
-    return jsonify({"message": response_message, "url": issue_url, "status": response_status}), status_code
+    return jsonify({"message": response_message, "url": issue_url, "issue_api_url": issue_api_url, "status": response_status}), status_code
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():

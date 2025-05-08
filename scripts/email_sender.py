@@ -5,7 +5,6 @@ import sendgrid
 from app.config import Config
 from sendgrid.helpers.mail import Asm, Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, \
     FileContent, GroupId, GroupsToDisplay
-from concurrent.futures import ThreadPoolExecutor
 
 subject = "Message from SPARC Portal"
 
@@ -19,7 +18,7 @@ ses_client = boto3.client(
 sg_client = sendgrid.SendGridAPIClient(api_key=Config.SENDGRID_API_KEY)
 
 feedback_email = Template('''\
-Thank you for your feedback on the SPARC Portal!
+<b>Thank you for your feedback on the SPARC Portal!</b>
 <br>
 <br>
 Your message:
@@ -29,7 +28,7 @@ $message
 ''')
 
 issue_reporting_email = Template('''\
-Thank you for reporting the following error/issue on the SPARC Portal!
+<b>Thank you for reporting the following error/issue on the SPARC Portal!</b>
 <br>
 <br>
 $message
@@ -76,13 +75,8 @@ class EmailSender(object):
         if Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP != '':
             self.unsubscribe_group = int(Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP)
 
-        self.executor = ThreadPoolExecutor(max_workers=8)
-
     def send_email(self, name, email_address, message):
         body = name + "\n" + email_address + "\n" + message
-        self.executor.submit(self._send_email_ses, body)
-
-    def _send_email_ses(self, body):
         ses_client.send_email(
             Source=self.ses_sender,
             Destination={"ToAddresses": [self.ses_sender]},
@@ -94,9 +88,6 @@ class EmailSender(object):
         )
 
     def sendgrid_email_with_attachment(self, fromm, to, subject, body, encoded_file, file_name, file_type):
-        self.executor.submit(self._sendgrid_email_with_attachment, fromm, to, subject, body, encoded_file, file_name, file_type)
-
-    def _sendgrid_email_with_attachment(self, fromm, to, subject, body, encoded_file, file_name, file_type):
         mail = Mail(
             Email(fromm),
             To(to),
@@ -117,9 +108,6 @@ class EmailSender(object):
         return response
 
     def sendgrid_email(self, fromm, to, subject, body):
-        self.executor.submit(self._sendgrid_email, fromm, to, subject, body)
-
-    def _sendgrid_email(self, fromm, to, subject, body):
         mail = Mail(
             Email(fromm),
             To(to),
@@ -132,9 +120,6 @@ class EmailSender(object):
         return response
 
     def sendgrid_email_with_unsubscribe_group(self, fromm, to, subject, body):
-        self.executor.submit(self._sendgrid_email_with_unsubscribe_group, fromm, to, subject, body)
-
-    def _sendgrid_email_with_unsubscribe_group(self, fromm, to, subject, body):
         mail = Mail(
             Email(fromm),
             To(to),

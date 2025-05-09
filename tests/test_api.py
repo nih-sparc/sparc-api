@@ -86,6 +86,68 @@ def test_get_datasets_by_project(client):
     assert r.status_code == 200
 
 
+def test_annotation_get_share_id_and_state(client):
+    # mock json for testing
+    test_data = { "state" : [
+        {
+            "resource":"placeholder1",
+            "item":{"id":"123"},
+            "body":{"evidence":["https://doi.org/caxdd"],
+            "comment":"asdac",
+            "type":"connectivity",
+            "source":{"label":"body proper","id":1002,"models":"UBERON:0013702"},
+            "target":{"label":"body proper","id":1002,"models":"UBERON:0013702"},
+            "intermediates":[]},
+            "feature":{
+                "id":"safsfa","type":"Feature",
+                "properties":{"drawn":True,"label":"Drawn annotation"},
+                "geometry":{
+                    "coordinates":[
+                        [-12.148524690634474,-12.730414964960303],
+                        [-22.302217020303743,-6.678936298958405]
+                    ],
+                    "type":"LineString"},
+            "connection":{" 1002":{"label":"body proper","id":1002,"models":"UBERON:0013702"}}}
+        },
+        {
+            "resource":"placeholder2","item":{"id":"__annotation/LineString"},
+            "body":{"evidence":[],"comment":"Create"},
+            "feature":{"id":"__annotation/LineString",
+                "properties":{"drawn":True,"label":"Drawn annotation"},
+                "geometry":{
+                    "coordinates":[
+                        [10.914859771728516,3.357909917831421,2.910676956176758],
+                        [9.065815925598145,13.387456893920898,-24.09609031677246]
+                    ],
+                    "type":"MultiLineString"
+                }
+            },
+            "group":"LineString","region":"__annotation"
+        }
+    ]}
+
+    r = client.post(f"/annotation/getshareid", json = {})
+    assert r.status_code == 400
+
+    r = client.post(f"/annotation/getshareid", json = test_data)
+    assert r.status_code == 200
+    assert "uuid" in r.get_json()
+
+    r = client.post(f"/annotation/getstate", json = r.get_json())
+    assert r.status_code == 200
+    returned_data = r.get_json()
+    assert "state" in returned_data
+    assert len(returned_data["state"]) == 2
+    assert returned_data["state"][0]['resource'] == "placeholder1"
+    assert returned_data["state"][1]['resource'] == "placeholder2"
+
+    r = client.post(f"/map/getstate", json = {"uuid": "1234567"})
+    assert r.status_code == 400
+
+    r = client.post(f"/map/getstate", json = {})
+    assert r.status_code == 400
+
+
 def test_map_get_share_id_and_state(client):
     # mock json for testing
     test_data = { "state" : { "type" : "scaffold", "value": 1234 } }

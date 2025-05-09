@@ -343,3 +343,30 @@ def test_get_reva_landmarks_files(client):
     json = r.get_json()
     assert 'folders' in json
     assert type(json['folders']) == list
+
+def test_create_issue(client):
+    create_response = client.post("/create_issue", data={
+        "title": "test-sparc-api-issue-creation",
+        "body": "This is a test generated from the sparc-api test suite. This ticket should be automatically closed, but if it is not then please do so"
+    })
+
+    create_response_json = create_response.get_json()
+
+    assert create_response.status_code == 201
+    assert create_response_json['status'] == 'success'
+
+    issue_api_url = create_response_json['issue_api_url']
+    assert issue_api_url is not None
+
+    headers = {
+        "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    close_response = requests.patch(
+        issue_api_url,
+        headers=headers,
+        json={"state": "closed", "labels": ['test']}
+    )
+
+    assert close_response.status_code == 200

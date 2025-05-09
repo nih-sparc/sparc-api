@@ -23,6 +23,7 @@ import logging
 import re
 import requests
 import threading
+import uuid
 from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -1349,9 +1350,9 @@ def verify_recaptcha(token):
         logging.error("Could not validate captcha, bypassing validation", ex)
 
 def create_github_issue(title, body, labels=None, assignees=None):
-    url = f"https://api.github.com/repos/{Config.GITHUB_ORG}/{Config.GITHUB_REPO}/issues"
+    url = f"https://api.github.com/repos/{Config.SPARC_GITHUB_ORG}/{Config.SPARC_GITHUB_REPO}/issues"
     headers = {
-        "Authorization": f"Bearer {Config.GITHUB_TOKEN}",
+        "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
     }
 
@@ -1369,7 +1370,12 @@ def create_github_issue(title, body, labels=None, assignees=None):
     response = requests.post(url, json=data, headers=headers)
 
     if response.status_code == 201:
-        return response.json()["html_url"]
+        response_json = response.json()
+        return {
+          "html_url": response_json["html_url"],
+          "comments_url": response_json["comments_url"],
+          "issue_api_url": response_json["url"]
+        }
     else:
         raise Exception(f"GitHub Issue creation failed: {response.text}")
 
@@ -1387,30 +1393,102 @@ def create_issue():
         abort(400, description="Missing title or body")
     email = form.get("email", "").strip()
     sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
-    
+    issue_url = None
+    comments_url = None
+    issue_api_url = None
     match task_type:
         case "bug" | "feedback":
             try:
-                issue_url = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
-                try:
-                    if (issue_url):
-                        if sendCopy:
-                            # default to bug form if task type not specified
-                            subject = 'SPARC Reported Issue Submission'
-                            email_body = issue_reporting_email.substitute({'message': issue_body})
-                            if (task_type == "feedback"):
-                                subject = 'SPARC Reported Feedback Submission'
-                                email_body = feedback_email.substitute({'message': issue_body})
-                            email_body += f"\n\nYour ticket creation can be found at the following link: {issue_url}"
-                            html_body = markdown.markdown(email_body)
-                            email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)
-                            return jsonify({"message": "Github issue was created successfully and confirmation email was sent to the user", "url": issue_url}), 201
-                except Exception as e:
-                    return jsonify({"message": "GitHub issue was created successfully, but confirmation email was not sent to the user.", "url": issue_url}), 202
-                return jsonify({"message": "Github issue was created successfully", "url": issue_url}), 201
+                issue = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
+                issue_url = issue['html_url']
+                comments_url = issue['comments_url']
+                issue_api_url = issue['issue_api_url']
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
-    abort(400, description="Invalid task type")
+        case _:
+            return jsonify({"error": f"Unsupported task type: {task_type}"}), 400
+
+    # default to this if there is no issue_url
+    response_message = 'GitHub issue could not be created'
+    status_code = 500
+    response_status = 'error'
+    if (issue_url):
+        response_message = 'GitHub issue created successfully. '
+        status_code = 201
+        response_status = 'success'
+        files = request.files
+        # host the file on the dummy sparc repo and add the viewable url as a comment to the newly created ticket
+        if files and 'attachment' in files:
+            attachment = files['attachment']
+            file_content = attachment.read()
+            file_name = attachment.filename
+            content_type = attachment.content_type
+
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            unique_id = uuid.uuid4().hex
+            unique_filename = f"{timestamp}_{unique_id}_{file_name}"
+
+            url = f"https://api.github.com/repos/{Config.SPARC_TECH_LEADS_GITHUB_USERNAME}/{Config.SPARC_TECH_LEADS_SPARC_GITHUB_REPO}/contents/attachments/{unique_filename}"
+            headers = {
+                "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+
+            encoded_content = base64.b64encode(file_content).decode('utf-8')
+
+            data = {
+                "message": f"Add file {unique_filename}",
+                "content": encoded_content
+            }
+            try:
+                response = requests.put(url, headers=headers, json=data)
+                if response.status_code in (200, 201):
+                    json_response = response.json()
+                    image_url = json_response["content"]["download_url"]
+                    comment_body = f"![Issue Attachment]({image_url})"
+                    headers = {
+                        "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
+                        "Accept": "application/vnd.github+json"
+                    }
+
+                    data = {
+                        "body": comment_body
+                    }
+
+                    response = requests.post(comments_url, json=data, headers=headers)
+
+                    if response.status_code != 201:
+                        response_message += 'File attachment unsuccessful. '
+                        status_code = 201
+                        response_status = 'warning'
+                    else:
+                        response_message += 'File attachment successful. '
+                else:
+                    response_message += 'File upload unsuccessful. '
+                    status_code = 201
+                    response_status = 'warning'
+            except Exception as e:
+              response_message += 'File upload unsuccessful. '
+              status_code = 201
+              response_status = 'warning'
+        if sendCopy:
+            # default to bug form if task type not specified
+            subject = 'SPARC Reported Issue Submission'
+            email_body = issue_reporting_email.substitute({'message': issue_body})
+            if (task_type == "feedback"):
+                subject = 'SPARC Reported Feedback Submission'
+                email_body = feedback_email.substitute({'message': issue_body})
+            email_body += f"\n\nYour ticket creation can be found at the following link: {issue_url}"
+            html_body = markdown.markdown(email_body)
+            try:
+                email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)
+                response_message += 'Confirmation email sent to user successful. '
+            except Exception as e:
+                response_message += 'Confirmation email sent to user unsuccessful. '
+                status_code = 201
+                response_status = 'warning'
+    return jsonify({"message": response_message, "url": issue_url, "issue_api_url": issue_api_url, "status": response_status}), status_code
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():

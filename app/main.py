@@ -10,6 +10,7 @@ from scripts.update_featured_dataset_id import set_featured_dataset_id, get_feat
 from app.osparc.services import OSparcServices
 
 import botocore
+import markdown
 import boto3
 import hashlib
 import hmac
@@ -22,6 +23,7 @@ import logging
 import re
 import requests
 import threading
+import uuid
 from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -29,6 +31,7 @@ from apscheduler.triggers.combining import OrTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from botocore.exceptions import ClientError
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
@@ -43,13 +46,13 @@ from flask_caching import Cache
 from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id, \
-    create_multiple_mimetype_query
+    create_multiple_mimetype_query, create_citations_query
 from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, service_interest_email
 from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
-from app.dbtable import MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
+from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
     reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
@@ -64,6 +67,8 @@ app = Flask(__name__)
 
 log_level = Config.LOG_LEVEL.upper()
 app.logger.setLevel(getattr(logging, log_level, logging.WARNING))
+
+executor = ThreadPoolExecutor(max_workers=8)
 
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV
@@ -84,21 +89,29 @@ s3 = boto3.client(
 
 biolucida_lock = Lock()
 
+db_url = Config.DATABASE_URL
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 try:
-    maptable = MapTable(Config.DATABASE_URL)
+    annotationtable = AnnotationTable(db_url)
+except AttributeError:
+    annotationtable = None
+
+try:
+    maptable = MapTable(db_url)
 except AttributeError:
     maptable = None
 
 try:
-    scaffoldtable = ScaffoldTable(Config.DATABASE_URL)
+    scaffoldtable = ScaffoldTable(db_url)
 except AttributeError:
     scaffoldtable = None
 
 try:
-    featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(Config.DATABASE_URL)
+    featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(db_url)
 except AttributeError:
     featuredDatasetIdSelectorTable = None
-
 
 class Biolucida(object):
     _token = ''
@@ -172,7 +185,6 @@ if not featured_dataset_id_scheduler.running:
     logging.info('Starting scheduler for featured dataset id acquisition')
     featured_dataset_id_scheduler.start()
 
-# Run monthly stats email schedule on production
 if Config.DEPLOY_ENV == 'production':
     monthly_stats_email_scheduler = BackgroundScheduler()
     ms = MonthlyStats()
@@ -183,6 +195,14 @@ if Config.DEPLOY_ENV == 'production':
     # Check on the first of each month at 2am
     monthly_stats_email_scheduler.add_job(ms.monthly_stats_required_check, 'cron',
                                           year='*', month='*', day='1', hour='2', minute=0, second=0)
+
+# Run monthly annotation states clean up
+if annotationtable:
+    annotation_cleanup_scheduler = BackgroundScheduler()
+    annotation_cleanup_scheduler.start()
+    # Check on the second of each month at 2am
+    annotation_cleanup_scheduler.add_job(annotationtable.removeExpiredState, 'cron',
+                                          year='*', month='*', day='2', hour='2', minute=0, second=0)
 
 # Only need to run the update contentful entries scheduler on one environment, so dev was chosen to keep prod more responsive
 if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
@@ -970,27 +990,57 @@ def getRevaTracingInSituFolderChildren(subject_id):
         coordinates_folder_name = 'CoordinatesData'
         in_situ_folder_name = 'InSitu'
         primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
-        primary_children = primary_folder['children']
+        if not primary_folder:
+            msg = f"Primary folder not found: {Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        primary_children = primary_folder.get('children', [])
         subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
         if subject_child is None:
-            logging.error(f"REVA tracing folder not found with subject id: {subject_id}")
-            return abort(404, description=f"Folder not found with subject id: {subject_id}")
+            msg = f"Subject folder not found for subject id: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
         subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
-        subject_children = subject_folder['children']
+        if not subject_folder:
+            msg = f"Subject folder could not be fetched for id: {subject_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        subject_children = subject_folder.get('children', [])
         coordinates_child = next((child for child in subject_children if child['content']['name'] == coordinates_folder_name), None)
         if coordinates_child is None:
-            logging.error(f"REVA tracing folder {coordinates_folder_name} not found for subject: {subject_id}")
-            return abort(404, description=f"{coordinates_folder_name} folder not found with subject id: {subject_id}")
+            msg = f"CoordinatesData folder not found for subject: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
         coordinates_folder = ps2.get(f"/packages/{coordinates_child['content']['id']}")
-        coordinates_children = coordinates_folder['children']
+        if not coordinates_folder:
+            msg = f"CoordinatesData folder could not be fetched for id: {coordinates_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        coordinates_children = coordinates_folder.get('children', [])
         in_situ_child = next((child for child in coordinates_children if child['content']['name'] == in_situ_folder_name), None)
         if in_situ_child is None:
-            logging.error(f"REVA tracing folder {in_situ_folder_name} not found for subject: {subject_id}")
-            return abort(404, description=f"{in_situ_folder_name} folder not found with subject id: {subject_id}")
+            msg = f"InSitu folder not found for subject: {subject_id}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        # Get in situ folder
         in_situ_folder = ps2.get(f"/packages/{in_situ_child['content']['id']}")
-        return in_situ_folder['children']
+        if not in_situ_folder:
+            msg = f"InSitu folder could not be fetched for id: {in_situ_child['content']['id']}"
+            logging.error(msg)
+            return abort(404, description=msg)
+
+        return in_situ_folder.get('children', [])
+
     except Exception as e:
-        return abort(500, description=f"Exception thrown when getting Reva InSitu Folder: {e}")
+        msg = f"Exception thrown when getting Reva InSitu Folder: {e}"
+        logging.error(msg)
+        return abort(500, description=msg)
 
 
 @app.route("/reva/anatomical-landmarks-files/<subject_id>", methods=["GET"])
@@ -1249,6 +1299,18 @@ def get_saved_state(table):
 
 
 # Get the share link for the current map content.
+@app.route("/annotation/getshareid", methods=["POST"])
+def get_annotation_share_link():
+    return get_share_link(annotationtable)
+
+
+# Get the map state using the share link id.
+@app.route("/annotation/getstate", methods=["POST"])
+def get_annotation_state():
+    return get_saved_state(annotationtable)
+
+
+# Get the share link for the current map content.
 @app.route("/map/getshareid", methods=["POST"])
 def get_map_share_link():
     return get_share_link(maptable)
@@ -1271,6 +1333,162 @@ def get_scaffold_share_link():
 def get_scaffold_state():
     return get_saved_state(scaffoldtable)
 
+def verify_recaptcha(token):
+    try:
+        captchaReq = requests.post(
+            url=Config.TURNSTILE_URL,
+            json={
+                "secret": Config.NUXT_TURNSTILE_SECRET_KEY,
+                "response": token
+            }
+        )
+        captchaResp = captchaReq.json()
+        if "success" not in captchaResp or not captchaResp["success"]:
+            return {"error": "Failed Captcha Validation"}, 409
+        return captchaResp.get('success', False)
+    except Exception as ex:
+        logging.error("Could not validate captcha, bypassing validation", ex)
+
+def create_github_issue(title, body, labels=None, assignees=None):
+    url = f"https://api.github.com/repos/{Config.SPARC_GITHUB_ORG}/{Config.SPARC_GITHUB_REPO}/issues"
+    headers = {
+        "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    data = {
+        "title": title,
+        "body": body,
+    }
+
+    if labels:
+        data["labels"] = labels
+
+    if assignees:
+        data["assignees"] = assignees
+
+    response = requests.post(url, json=data, headers=headers)
+
+    if response.status_code == 201:
+        response_json = response.json()
+        return {
+          "html_url": response_json["html_url"],
+          "comments_url": response_json["comments_url"],
+          "issue_api_url": response_json["url"]
+        }
+    else:
+        raise Exception(f"GitHub Issue creation failed: {response.text}")
+
+@app.route("/create_issue", methods=["POST"])
+def create_issue():
+    form = request.form
+    recaptcha_token = request.form.get('captcha_token')
+    if not app.config['TESTING'] and (not recaptcha_token or not verify_recaptcha(recaptcha_token)):
+        return jsonify({'error': 'Invalid reCAPTCHA'}), 400
+
+    task_type = form.get("type", "bug")
+    title = form.get("title")
+    issue_body = form.get("body")
+    if not title or not issue_body:
+        abort(400, description="Missing title or body")
+    email = form.get("email", "").strip()
+    sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
+    issue_url = None
+    comments_url = None
+    issue_api_url = None
+    match task_type:
+        case "bug" | "feedback":
+            try:
+                issue = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
+                issue_url = issue['html_url']
+                comments_url = issue['comments_url']
+                issue_api_url = issue['issue_api_url']
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+        case _:
+            return jsonify({"error": f"Unsupported task type: {task_type}"}), 400
+
+    # default to this if there is no issue_url
+    response_message = 'GitHub issue could not be created'
+    status_code = 500
+    response_status = 'error'
+    if (issue_url):
+        response_message = 'GitHub issue created successfully. '
+        status_code = 201
+        response_status = 'success'
+        files = request.files
+        # host the file on the dummy sparc repo and add the viewable url as a comment to the newly created ticket
+        if files and 'attachment' in files:
+            attachment = files['attachment']
+            file_content = attachment.read()
+            file_name = attachment.filename
+            content_type = attachment.content_type
+
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            unique_id = uuid.uuid4().hex
+            unique_filename = f"{timestamp}_{unique_id}_{file_name}"
+
+            url = f"https://api.github.com/repos/{Config.SPARC_TECH_LEADS_GITHUB_USERNAME}/{Config.SPARC_TECH_LEADS_SPARC_GITHUB_REPO}/contents/attachments/{unique_filename}"
+            headers = {
+                "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+
+            encoded_content = base64.b64encode(file_content).decode('utf-8')
+
+            data = {
+                "message": f"Add file {unique_filename}",
+                "content": encoded_content
+            }
+            try:
+                response = requests.put(url, headers=headers, json=data)
+                if response.status_code in (200, 201):
+                    json_response = response.json()
+                    image_url = json_response["content"]["download_url"]
+                    comment_body = f"![Issue Attachment]({image_url})"
+                    headers = {
+                        "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
+                        "Accept": "application/vnd.github+json"
+                    }
+
+                    data = {
+                        "body": comment_body
+                    }
+
+                    response = requests.post(comments_url, json=data, headers=headers)
+
+                    if response.status_code != 201:
+                        response_message += 'File attachment unsuccessful. '
+                        status_code = 201
+                        response_status = 'warning'
+                    else:
+                        response_message += 'File attachment successful. '
+                else:
+                    response_message += 'File upload unsuccessful. '
+                    status_code = 201
+                    response_status = 'warning'
+            except Exception as e:
+              response_message += 'File upload unsuccessful. '
+              status_code = 201
+              response_status = 'warning'
+        if sendCopy:
+            # default to bug form if task type not specified
+            subject = 'SPARC Reported Issue Submission'
+            email_body = issue_reporting_email.substitute({'message': issue_body})
+            if (task_type == "feedback"):
+                subject = 'SPARC Reported Feedback Submission'
+                email_body = feedback_email.substitute({'message': issue_body})
+            email_body += f"\n\nYour ticket creation can be found at the following link: {issue_url}"
+            html_body = markdown.markdown(email_body)
+            try:
+                email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)
+                response_message += 'Confirmation email sent to user successful. '
+            except Exception as e:
+                response_message += 'Confirmation email sent to user unsuccessful. '
+                status_code = 201
+                response_status = 'warning'
+    return jsonify({"message": response_message, "url": issue_url, "issue_api_url": issue_api_url, "status": response_status}), status_code
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
@@ -1622,22 +1840,19 @@ def add_or_update_emailoctopus_contact(list_id, email, firstname, lastname, tags
 
 @app.route("/hubspot_webhook", methods=["POST"])
 def hubspot_webhook():
-    body = request.get_json()
-    if isinstance(body, str):  # Check if body is still a string
-        try:
-            body = json.loads(body)  # Convert string to JSON
-        except json.JSONDecodeError as e:
-            logging.error(f'Webhook request body has invalid JSON format: {body}')
-            return jsonify({"error": "Invalid JSON format"}), 400
-    if not body:
-        logging.error('Webhook request does not contain a body')
-        return jsonify({"error": "Invalid payload"}), 400
+    body = None
+    try:
+        body = request.get_json(force=True)
+    except Exception as e:
+        logging.error(f"Invalid JSON body: {e}")
+        return jsonify({"error": "Invalid JSON format"}), 400
+
+    if not isinstance(body, list) or not body:
+        logging.error(f'Expected an array of webhook events: {body}')
+        return jsonify({"error": "Expected a non-empty JSON array"}), 400
 
     app.logger.info(f'Received Hubspot webhook request: {request}')
     app.logger.info(f'Hubspot webhook request body: {body}')
-    if 'subscriptionType' not in body[0] or 'objectId' not in body[0]:
-        logging.error(f'Required keys missing in the following body payload: {body}')
-        return jsonify({"error": "Required keys missing in payload"}), 400
     if 'X-HubSpot-Request-Timestamp' not in request.headers or 'X-HubSpot-Signature-V3' not in request.headers:
         logging.error(f'Required signature header(s) not present in the following request headers: {request.headers}')
         return jsonify({"error": f"Required signature header(s) not present in the following request headers: {request.headers}"}), 400
@@ -1652,7 +1867,7 @@ def hubspot_webhook():
         current_time = int(time.time())
         if current_time - signature_timestamp > 300:
             logging.error(f'Signature timestamp is older than 5 minutes: current time = {current_time}, signature time = {signature_timestamp}')
-            return jsonify({'Signature timestamp is older than 5 minutes'}), 400
+            return jsonify({'error': 'Signature timestamp is older than 5 minutes'}), 400
 
         # Concatenate request method, URI, body, and header timestamp
         url = request.url
@@ -1669,52 +1884,59 @@ def hubspot_webhook():
 
         base64_hashed_signature = base64.b64encode(hashed_signature).decode('utf-8')
 
-        # Validate the signature
+        # Validate the signature if we are not running a test
         if not hmac.compare_digest(base64_hashed_signature, signature_header):
             logging.error(f'Signature is invalid')
-            return jsonify({"error": "Signature is invalid"}), 404
+            return jsonify({"error": "Signature is invalid"}), 401
     except Exception as ex:
         logging.error(f'Internal error when validating Hubspot webhook request signature: {ex}')
         return jsonify({"error": f"Internal error when validating Hubspot webhook request signature: {ex}"}), 500
-    # We needed to maintain the array structure in order to validate the signature, but now we can drop it
-    body = body[0]
-    subscription_type = body["subscriptionType"]
-    object_id = body["objectId"]
-    # HubSpot only provides the contact id so we have to request the contact details separately
-    contact_data = None
 
     # execute this in a separate thread so that we can send the acknowledgement response to HubSpot asap and do not block the api server
-    def execute_webhook():
+    def process_event(event):
         with app.app_context():
+            subscription_type = event.get("subscriptionType")
+            object_id = event.get("objectId")
+            if subscription_type is None or object_id is None:
+                logging.error(f"Missing required keys in event: {event}")
+                return
+            contact_data = None
             try:
+                # HubSpot only provides the contact id so we have to request the contact details separately
                 contact_data = get_contact_properties(object_id)
             except Exception as ex:
                 logging.error(f'Could not retrieve contact information for ID: {object_id} due to the following error: {ex}')
                 return
-            firstname = contact_data["firstname"]
-            lastname = contact_data["lastname"]
-            email = contact_data["email"]
-            emailoctopus_contact = add_or_update_emailoctopus_contact(Config.EMAIL_OCTOPUS_MASTER_LIST_ID, email, firstname, lastname, [], 'subscribed')
-            if subscription_type == "contact.propertyChange":
-                tags_to_add = []
-                for tag in contact_data["tags"]:
-                    if tag not in emailoctopus_contact["tags"]:
-                        tags_to_add.append(tag)
-                # Now we must cycle through all the tags in order to see if any must be removed since we don't know what tags were added or removed in hubspot
-                tags_to_remove = []
-                for tag in emailoctopus_contact["tags"]:
-                    if tag not in contact_data["tags"]:
-                        tags_to_remove.append(tag)
-                updated_contact_tags = {tag: True for tag in tags_to_add}
-                updated_contact_tags.update({tag: False for tag in tags_to_remove})
-                add_or_update_emailoctopus_contact(Config.EMAIL_OCTOPUS_MASTER_LIST_ID, email, firstname, lastname, updated_contact_tags, 'subscribed')
-            else:
-                logging.error(f'Unsupported subscription type: {subscription_type}')
-                return
-            return jsonify({"status": "success", "message": "Webhook processed successfully"}), 200
+            try:
+                firstname = contact_data["firstname"]
+                lastname = contact_data["lastname"]
+                email = contact_data["email"]
+                emailoctopus_contact = add_or_update_emailoctopus_contact(Config.EMAIL_OCTOPUS_MASTER_LIST_ID, email, firstname, lastname, [], 'subscribed')
+                if subscription_type == "contact.propertyChange":
+                    tags_to_add = []
+                    for tag in contact_data["tags"]:
+                        if tag not in emailoctopus_contact["tags"]:
+                            tags_to_add.append(tag)
+                    # Now we must cycle through all the tags in order to see if any must be removed since we don't know what tags were added or removed in hubspot
+                    tags_to_remove = []
+                    for tag in emailoctopus_contact["tags"]:
+                        if tag not in contact_data["tags"]:
+                            tags_to_remove.append(tag)
+                    updated_contact_tags = {tag: True for tag in tags_to_add}
+                    updated_contact_tags.update({tag: False for tag in tags_to_remove})
+                    add_or_update_emailoctopus_contact(Config.EMAIL_OCTOPUS_MASTER_LIST_ID, email, firstname, lastname, updated_contact_tags, 'subscribed')
+                else:
+                    logging.error(f'Unsupported subscription type: {subscription_type}')
+            except Exception as ex:
+                logging.error(f"Error processing event {event}: {ex}")
 
-    threading.Thread(target=execute_webhook).start()
-    return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 204
+    for event in body:
+        if not isinstance(event, dict):
+            logging.warning(f"Skipping non-dict event: {event}")
+            continue
+        executor.submit(process_event, event)
+
+    return jsonify({"status": "success", "message": "Webhook request received and signature verified"}), 200
 
 
 # Get list of available name / curie pair
@@ -1872,6 +2094,35 @@ def find_by_onto_term():
             json_data = result['_source']
         else:
             json_data = {'label': 'not found'}
+
+        return json_data
+    except Exception as ex:
+        logging.error("An error occured while fetching from SciCrunch", ex)
+    return abort(500)
+
+@app.route("/dataset_citations/<dataset_id>")
+def get_dataset_citations(dataset_id):
+    headers = {
+        'Accept': 'application/json',
+    }
+
+    params = {
+        "api_key": Config.KNOWLEDGEBASE_KEY
+    }
+
+    query = create_citations_query(dataset_id)
+
+    try:
+        response = requests.get(f'{Config.SCI_CRUNCH_CITATIONS_HOST}/_search', headers=headers, params=params, json=query)
+
+        results = response.json()
+        hits = results['hits']['hits']
+        total = results['hits']['total']['value']
+        if total == 1:
+            result = hits[0]
+            json_data = result['_source']
+        else:
+            json_data = {'dataset id': 'not found'}
 
         return json_data
     except Exception as ex:

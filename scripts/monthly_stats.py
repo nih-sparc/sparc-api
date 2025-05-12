@@ -35,7 +35,10 @@ class MonthlyStats(object):
             self.logging_address = Config.METRICS_EMAIL_ADDRESS
         if Config.DATABASE_URL is not None:
             try:
-                self.monthlytable = MonthlyStatsTable(Config.DATABASE_URL)
+                db_url = Config.DATABASE_URL
+                if db_url and db_url.startswith("postgres://"):
+                    db_url = db_url.replace("postgres://", "postgresql://", 1)
+                self.monthlytable = MonthlyStatsTable(db_url)
             except AttributeError:
                 self.monthlytable = None
 

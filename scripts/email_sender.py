@@ -1,6 +1,5 @@
 import logging
 from string import Template
-
 import boto3
 import sendgrid
 from app.config import Config
@@ -88,7 +87,6 @@ class EmailSender(object):
             SourceArn=self.ses_arn,
         )
 
-    
     def sendgrid_email_with_attachment(self, fromm, to, subject, body, encoded_file, file_name, file_type):
         mail = Mail(
             Email(fromm),

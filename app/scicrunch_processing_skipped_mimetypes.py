@@ -50,8 +50,6 @@ SKIPPED_MIME_TYPES = [
     'image/x-coreldraw',
     'image/x.vnd.zeiss.czi',
     'inode/directory',
-    'inode/vnd.abi.plot+thumbnail',
-    'model/obj',
     'text/Tab-separated-values',
     'text/css',
     'text/h323',

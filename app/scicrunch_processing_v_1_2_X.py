@@ -1,7 +1,7 @@
 import logging
 
 from app import Config
-from app.scicrunch_processing_common import map_mime_type, COMMON_IMAGES, NOT_SPECIFIED, SKIP
+from app.scicrunch_processing_common import map_mime_type, COMMON_IMAGES, NOT_SPECIFIED, SKIP, BIOLUCIDA_2D, BIOLUCIDA_3D, SCAFFOLD_FILE
 from app.scicrunch_processing_common import PASS_THROUGH_KEYS as BASE_PASS_THROUGH_KEYS
 from app.manifest_name_to_discover_name import name_map
 

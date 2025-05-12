@@ -1393,20 +1393,16 @@ def create_issue():
         abort(400, description="Missing title or body")
     email = form.get("email", "").strip()
     sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
-    issue_url = None
-    comments_url = None
-    issue_api_url = None
-    match task_type:
-        case "bug" | "feedback":
-            try:
-                issue = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
-                issue_url = issue['html_url']
-                comments_url = issue['comments_url']
-                issue_api_url = issue['issue_api_url']
-            except Exception as e:
-                return jsonify({"error": str(e)}), 500
-        case _:
-            return jsonify({"error": f"Unsupported task type: {task_type}"}), 400
+    if task_type in ["bug", "feedback"]:
+        try:
+            issue = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
+            issue_url = issue['html_url']
+            comments_url = issue['comments_url']
+            issue_api_url = issue['issue_api_url']
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    else:
+        return jsonify({"error": f"Unsupported task type: {task_type}"}), 400
 
     # default to this if there is no issue_url
     response_message = 'GitHub issue could not be created'

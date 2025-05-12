@@ -21,6 +21,7 @@ ATTRIBUTES_MAP = {
     'contributors': ['contributors']
 }
 
+
 def sort_files_by_mime_type(obj_list):
     return {}
 

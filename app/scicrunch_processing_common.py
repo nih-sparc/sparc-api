@@ -38,7 +38,7 @@ MAPPED_MIME_TYPES = {
     'application/x.vnd.abi.simulation+json': SIMULATION_FILE,
     'image/x.vnd.abi.thumbnail+jpeg': THUMBNAIL_IMAGE,
     'image/x.vnd.abi.thumbnail+png': THUMBNAIL_IMAGE,
-    # 'text/vnd.abi.plot+thumbnail': THUMBNAIL_IMAGE, <-- Old incorrect annotation, needs to be corrected.
+    'text/vnd.abi.plot+thumbnail': THUMBNAIL_IMAGE,  # <-- Old incorrect annotation, needs to be corrected.
     'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
     'inode/vnd.abi.scaffold+file': SCAFFOLD_FILE,
     'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,

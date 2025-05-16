@@ -18,6 +18,7 @@ SCAFFOLD_FILE = 'abi-scaffold-metadata-file'
 THUMBNAIL_IMAGE = 'abi-thumbnail'
 SCAFFOLD_VIEW_FILE = 'abi-scaffold-view-file'
 SIMULATION_FILE = 'abi-simulation-file'
+FE_MODEL = 'fe-model'
 VIDEO = 'video'
 VERSION = 'version'
 README = 'readme'
@@ -37,11 +38,13 @@ MAPPED_MIME_TYPES = {
     'application/x.vnd.abi.simulation+json': SIMULATION_FILE,
     'image/x.vnd.abi.thumbnail+jpeg': THUMBNAIL_IMAGE,
     'image/x.vnd.abi.thumbnail+png': THUMBNAIL_IMAGE,
+    'text/vnd.abi.plot+thumbnail': THUMBNAIL_IMAGE,  # <-- Old incorrect annotation, needs to be corrected.
     'inode/vnd.abi.scaffold+directory': SCAFFOLD_DIR,
     'inode/vnd.abi.scaffold+file': SCAFFOLD_FILE,
     'inode/vnd.abi.scaffold+thumbnail': THUMBNAIL_IMAGE,
     'inode/vnd.abi.scaffold.thumbnail+file': THUMBNAIL_IMAGE,
     'inode/vnd.abi.scaffold.view+file': SCAFFOLD_VIEW_FILE,
+    # 'inode/vnd.abi.plot+thumbnail': THUMBNAIL_IMAGE, <-- Old incorrect annotation, needs to be corrected.
     'text/vnd.abi.plot+tab-separated-values': PLOT_FILE,
     'text/x.vnd.abi.plot+tab-separated-values': PLOT_FILE,
     'text/vnd.abi.plot+csv': PLOT_FILE,
@@ -54,6 +57,8 @@ MAPPED_MIME_TYPES = {
     'image/vnd.ome.xml+jpx': BIOLUCIDA_3D,
     'image/jp2': BIOLUCIDA_2D,
     'image/vnd.ome.xml+jp2': BIOLUCIDA_2D,
+    'model/stl': FE_MODEL,
+    'model/obj': FE_MODEL,
     'video/mp4': VIDEO
 }
 

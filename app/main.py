@@ -1353,7 +1353,7 @@ def verify_recaptcha(token):
 
 
 def create_github_issue(title, body, labels=None, assignees=None):
-    url = f"https://api.github.com/repos/{Config.SPARC_GITHUB_ORG}/{Config.SPARC_GITHUB_REPO}/issues"
+    url = f"https://api.github.com/repos/{Config.SPARC_GITHUB_ORG}/{Config.SPARC_ISSUES_GITHUB_REPO}/issues"
     headers = {
         "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
@@ -1409,11 +1409,11 @@ def create_issue():
         return jsonify({"error": f"Unsupported task type: {task_type}"}), 400
 
     # default to this if there is no issue_url
-    response_message = 'GitHub issue could not be created'
+    response_message = 'Submission could not be created'
     status_code = 500
     response_status = 'error'
     if (issue_url):
-        response_message = 'GitHub issue created successfully. '
+        response_message = 'Submission created successfully. '
         status_code = 201
         response_status = 'success'
         files = request.files
@@ -1428,7 +1428,7 @@ def create_issue():
             unique_id = uuid.uuid4().hex
             unique_filename = f"{timestamp}_{unique_id}_{file_name}"
 
-            url = f"https://api.github.com/repos/{Config.SPARC_TECH_LEADS_GITHUB_USERNAME}/{Config.SPARC_TECH_LEADS_SPARC_GITHUB_REPO}/contents/attachments/{unique_filename}"
+            url = f"https://api.github.com/repos/{Config.SPARC_GITHUB_ORG}/{Config.SPARC_ISSUES_GITHUB_REPO}/contents/attachments/{unique_filename}"
             headers = {
                 "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
                 "Accept": "application/vnd.github+json",
@@ -1479,7 +1479,6 @@ def create_issue():
             if (task_type == "feedback"):
                 subject = 'SPARC Reported Feedback Submission'
                 email_body = feedback_email.substitute({'message': issue_body})
-            email_body += f"\n\nYour ticket creation can be found at the following link: {issue_url}"
             html_body = markdown.markdown(email_body)
             try:
                 email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)

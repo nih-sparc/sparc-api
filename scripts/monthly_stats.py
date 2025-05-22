@@ -79,8 +79,8 @@ class MonthlyStats(object):
         return self.user_stats
 
     def should_send_today(self, last_name):
-        if len(last_name):
-            day_number = datetime.datetime.now().day
+        day_number = datetime.datetime.now().day
+        if isinstance(last_name, str) and len(last_name):
             initial_letter = last_name.lower()[0]
             letter_order = ord(initial_letter) - ord('a') + 1
             if letter_order == day_number:
@@ -89,6 +89,8 @@ class MonthlyStats(object):
             if day_number == 27 and (letter_order < 1 or letter_order > 26):
                 # If letter is not in the standard alphabet and it is the 27th of the month
                 return True
+        elif day_number == 27:
+            return True
         return False
 
     def send_stats(self, user_stats):

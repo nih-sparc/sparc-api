@@ -87,6 +87,8 @@ class Config(object):
     SPARC_TECH_LEADS_GITHUB_TOKEN = os.environ.get("SPARC_TECH_LEADS_GITHUB_TOKEN", "")
     GITHUB_ISSUE_ASSIGNEES = os.environ.get("GITHUB_ISSUE_ASSIGNEES", "").split(",")
     SPARC_ISSUES_GITHUB_REPO = os.environ.get("SPARC_ISSUES_GITHUB_REPO", "sparc-app-issues")
+    PROTOCOLS_IO_HOST = os.environ.get("PROTOCOLS_IO_HOST", "https://www.protocols.io")
+    PROTOCOLS_IO_TOKEN = os.environ.get("PROTOCOLS_IO_TOKEN", "")
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")
     GOOGLE_API_GA_KEY_PATH = os.environ.get("GOOGLE_API_GA_KEY_PATH")

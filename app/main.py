@@ -9,6 +9,7 @@ from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
 from app.osparc.services import OSparcServices
 
+import asyncio
 import botocore
 import markdown
 import boto3
@@ -16,6 +17,7 @@ import hashlib
 import hmac
 import base64
 import time
+import httpx
 import hubspot
 from hubspot.crm.contacts import ApiException
 import json
@@ -2179,3 +2181,49 @@ def all_dataset_ids():
     string_list = [str(element) for element in list]
     delimiter = ", "
     return delimiter.join(string_list)
+
+async def fetch_with_retry(client, url, retries=3, delay=0.5):
+    for attempt in range(1, retries + 1):
+        try:
+            response = await client.get(url, headers={
+                "Authorization": f"Bearer {Config.PROTOCOLS_IO_TOKEN}"
+            })
+            response.raise_for_status()
+            data = response.json()
+            return data.get("pagination", {}).get("total_results", 0)
+        except Exception as e:
+            if attempt < retries:
+                await asyncio.sleep(delay)
+            else:
+                print(f"Failed after {retries} retries: {url} — {e}")
+                return 0
+
+async def fetch_protocols_total(workspace_ids, concurrency=1):
+    results = []
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async with httpx.AsyncClient(base_url=Config.PROTOCOLS_IO_HOST, http2=True) as client:
+        async def worker(workspace_id):
+            url = f"/api/v3/workspaces/{workspace_id}/protocols"
+            async with semaphore:
+                return await fetch_with_retry(client, url)
+
+        tasks = [worker(wid) for wid in workspace_ids]
+        results = await asyncio.gather(*tasks)
+
+    return sum(results)
+
+@cache.memoize(timeout=86400)
+def get_total_protocols_cached(workspace_ids_tuple):
+    return asyncio.run(fetch_protocols_total(list(workspace_ids_tuple)))
+
+@app.route("/total_protocols", methods=["GET"])
+def protocol_metrics():
+    data = request.get_json(silent=True) or {}
+    workspace_ids = data.get("workspace_ids")
+
+    if not workspace_ids or not isinstance(workspace_ids, list):
+        return jsonify({"error": "Missing or invalid 'workspace_ids'"}), 400
+
+    total = get_total_protocols_cached(tuple(workspace_ids))
+    return jsonify({"total_protocols": total})

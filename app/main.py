@@ -7,6 +7,7 @@ from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
+from scripts.update_protocol_metrics import update_protocol_metrics, get_protocol_metrics_table_state
 from app.osparc.services import OSparcServices
 
 import asyncio
@@ -54,7 +55,7 @@ from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
-from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
+from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable, ProtocolMetricsTable
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
     reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
@@ -114,6 +115,11 @@ try:
     featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(db_url)
 except AttributeError:
     featuredDatasetIdSelectorTable = None
+
+try:
+    protocolMetricsTable = ProtocolMetricsTable(db_url)
+except AttributeError:
+    protocolMetricsTable = None
 
 
 class Biolucida(object):
@@ -183,6 +189,15 @@ metrics_scheduler = BackgroundScheduler()
 services_scheduler = BackgroundScheduler()
 featured_dataset_id_scheduler = BackgroundScheduler()
 update_contentful_event_entries_scheduler = BackgroundScheduler()
+protocol_metrics_scheduler = BackgroundScheduler()
+
+# If nothing is stored in the DB than update it now
+if get_protocol_metrics_table_state(protocolMetricsTable)['total_protocol_views'] == -1:
+    update_protocol_metrics(protocolMetricsTable)
+
+if not protocol_metrics_scheduler.running:
+    logging.info('Starting scheduler for protocol metrics acquisition')
+    protocol_metrics_scheduler.start()
 
 if not featured_dataset_id_scheduler.running:
     logging.info('Starting scheduler for featured dataset id acquisition')
@@ -216,7 +231,6 @@ if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
     update_contentful_event_entries_scheduler.add_job(update_all_events_sort_order, 'cron', hour=2, timezone='US/Eastern')
 
 osparc_data = {}
-
 
 @app.before_first_request
 def get_osparc_file_viewers():
@@ -292,6 +306,8 @@ metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 featured_dataset_id_trigger = OrTrigger([DateTrigger(), IntervalTrigger(hours=1)])
 featured_dataset_id_scheduler.add_job(lambda: set_featured_dataset_id(featuredDatasetIdSelectorTable), featured_dataset_id_trigger)
 
+# Update the protocol metrics once a week on saturday at midnight
+protocol_metrics_scheduler.add_job(update_protocol_metrics, 'cron', args=[protocolMetricsTable], day_of_week='sat', hour=0, minute=0)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -306,6 +322,9 @@ def shutdown_schedulers():
     logging.info('Stopping scheduler for updating featured dataset id')
     if featured_dataset_id_scheduler.running:
         featured_dataset_id_scheduler.shutdown()
+    logging.info('Stopping scheduler for updating protocol metrics')
+    if protocol_metrics_scheduler.running:
+        protocol_metrics_scheduler.shutdown()
     logging.info('Stopping scheduler for oSPARC services')
     if services_scheduler.running:
         services_scheduler.shutdown()
@@ -2182,48 +2201,12 @@ def all_dataset_ids():
     delimiter = ", "
     return delimiter.join(string_list)
 
-async def fetch_with_retry(client, url, retries=3, delay=0.5):
-    for attempt in range(1, retries + 1):
-        try:
-            response = await client.get(url, headers={
-                "Authorization": f"Bearer {Config.PROTOCOLS_IO_TOKEN}"
-            })
-            response.raise_for_status()
-            data = response.json()
-            return data.get("pagination", {}).get("total_results", 0)
-        except Exception as e:
-            if attempt < retries:
-                await asyncio.sleep(delay)
-            else:
-                print(f"Failed after {retries} retries: {url} — {e}")
-                return 0
-
-async def fetch_protocols_total(workspace_ids, concurrency=1):
-    results = []
-    semaphore = asyncio.Semaphore(concurrency)
-
-    async with httpx.AsyncClient(base_url=Config.PROTOCOLS_IO_HOST, http2=True) as client:
-        async def worker(workspace_id):
-            url = f"/api/v3/workspaces/{workspace_id}/protocols"
-            async with semaphore:
-                return await fetch_with_retry(client, url)
-
-        tasks = [worker(wid) for wid in workspace_ids]
-        results = await asyncio.gather(*tasks)
-
-    return sum(results)
-
-@cache.memoize(timeout=86400)
-def get_total_protocols_cached(workspace_ids_tuple):
-    return asyncio.run(fetch_protocols_total(list(workspace_ids_tuple)))
-
-@app.route("/total_protocols", methods=["GET"])
-def protocol_metrics():
-    data = request.get_json(silent=True) or {}
-    workspace_ids = data.get("workspace_ids")
-
-    if not workspace_ids or not isinstance(workspace_ids, list):
-        return jsonify({"error": "Missing or invalid 'workspace_ids'"}), 400
-
-    total = get_total_protocols_cached(tuple(workspace_ids))
-    return jsonify({"total_protocols": total})
+@app.route("/total_protocol_views")
+def get_total_protocol_views():
+    total_protocol_views = get_protocol_metrics_table_state(protocolMetricsTable)["total_protocol_views"]
+    if total_protocol_views == -1:
+        return jsonify({
+            "total_views": None,
+            "message": "Total views not yet calculated."
+        }), 202
+    return jsonify({"total_views": total_protocol_views}), 200

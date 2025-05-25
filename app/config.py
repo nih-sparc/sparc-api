@@ -40,6 +40,7 @@ class Config(object):
     ANNOTATIONSTATE_TABLENAME = os.environ.get("ANNOTATION_TABLENAME", "annotationstates")
     SCAFFOLDSTATE_TABLENAME = os.environ.get("SCAFFOLDSTATE_TABLENAME", "scaffoldstates")
     FEATURED_DATASET_ID_SELECTOR_TABLENAME = os.environ.get("FEATURED_DATASET_ID_SELECTOR_TABLENAME", "featured_dataset_selector_state")
+    PROTOCOL_METRICS_TABLENAME = os.environ.get("PROTOCOL_METRICS_TABLENAME", "protocol_metrics_state")
     MONTHLYSTATS_TABLENAME = os.environ.get("MONTHLYSTATS_TABLENAME", "monthlystats")
     WRIKE_TOKEN = os.environ.get("WRIKE_TOKEN")
     DRC_FEEDBACK_FOLDER_ID = os.environ.get("DRC_FEEDBACK_FOLDER_ID", "IEADBYQEI4MM37FH")

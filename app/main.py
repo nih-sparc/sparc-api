@@ -192,7 +192,7 @@ update_contentful_event_entries_scheduler = BackgroundScheduler()
 protocol_metrics_scheduler = BackgroundScheduler()
 
 # If nothing is stored in the DB than update it now
-if get_protocol_metrics_table_state(protocolMetricsTable)['total_protocol_views'] == -1:
+if Config.SPARC_API_DEBUGGING == 'FALSE' and get_protocol_metrics_table_state(protocolMetricsTable)['total_protocol_views'] == -1:
     update_protocol_metrics(protocolMetricsTable)
 
 if not protocol_metrics_scheduler.running:
@@ -307,7 +307,8 @@ featured_dataset_id_trigger = OrTrigger([DateTrigger(), IntervalTrigger(hours=1)
 featured_dataset_id_scheduler.add_job(lambda: set_featured_dataset_id(featuredDatasetIdSelectorTable), featured_dataset_id_trigger)
 
 # Update the protocol metrics once a week on saturday at midnight
-protocol_metrics_scheduler.add_job(update_protocol_metrics, 'cron', args=[protocolMetricsTable], day_of_week='sat', hour=0, minute=0)
+if Config.SPARC_API_DEBUGGING == 'FALSE':
+    protocol_metrics_scheduler.add_job(update_protocol_metrics, 'cron', args=[protocolMetricsTable], day_of_week='sat', hour=0, minute=0)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -2122,7 +2123,7 @@ def find_by_onto_term():
     return abort(500)
 
 
-@app.route("/dataset_citations/<dataset_id>")
+@app.route("/dataset_citations/<dataset_id>", methods=["GET"])
 def get_dataset_citations(dataset_id):
     headers = {
         'Accept': 'application/json',
@@ -2149,8 +2150,40 @@ def get_dataset_citations(dataset_id):
         return json_data
     except Exception as ex:
         logging.error("An error occured while fetching from SciCrunch", ex)
-    return abort(500)
+    return jsonify({ 'message': f"An error occured while fetching citation info for dataset {dataset_id} from SciCrunch" }), 500
 
+@app.route("/total_dataset_citations", methods=["GET"])
+def get_total_dataset_citations():
+    headers = {
+        'Accept': 'application/json',
+    }
+
+    params = {
+        "api_key": Config.KNOWLEDGEBASE_KEY
+    }
+
+    query = {
+        "size": 0,
+        "from": 0,
+        "query": { "match_all": {} },
+        "aggregations": {
+            "Citations": {
+                "terms": {
+                    "field": "citations.type"
+                }
+            }
+        }
+    }
+
+    try:
+        response = requests.get(f'{Config.SCI_CRUNCH_CITATIONS_HOST}/_search', headers=headers, params=params, json=query)
+        results = response.json()
+        buckets = results['aggregations']['Citations']['buckets']
+        total = sum(bucket["doc_count"] for bucket in buckets)
+        return jsonify({ 'total_citations': total }), 200
+    except Exception as ex:
+        logging.error("An error occured while fetching total citations from SciCrunch", ex)
+    return jsonify({ 'total_citations': -1, 'message': "An error occured while fetching total citations from SciCrunch" }), 500
 
 @app.route("/search-readme/<query>", methods=["GET"])
 def search_readme(query):

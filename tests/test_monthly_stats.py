@@ -35,7 +35,8 @@ test_data = {
                 "downloads": 1
             }
         ],
-        "email": test_email_recipient
+        "email": test_email_recipient,
+        "lastName": "TestUser"
     }
 }
 

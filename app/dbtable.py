@@ -35,6 +35,10 @@ class FeaturedDatasetIdSelectorState(base):
     uuid = Column(String, primary_key=True, unique=True)
     data = Column(JSONB)
 
+class ProtocolMetricsState(base):
+    __tablename__ = Config.PROTOCOL_METRICS_TABLENAME
+    uuid = Column(String, primary_key=True, unique=True)
+    data = Column(JSONB)
 
 class Table:
   def __init__(self, databaseURL, state):
@@ -142,3 +146,8 @@ class ScaffoldTable(Table):
 class FeaturedDatasetIdSelectorTable(Table):
     def __init__(self, databaseURL):
         Table.__init__(self, databaseURL, FeaturedDatasetIdSelectorState)
+
+
+class ProtocolMetricsTable(Table):
+    def __init__(self, databaseURL):
+        Table.__init__(self, databaseURL, ProtocolMetricsState)

@@ -7,8 +7,10 @@ from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
+from scripts.update_protocol_metrics import update_protocol_metrics, get_protocol_metrics_table_state
 from app.osparc.services import OSparcServices
 
+import asyncio
 import botocore
 import markdown
 import boto3
@@ -16,6 +18,7 @@ import hashlib
 import hmac
 import base64
 import time
+import httpx
 import hubspot
 from hubspot.crm.contacts import ApiException
 import json
@@ -52,7 +55,7 @@ from threading import Lock
 from xml.etree import ElementTree
 
 from app.config import Config
-from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable
+from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable, ProtocolMetricsTable
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
     reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
@@ -112,6 +115,11 @@ try:
     featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(db_url)
 except AttributeError:
     featuredDatasetIdSelectorTable = None
+
+try:
+    protocolMetricsTable = ProtocolMetricsTable(db_url)
+except AttributeError:
+    protocolMetricsTable = None
 
 
 class Biolucida(object):
@@ -181,6 +189,15 @@ metrics_scheduler = BackgroundScheduler()
 services_scheduler = BackgroundScheduler()
 featured_dataset_id_scheduler = BackgroundScheduler()
 update_contentful_event_entries_scheduler = BackgroundScheduler()
+protocol_metrics_scheduler = BackgroundScheduler()
+
+# If nothing is stored in the DB than update it now
+if Config.SPARC_API_DEBUGGING == 'FALSE' and get_protocol_metrics_table_state(protocolMetricsTable)['total_protocol_views'] == -1:
+    update_protocol_metrics(protocolMetricsTable)
+
+if not protocol_metrics_scheduler.running:
+    logging.info('Starting scheduler for protocol metrics acquisition')
+    protocol_metrics_scheduler.start()
 
 if not featured_dataset_id_scheduler.running:
     logging.info('Starting scheduler for featured dataset id acquisition')
@@ -214,7 +231,6 @@ if Config.DEPLOY_ENV == 'development' and Config.SPARC_API_DEBUGGING == 'FALSE':
     update_contentful_event_entries_scheduler.add_job(update_all_events_sort_order, 'cron', hour=2, timezone='US/Eastern')
 
 osparc_data = {}
-
 
 @app.before_first_request
 def get_osparc_file_viewers():
@@ -290,6 +306,9 @@ metrics_scheduler.add_job(func=get_metrics, trigger='interval', hours=3)
 featured_dataset_id_trigger = OrTrigger([DateTrigger(), IntervalTrigger(hours=1)])
 featured_dataset_id_scheduler.add_job(lambda: set_featured_dataset_id(featuredDatasetIdSelectorTable), featured_dataset_id_trigger)
 
+# Update the protocol metrics once a week on saturday at midnight
+if Config.SPARC_API_DEBUGGING == 'FALSE':
+    protocol_metrics_scheduler.add_job(update_protocol_metrics, 'cron', args=[protocolMetricsTable], day_of_week='sat', hour=0, minute=0)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -304,6 +323,9 @@ def shutdown_schedulers():
     logging.info('Stopping scheduler for updating featured dataset id')
     if featured_dataset_id_scheduler.running:
         featured_dataset_id_scheduler.shutdown()
+    logging.info('Stopping scheduler for updating protocol metrics')
+    if protocol_metrics_scheduler.running:
+        protocol_metrics_scheduler.shutdown()
     logging.info('Stopping scheduler for oSPARC services')
     if services_scheduler.running:
         services_scheduler.shutdown()
@@ -2101,7 +2123,7 @@ def find_by_onto_term():
     return abort(500)
 
 
-@app.route("/dataset_citations/<dataset_id>")
+@app.route("/dataset_citations/<dataset_id>", methods=["GET"])
 def get_dataset_citations(dataset_id):
     headers = {
         'Accept': 'application/json',
@@ -2128,8 +2150,40 @@ def get_dataset_citations(dataset_id):
         return json_data
     except Exception as ex:
         logging.error("An error occured while fetching from SciCrunch", ex)
-    return abort(500)
+    return jsonify({ 'message': f"An error occured while fetching citation info for dataset {dataset_id} from SciCrunch" }), 500
 
+@app.route("/total_dataset_citations", methods=["GET"])
+def get_total_dataset_citations():
+    headers = {
+        'Accept': 'application/json',
+    }
+
+    params = {
+        "api_key": Config.KNOWLEDGEBASE_KEY
+    }
+
+    query = {
+        "size": 0,
+        "from": 0,
+        "query": { "match_all": {} },
+        "aggregations": {
+            "Citations": {
+                "terms": {
+                    "field": "citations.type"
+                }
+            }
+        }
+    }
+
+    try:
+        response = requests.get(f'{Config.SCI_CRUNCH_CITATIONS_HOST}/_search', headers=headers, params=params, json=query)
+        results = response.json()
+        buckets = results['aggregations']['Citations']['buckets']
+        total = sum(bucket["doc_count"] for bucket in buckets)
+        return jsonify({ 'total_citations': total }), 200
+    except Exception as ex:
+        logging.error("An error occured while fetching total citations from SciCrunch", ex)
+    return jsonify({ 'total_citations': -1, 'message': "An error occured while fetching total citations from SciCrunch" }), 500
 
 @app.route("/search-readme/<query>", methods=["GET"])
 def search_readme(query):
@@ -2179,3 +2233,13 @@ def all_dataset_ids():
     string_list = [str(element) for element in list]
     delimiter = ", "
     return delimiter.join(string_list)
+
+@app.route("/total_protocol_views")
+def get_total_protocol_views():
+    total_protocol_views = get_protocol_metrics_table_state(protocolMetricsTable)["total_protocol_views"]
+    if total_protocol_views == -1:
+        return jsonify({
+            "total_views": None,
+            "message": "Total views not yet calculated."
+        }), 202
+    return jsonify({"total_views": total_protocol_views}), 200

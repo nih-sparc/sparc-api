@@ -316,6 +316,18 @@ def test_get_featured_datasets(client):
     assert 'identifiers' in json
     assert type(json['identifiers']) == list
 
+def test_get_protocol_views(client):
+    r = client.get('/total_protocol_views')
+    assert r.status_code in (200, 202)
+    json = r.get_json()
+    assert 'total_views' in json
+
+def test_get_total_dataset_citations(client):
+    r = client.get('/total_dataset_citations')
+    assert r.status_code == 200
+    json = r.get_json()
+    assert 'total_citations' in json
+
 def test_get_reva_subject_ids(client):
     r = client.get('/reva/subject-ids')
     assert r.status_code == 200

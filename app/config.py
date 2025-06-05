@@ -40,6 +40,7 @@ class Config(object):
     ANNOTATIONSTATE_TABLENAME = os.environ.get("ANNOTATION_TABLENAME", "annotationstates")
     SCAFFOLDSTATE_TABLENAME = os.environ.get("SCAFFOLDSTATE_TABLENAME", "scaffoldstates")
     FEATURED_DATASET_ID_SELECTOR_TABLENAME = os.environ.get("FEATURED_DATASET_ID_SELECTOR_TABLENAME", "featured_dataset_selector_state")
+    PROTOCOL_METRICS_TABLENAME = os.environ.get("PROTOCOL_METRICS_TABLENAME", "protocol_metrics_state")
     MONTHLYSTATS_TABLENAME = os.environ.get("MONTHLYSTATS_TABLENAME", "monthlystats")
     WRIKE_TOKEN = os.environ.get("WRIKE_TOKEN")
     DRC_FEEDBACK_FOLDER_ID = os.environ.get("DRC_FEEDBACK_FOLDER_ID", "IEADBYQEI4MM37FH")
@@ -87,6 +88,8 @@ class Config(object):
     SPARC_TECH_LEADS_GITHUB_TOKEN = os.environ.get("SPARC_TECH_LEADS_GITHUB_TOKEN", "")
     GITHUB_ISSUE_ASSIGNEES = os.environ.get("GITHUB_ISSUE_ASSIGNEES", "").split(",")
     SPARC_ISSUES_GITHUB_REPO = os.environ.get("SPARC_ISSUES_GITHUB_REPO", "sparc-app-issues")
+    PROTOCOLS_IO_HOST = os.environ.get("PROTOCOLS_IO_HOST", "https://www.protocols.io")
+    PROTOCOLS_IO_TOKEN = os.environ.get("PROTOCOLS_IO_TOKEN", "")
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")
     GOOGLE_API_GA_KEY_PATH = os.environ.get("GOOGLE_API_GA_KEY_PATH")

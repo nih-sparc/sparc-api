@@ -1606,7 +1606,7 @@ def create_hubspot_note(body, deal_id, contact_id):
     if not associate_res_contact.ok:
         raise Exception(f"Failed to associate note to contact: {associate_res_contact.status_code} {associate_res_contact.text}")
 
-    return note_res.json()
+    return note_id
 
 def associate_hubspot_deal_with_contact(deal_id, contact_id):
     headers = {
@@ -1642,6 +1642,7 @@ def submit_data_inquiry():
 
     contact_id = None
     deal_id = None
+    note_id = None
     deal_pipeline = Config.HUBSPOT_ONBOARDING_PIPELINE_ID if task_type == "research" else Config.HUBSPOT_GRANT_SEEKER_PIPELINE_ID
     deal_stage = Config.HUBSPOT_ONBOARDING_PIPELINE_INITIAL_STAGE_ID if task_type == "research" else Config.HUBSPOT_GRANT_SEEKER_PIPELINE_INITIAL_STAGE_ID
     partial_success = {}
@@ -1674,7 +1675,7 @@ def submit_data_inquiry():
 
     try:
         # Create a note containing the form body and associate it to the contact and deal
-        create_hubspot_note(body, deal_id, contact_id)
+        note_id = create_hubspot_note(body, deal_id, contact_id)
     except Exception as e:
         # Don't fail the whole submission — just inform the user
         partial_success = {
@@ -1688,7 +1689,8 @@ def submit_data_inquiry():
         "message": "Request successfully submitted.",
         "status": "success",
         "contact_id": contact_id,
-        "deal_id": deal_id
+        "deal_id": deal_id,
+        "note_id": note_id
     }
 
     if sendCopy:

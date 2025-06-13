@@ -382,3 +382,33 @@ def test_create_issue(client):
     )
 
     assert close_response.status_code == 200
+
+def test_submit_data_inquiry(client):
+    request_response = client.post("/submit_data_inquiry", data={
+        "title": "test-sparc-api-deal-creation",
+        "body": "This is a test generated from the sparc-api test suite. This deal/note should be automatically deleted, but if it is not then please do so",
+        "type": "research",
+        "firstname": "Test",
+        "lastname": "User",
+        "email": "test-api-email@do-not-delete.com"
+    })
+
+    request_response_json = request_response.get_json()
+
+    assert request_response.status_code == 201
+    for key in ["contact_id", "deal_id", "note_id"]:
+        assert request_response_json.get(key) is not None, f"{key} is missing or None"
+
+    deal_id = request_response_json["deal_id"]
+    note_id = request_response_json["note_id"]
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
+    }
+    delete_deal_url = f"{Config.HUBSPOT_V3_API}/objects/deals/{deal_id}"
+    delete_deal_response = requests.delete(delete_deal_url, headers=headers)
+    assert delete_deal_response.ok, "Failed to delete test deal"
+
+    delete_note_url = f"{Config.HUBSPOT_V3_API}/objects/notes/{note_id}"
+    delete_note_response = requests.delete(delete_note_url, headers=headers)
+    assert delete_note_response.ok, "Failed to delete test note"

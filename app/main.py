@@ -1444,7 +1444,6 @@ def create_issue():
             attachment = files['attachment']
             file_content = attachment.read()
             file_name = attachment.filename
-            content_type = attachment.content_type
 
             timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
             unique_id = uuid.uuid4().hex
@@ -1511,6 +1510,213 @@ def create_issue():
                 response_status = 'warning'
     return jsonify({"message": response_message, "url": issue_url, "issue_api_url": issue_api_url, "status": response_status}), status_code
 
+def get_hubspot_contact(email, firstname, lastname):
+    search_url = f"{Config.HUBSPOT_V3_API}/objects/contacts/search"
+    search_body = {
+        "filterGroups": [
+            {
+                "filters": [
+                    {
+                        "propertyName": "email",
+                        "operator": "EQ",
+                        "value": email
+                    }
+                ]
+            }
+        ],
+        "properties": ["email"],
+        "limit": 1
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
+    }
+    
+    search_results = requests.post(search_url, headers=headers, json=search_body)
+    search_data = search_results.json()
+    contact_id = None
+
+    if search_data.get("results"):
+        contact_id = search_data["results"][0]["id"]
+    else:
+        # Create contact if not found
+        create_contact_url = f"{Config.HUBSPOT_V3_API}/objects/contacts"
+        contact_body = {
+            "properties": {
+                "email": email,
+                "firstname": firstname,
+                "lastname": lastname
+            }
+        }
+        create_res = requests.post(create_contact_url, headers=headers, json=contact_body)
+        if not create_res.ok:
+            raise Exception(f"Hubspot contact creation failed: {create_res.status_code} {create_res.text}")
+        contact_id = create_res.json()["id"]
+    return contact_id
+
+def create_hubspot_deal(name, stage, pipeline):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
+    }
+    create_deal_url = f"{Config.HUBSPOT_V3_API}/objects/deals"
+    deal_body = {
+        "properties": {
+            "dealname": name,
+            "dealstage": stage,
+            "pipeline": pipeline
+        }
+    }
+
+    deal_res = requests.post(create_deal_url, headers=headers, json=deal_body)
+    if not deal_res.ok:
+        raise Exception(f"Hubspot deal creation failed: {deal_res.status_code} {deal_res.text}")
+    deal_id = deal_res.json()["id"]
+    return deal_id
+
+def create_hubspot_note(body, deal_id, contact_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
+    }
+    note_url = f"{Config.HUBSPOT_V3_API}/objects/notes"
+    hs_timestamp = int(datetime.utcnow().timestamp() * 1000)
+    note_payload = {
+        "properties": {
+            "hs_note_body": body,
+            "hs_timestamp": hs_timestamp
+        }
+    }
+
+    note_res = requests.post(note_url, headers=headers, json=note_payload)
+    if not note_res.ok:
+        raise Exception(f"HubSpot note creation failed: {note_res.status_code} {note_res.text}")
+
+    note_id = note_res.json()["id"]
+
+    # Step 2: Associate the note to deal
+    associate_note_to_deal_url = f"{Config.HUBSPOT_V3_API}/objects/notes/{note_id}/associations/deals/{deal_id}/note_to_deal"
+    associate_res_deal = requests.put(associate_note_to_deal_url, headers=headers)
+    if not associate_res_deal.ok:
+        raise Exception(f"Failed to associate note to deal: {associate_res_deal.status_code} {associate_res_deal.text}")
+
+    # Step 3: Associate the note to contact
+    associate_note_to_contact_url = f"{Config.HUBSPOT_V3_API}/objects/notes/{note_id}/associations/contacts/{contact_id}/note_to_contact"
+    associate_res_contact = requests.put(associate_note_to_contact_url, headers=headers)
+    if not associate_res_contact.ok:
+        raise Exception(f"Failed to associate note to contact: {associate_res_contact.status_code} {associate_res_contact.text}")
+
+    return note_res.json()
+
+def associate_hubspot_deal_with_contact(deal_id, contact_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
+    }
+    associate_url = f"{Config.HUBSPOT_V3_API}/objects/deals/{deal_id}/associations/contacts/{contact_id}/deal_to_contact"
+    assoc_res = requests.put(associate_url, headers=headers)
+
+    if not assoc_res.ok:
+        raise Exception(f"HubSpot deal to contact association failed: {assoc_res.status_code} {assoc_res.text}")
+
+    return assoc_res.json()
+
+@app.route("/submit_data_inquiry", methods=["POST"])
+def submit_data_inquiry():
+    form = request.form
+    recaptcha_token = request.form.get('captcha_token')
+    if not app.config['TESTING'] and (not recaptcha_token or not verify_recaptcha(recaptcha_token)):
+        return jsonify({'error': 'Invalid reCAPTCHA'}), 400
+    email = form.get("email", "").strip()
+    firstname = form.get("firstname", "").strip()
+    lastname = form.get("lastname", "").strip()
+    task_type = form.get("type", "")
+    title = form.get("title").strip()
+    body = form.get("body").strip()
+    if not title or not body or not email or not firstname or not lastname:
+        return jsonify({"error": "Missing title, body, email, first name, or last name"}), 400
+    if task_type not in ["research","interest"]:
+        return jsonify({"error": f"Unsupported task type: {task_type}"}), 400
+
+    sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
+
+    contact_id = None
+    deal_id = None
+    deal_pipeline = Config.HUBSPOT_ONBOARDING_PIPELINE_ID if task_type == "research" else Config.HUBSPOT_GRANT_SEEKER_PIPELINE_ID
+    deal_stage = Config.HUBSPOT_ONBOARDING_PIPELINE_INITIAL_STAGE_ID if task_type == "research" else Config.HUBSPOT_GRANT_SEEKER_PIPELINE_INITIAL_STAGE_ID
+    partial_success = {}
+    try:
+        contact_id = get_hubspot_contact(email, firstname, lastname)
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to create or retrieve contact. ",
+            "details": str(e)
+        }), 500
+
+    try:
+        deal_id = create_hubspot_deal(title, deal_stage ,deal_pipeline)
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to create deal. ",
+            "contact_id": contact_id,
+            "details": str(e)
+        }), 500
+
+    try:
+        associate_hubspot_deal_with_contact(deal_id, contact_id)
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to associate deal with contact. ",
+            "contact_id": contact_id,
+            "deal_id": deal_id,
+            "details": str(e)
+        }), 500
+
+    try:
+        # Create a note containing the form body and associate it to the contact and deal
+        create_hubspot_note(body, deal_id, contact_id)
+    except Exception as e:
+        # Don't fail the whole submission — just inform the user
+        partial_success = {
+            "warning": "Request successfully submitted, but note creation failed. ",
+            "contact_id": contact_id,
+            "deal_id": deal_id,
+            "details": str(e)
+        }
+
+    response = {
+        "message": "Request successfully submitted.",
+        "status": "success",
+        "contact_id": contact_id,
+        "deal_id": deal_id
+    }
+
+    if sendCopy:
+        subject = 'SPARC Form Submission'
+        email_body = creation_request_confirmation_email.substitute({'message': body})
+        html_body = markdown.markdown(email_body)
+        try:
+            email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)
+            response['message'] = response.get('message', '') + 'Confirmation email sent to user successfully.'
+            if partial_success:
+                partial_success['warning'] = partial_success.get('warning', '') + 'Confirmation email sent to user successfully.'
+        except Exception as e:
+            if partial_success:
+                partial_success['warning'] = partial_success.get('warning', '') + 'Confirmation email sent to user unsuccessful.'
+                partial_success['details'] = partial_success.get('details', '') + str(e)
+            else:
+                partial_success = {
+                    "warning": "Request successfully submitted, but confirmation email sent to user unsuccessful.",
+                    "contact_id": contact_id,
+                    "deal_id": deal_id,
+                    "details": str(e)
+                }
+
+    if partial_success:
+        response.update(partial_success)
+        return jsonify(response), 207
+
+    return jsonify(response), 201
 
 @app.route("/tasks", methods=["POST"])
 def create_wrike_task():
@@ -1700,7 +1906,7 @@ def create_wrike_task():
 
 @app.route("/hubspot_contact_properties/<email>", methods=["GET"])
 def get_hubspot_contact_properties(email):
-    url = f"https://api.hubapi.com/crm/v3/objects/contacts/{email}?archived=false&idProperty=email&properties=firstname,lastname,email,newsletter,event_name"
+    url = f"{Config.HUBSPOT_V3_API}/objects/contacts/{email}?archived=false&idProperty=email&properties=firstname,lastname,email,newsletter,event_name"
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
@@ -1784,7 +1990,7 @@ def subscribe_to_newsletter():
             }
         ]
     }
-    url = "https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert"
+    url = f"{Config.HUBSPOT_V3_API}/objects/contacts/batch/upsert"
     headers = {
         "Content-Type": "application/json",
         'Authorization': 'Bearer ' + Config.HUBSPOT_API_TOKEN

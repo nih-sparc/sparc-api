@@ -90,6 +90,11 @@ class Config(object):
     SPARC_ISSUES_GITHUB_REPO = os.environ.get("SPARC_ISSUES_GITHUB_REPO", "sparc-app-issues")
     PROTOCOLS_IO_HOST = os.environ.get("PROTOCOLS_IO_HOST", "https://www.protocols.io")
     PROTOCOLS_IO_TOKEN = os.environ.get("PROTOCOLS_IO_TOKEN", "")
+    HUBSPOT_GRANT_SEEKER_PIPELINE_ID = os.environ.get("HUBSPOT_GRANT_SEEKER_PIPELINE_ID", "default")
+    HUBSPOT_ONBOARDING_PIPELINE_ID = os.environ.get("HUBSPOT_ONBOARDING_PIPELINE_ID", "55416921")
+    HUBSPOT_GRANT_SEEKER_PIPELINE_INITIAL_STAGE_ID = os.environ.get("HUBSPOT_GRANT_SEEKER_PIPELINE_INITIAL_STAGE_ID", "appointmentscheduled")
+    HUBSPOT_ONBOARDING_PIPELINE_INITIAL_STAGE_ID = os.environ.get("HUBSPOT_ONBOARDING_PIPELINE_INITIAL_STAGE_ID", "110981262")
+    HUBSPOT_V3_API = os.environ.get("HUBSPOT_V3_API", "https://api.hubapi.com/crm/v3")
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")
     GOOGLE_API_GA_KEY_PATH = os.environ.get("GOOGLE_API_GA_KEY_PATH")

@@ -23,6 +23,7 @@ async def fetch_views_for_workspace(workspace_id):
                 if not items:
                     break
                 views += sum(p.get("stats", {}).get("number_of_views", 0) for p in items)
+                print(f"{workspace_id} cummulative views = {views}")
                 if len(items) < page_size:
                     break
                 page += 1
@@ -34,12 +35,14 @@ async def fetch_views_for_workspace(workspace_id):
 async def compute_total_views():
     tasks = [fetch_views_for_workspace(wid) for wid in workspace_ids]
     results = await asyncio.gather(*tasks)
+    print(f"Workspace total views results = {results}")
     total = sum(results)
     return total
 
 def execute_protocol_metrics_update(table):
     print("Starting background job to update protocol metrics...")
     total_views = asyncio.run(compute_total_views())
+    print(f"Total protocol views = {total_views}")
     table_state = get_protocol_metrics_table_state(table)
     table_state["total_protocol_views"] = total_views
     table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(table_state), True)
@@ -61,5 +64,6 @@ def get_protocol_metrics_table_state(table):
         if current_state is None:
             current_state = table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(default_data), True)
         return json.loads(current_state)
-    except:
+    except Exception as e:
+        print(f"Error retreiving protocol metrics: {e}")
         return default_data

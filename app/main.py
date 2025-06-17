@@ -10,7 +10,6 @@ from scripts.update_featured_dataset_id import set_featured_dataset_id, get_feat
 from scripts.update_protocol_metrics import update_protocol_metrics, get_protocol_metrics_table_state
 from app.osparc.services import OSparcServices
 
-import asyncio
 import botocore
 import markdown
 import boto3
@@ -2443,6 +2442,7 @@ def all_dataset_ids():
     return delimiter.join(string_list)
 
 @app.route("/total_protocol_views")
+@cache.cached(timeout=86400)
 def get_total_protocol_views():
     total_protocol_views = get_protocol_metrics_table_state(protocolMetricsTable)["total_protocol_views"]
     if total_protocol_views == -1:

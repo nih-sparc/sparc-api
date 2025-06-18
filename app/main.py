@@ -17,14 +17,12 @@ import hashlib
 import hmac
 import base64
 import time
-import httpx
 import hubspot
 from hubspot.crm.contacts import ApiException
 import json
 import logging
 import re
 import requests
-import threading
 import uuid
 from urllib.parse import urlparse
 
@@ -191,8 +189,8 @@ update_contentful_event_entries_scheduler = BackgroundScheduler()
 protocol_metrics_scheduler = BackgroundScheduler()
 
 # If nothing is stored in the DB than update it now
-if Config.SPARC_API_DEBUGGING == 'FALSE' and get_protocol_metrics_table_state(protocolMetricsTable)['total_protocol_views'] == -1:
-    update_protocol_metrics(protocolMetricsTable)
+if Config.SPARC_API_DEBUGGING == 'FALSE' and get_protocol_metrics_table_state(protocolMetricsTable) is None or get_protocol_metrics_table_state(protocolMetricsTable)['total_protocol_views'] == -1:
+    update_protocol_metrics()
 
 if not protocol_metrics_scheduler.running:
     logging.info('Starting scheduler for protocol metrics acquisition')
@@ -307,7 +305,7 @@ featured_dataset_id_scheduler.add_job(lambda: set_featured_dataset_id(featuredDa
 
 # Update the protocol metrics once a week on saturday at midnight
 if Config.SPARC_API_DEBUGGING == 'FALSE':
-    protocol_metrics_scheduler.add_job(update_protocol_metrics, 'cron', args=[protocolMetricsTable], day_of_week='sat', hour=0, minute=0)
+    protocol_metrics_scheduler.add_job(update_protocol_metrics, 'cron', day_of_week='sat', hour=0, minute=0)
 
 def shutdown_schedulers():
     logging.info('Stopping scheduler for oSPARC viewers acquisition')
@@ -2442,11 +2440,14 @@ def all_dataset_ids():
     return delimiter.join(string_list)
 
 @app.route("/total_protocol_views")
+@cache.cached(timeout=180)
 def get_total_protocol_views():
-    total_protocol_views = get_protocol_metrics_table_state(protocolMetricsTable)["total_protocol_views"]
-    if total_protocol_views == -1:
+    table_state = get_protocol_metrics_table_state(protocolMetricsTable)
+    if table_state is None or not table_state.get("total_protocol_views"):
         return jsonify({
             "total_views": None,
             "message": "Total views not yet calculated."
         }), 202
+    total_protocol_views = table_state.get("total_protocol_views")
+
     return jsonify({"total_views": total_protocol_views}), 200

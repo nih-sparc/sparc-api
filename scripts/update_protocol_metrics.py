@@ -45,11 +45,12 @@ def execute_protocol_metrics_update(table):
     print(f"Total protocol views = {total_views}")
     table_state = get_protocol_metrics_table_state(table)
     table_state["total_protocol_views"] = total_views
+    print(f"Updating DB protocol metrics to: {table_state}")
     table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(table_state), True)
-    print("Finished updating protocol metrics.")
+    print(f"Finished updating DB. Protocol metrics set to: {table.pullState(Config.PROTOCOL_METRICS_TABLENAME)}")
 
 def update_protocol_metrics(table):
-    thread = threading.Thread(target=execute_protocol_metrics_update, args=(table, ), daemon=True)
+    thread = threading.Thread(target=execute_protocol_metrics_update, args=(table, ))
     thread.start()
     return
 
@@ -61,7 +62,9 @@ def get_protocol_metrics_table_state(table):
         return default_data
     try:
         current_state = table.pullState(Config.PROTOCOL_METRICS_TABLENAME)
+        print(f"Retreived the following protocol metrics from DB: {current_state}")
         if current_state is None:
+            print("Setting DB protocol metrics to default data")
             current_state = table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(default_data), True)
         return json.loads(current_state)
     except Exception as e:

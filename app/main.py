@@ -2442,7 +2442,6 @@ def all_dataset_ids():
     return delimiter.join(string_list)
 
 @app.route("/total_protocol_views")
-@cache.cached(timeout=86400)
 def get_total_protocol_views():
     total_protocol_views = get_protocol_metrics_table_state(protocolMetricsTable)["total_protocol_views"]
     if total_protocol_views == -1:

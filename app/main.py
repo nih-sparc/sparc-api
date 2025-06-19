@@ -189,7 +189,8 @@ update_contentful_event_entries_scheduler = BackgroundScheduler()
 protocol_metrics_scheduler = BackgroundScheduler()
 
 # If nothing is stored in the DB than update it now
-if Config.SPARC_API_DEBUGGING == 'FALSE' and get_protocol_metrics_table_state(protocolMetricsTable) is None or get_protocol_metrics_table_state(protocolMetricsTable)['total_protocol_views'] == -1:
+protocol_metrics = get_protocol_metrics_table_state(protocolMetricsTable)
+if Config.SPARC_API_DEBUGGING == 'FALSE' and (protocol_metrics is None or protocol_metrics.get('total_protocol_views') == -1):
     update_protocol_metrics()
 
 if not protocol_metrics_scheduler.running:

@@ -39,34 +39,47 @@ async def compute_total_views():
     total = sum(results)
     return total
 
-def execute_protocol_metrics_update(table):
-    print("Starting background job to update protocol metrics...")
+def execute_protocol_metrics_update():
+    from app.dbtable import ProtocolMetricsTable  # import here to avoid circular issues
+    from app.config import Config
+
+    print("Starting job to update protocol metrics...")
     total_views = asyncio.run(compute_total_views())
     print(f"Total protocol views = {total_views}")
+
+    # RECREATE fresh DB connection
+    db_url = Config.DATABASE_URL
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+    table = ProtocolMetricsTable(db_url)
+
     table_state = get_protocol_metrics_table_state(table)
+    if table_state is None:
+        print("Protocol views table state was None, setting table to default")
+        default_data = {
+          'total_protocol_views': -1
+        }
+        table_state = table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(default_data), True)
+
     table_state["total_protocol_views"] = total_views
     print(f"Updating DB protocol metrics to: {table_state}")
     table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(table_state), True)
     print(f"Finished updating DB. Protocol metrics set to: {table.pullState(Config.PROTOCOL_METRICS_TABLENAME)}")
 
-def update_protocol_metrics(table):
-    thread = threading.Thread(target=execute_protocol_metrics_update, args=(table, ))
+def update_protocol_metrics():
+    thread = threading.Thread(target=execute_protocol_metrics_update)
     thread.start()
-    return
 
 def get_protocol_metrics_table_state(table):
-    default_data = {
-      'total_protocol_views': -1
-    }
+    print(f"Retreiving protocol metrics from DB")
     if table is None:
-        return default_data
+        print(f"Protocol metrics table was None")
+        return None
     try:
         current_state = table.pullState(Config.PROTOCOL_METRICS_TABLENAME)
         print(f"Retreived the following protocol metrics from DB: {current_state}")
-        if current_state is None:
-            print("Setting DB protocol metrics to default data")
-            current_state = table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(default_data), True)
         return json.loads(current_state)
     except Exception as e:
         print(f"Error retreiving protocol metrics: {e}")
-        return default_data
+        return None

@@ -41,7 +41,6 @@ async def compute_total_views():
 
 def execute_protocol_metrics_update():
     from app.dbtable import ProtocolMetricsTable  # import here to avoid circular issues
-    from app.config import Config
 
     print("Starting job to update protocol metrics...")
     total_views = asyncio.run(compute_total_views())
@@ -53,18 +52,12 @@ def execute_protocol_metrics_update():
         db_url = db_url.replace("postgres://", "postgresql://", 1)
 
     table = ProtocolMetricsTable(db_url)
+    total_views_data = {
+        'total_protocol_views': total_views
+    }
 
-    table_state = get_protocol_metrics_table_state(table)
-    if table_state is None:
-        print("Protocol views table state was None, setting table to default")
-        default_data = {
-          'total_protocol_views': -1
-        }
-        table_state = table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(default_data), True)
-
-    table_state["total_protocol_views"] = total_views
-    print(f"Updating DB protocol metrics to: {table_state}")
-    table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(table_state), True)
+    print(f"Updating DB protocol metrics to: {total_views_data}")
+    table.updateState(Config.PROTOCOL_METRICS_TABLENAME, json.dumps(total_views_data), True)
     print(f"Finished updating DB. Protocol metrics set to: {table.pullState(Config.PROTOCOL_METRICS_TABLENAME)}")
 
 def update_protocol_metrics():
@@ -78,6 +71,9 @@ def get_protocol_metrics_table_state(table):
         return None
     try:
         current_state = table.pullState(Config.PROTOCOL_METRICS_TABLENAME)
+        if current_state is None:
+            print("Protocol metrics pullState returned None")
+            return None
         print(f"Retreived the following protocol metrics from DB: {current_state}")
         return json.loads(current_state)
     except Exception as e:

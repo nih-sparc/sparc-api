@@ -64,7 +64,8 @@ class Table:
       if commit:
           try:
               self._session.commit()
-          except SQLAlchemyError:
+          except SQLAlchemyError as e:
+              print(f'The following error occured when pushing state to the DB: {e}')
               self._session.rollback()
       return id
   
@@ -78,7 +79,8 @@ class Table:
       if commit:
           try:
               self._session.commit()
-          except SQLAlchemyError:
+          except SQLAlchemyError as e:
+              print(f'The following error occured when updating state on the DB: {e}')
               self._session.rollback()
       return input
 
@@ -87,7 +89,8 @@ class Table:
         result = self._session.query(self._state).filter_by(uuid=id).first()
         if result:
             return result.data
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        print(f'The following error occured when pulling state from DB: {e}')
         self._session.rollback()
     return None
 
@@ -109,7 +112,8 @@ class AnnotationTable(Table):
         if commit:
             try:
                 self._session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
+                print(f'The following error occured when pushing state to the DB: {e}')
                 self._session.rollback()
         return id
 
@@ -128,7 +132,8 @@ class AnnotationTable(Table):
                     else:
                         break
             self._session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            print(f'The following error occured when removing expired state from the DB: {e}')
             self._session.rollback()
             return None
 

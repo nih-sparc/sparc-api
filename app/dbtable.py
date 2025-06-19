@@ -42,12 +42,20 @@ class ProtocolMetricsState(base):
 
 class Table:
   def __init__(self, databaseURL, state):
-        db = create_engine(databaseURL, pool_pre_ping=True)
+        self._engine = create_engine(databaseURL, pool_pre_ping=True, pool_recycle=300)
         global base
-        base.metadata.create_all(db)
-        Session = sessionmaker(db)
+        base.metadata.create_all(self._engine)
+        Session = sessionmaker(self._engine)
         self._session = Session()
         self._state = state
+
+  def refresh_session(self):
+    try:
+        self._session.close()
+    except Exception as e:
+        print(f"Error closing session: {e}")
+    Session = sessionmaker(bind=self._engine)
+    self._session = Session()
 
   def getNumberOfRow(self):
       rows = self._session.query(self._state).count()

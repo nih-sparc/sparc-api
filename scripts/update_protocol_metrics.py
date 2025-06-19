@@ -3,6 +3,7 @@ import asyncio
 import httpx
 import json
 import threading
+from sqlalchemy.exc import OperationalError
 
 # These are the only workspaces/consortia that we are taking protocol metrics from right now. We may want to move this to an env var as the list expands in the future
 workspace_ids = ["sparc","re-join","precision-human-pain"]
@@ -70,6 +71,16 @@ def get_protocol_metrics_table_state(table):
         print(f"Protocol metrics table was None")
         return None
     try:
+        current_state = table.pullState(Config.PROTOCOL_METRICS_TABLENAME)
+        if current_state is None:
+            print("Protocol metrics pullState returned None")
+            return None
+        print(f"Retreived the following protocol metrics from DB: {current_state}")
+        return json.loads(current_state)
+    except OperationalError as e:
+        print(f"Initial get protocols meterics attempt failed with error: {e}")
+        print("Re-initializing DB session and retrying...")
+        table.refresh_session()
         current_state = table.pullState(Config.PROTOCOL_METRICS_TABLENAME)
         if current_state is None:
             print("Protocol metrics pullState returned None")

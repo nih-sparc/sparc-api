@@ -1417,7 +1417,7 @@ def create_issue():
         abort(400, description="Missing title or body")
     email = form.get("email", "").strip()
     sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
-    if task_type in ["bug", "feedback"]:
+    if task_type in ["bug", "feedback", "test"]:
         try:
             issue = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
             issue_url = issue['html_url']

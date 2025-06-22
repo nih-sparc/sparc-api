@@ -359,7 +359,8 @@ def test_get_reva_landmarks_files(client):
 def test_create_issue(client):
     create_response = client.post("/create_issue", data={
         "title": "test-sparc-api-issue-creation",
-        "body": "This is a test generated from the sparc-api test suite. This ticket should be automatically closed, but if it is not then please do so"
+        "body": "This is a test generated from the sparc-api test suite. This ticket should be automatically closed, but if it is not then please do so",
+        "type": "test"
     })
 
     create_response_json = create_response.get_json()
@@ -378,7 +379,7 @@ def test_create_issue(client):
     close_response = requests.patch(
         issue_api_url,
         headers=headers,
-        json={"state": "closed", "labels": ['test']}
+        json={"state": "closed"}
     )
 
     assert close_response.status_code == 200

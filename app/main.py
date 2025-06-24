@@ -1291,10 +1291,8 @@ def authenticate_biolucida():
 
 
 def get_share_link(table):
-    # Do not commit to database when testing
+    # Commit to database even when testing since the Table re-creates a new session each time to prevent stale sessions
     commit = True
-    if app.config["TESTING"]:
-        commit = False
     if table:
         json_data = request.get_json()
         if json_data and 'state' in json_data:

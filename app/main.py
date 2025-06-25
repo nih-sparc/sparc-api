@@ -2454,3 +2454,28 @@ def get_total_protocol_views():
     total_protocol_views = table_state.get("total_protocol_views")
 
     return jsonify({"total_views": total_protocol_views}), 200
+
+@app.route("/contact_support", methods=["POST"])
+def contact_support():
+    data = request.get_json()
+
+    name = data.get("name")
+    email = data.get("email")
+    message = data.get("message")
+    subject = data.get("subject", "Feedback submission")
+    send_copy = data.get("sendCopy", False)
+
+    if not name or not email or not message:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # Send to SPARC support address
+    email_sender.sendgrid_email(Config.SES_SENDER, Config.SES_SENDER, subject, message)
+
+    # Optionally send a confirmation copy to the user
+    if send_copy:
+        email_sender.sendgrid_email(Config.SES_SENDER, 
+                                    email,
+                                    "We received your message",
+                                    feedback_email.substitute({'message': message}))
+
+    return jsonify({"message": "Message received successfully."}), 200

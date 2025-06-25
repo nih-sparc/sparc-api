@@ -47,7 +47,7 @@ from app.scicrunch_requests import create_doi_query, create_filter_request, crea
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id, \
     create_multiple_mimetype_query, create_citations_query
-from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, service_interest_email
+from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, anbc_form_creation_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -1550,7 +1550,7 @@ def get_hubspot_contact(email, firstname, lastname):
         contact_id = create_res.json()["id"]
     return contact_id
 
-def create_hubspot_deal(name, stage, pipeline):
+def create_hubspot_deal(name, stage, pipeline, lead_source=None):
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
@@ -1560,7 +1560,8 @@ def create_hubspot_deal(name, stage, pipeline):
         "properties": {
             "dealname": name,
             "dealstage": stage,
-            "pipeline": pipeline
+            "pipeline": pipeline,
+            "lead_source_in_deal": lead_source
         }
     }
 
@@ -1627,6 +1628,7 @@ def submit_data_inquiry():
     firstname = form.get("firstname", "").strip()
     lastname = form.get("lastname", "").strip()
     task_type = form.get("type", "")
+    is_anbc_form = form.get("isAnbcForm", False)
     title = form.get("title").strip()
     body = form.get("body").strip()
     if not title or not body or not email or not firstname or not lastname:
@@ -1641,6 +1643,7 @@ def submit_data_inquiry():
     note_id = None
     deal_pipeline = Config.HUBSPOT_ONBOARDING_PIPELINE_ID if task_type == "research" else Config.HUBSPOT_GRANT_SEEKER_PIPELINE_ID
     deal_stage = Config.HUBSPOT_ONBOARDING_PIPELINE_INITIAL_STAGE_ID if task_type == "research" else Config.HUBSPOT_GRANT_SEEKER_PIPELINE_INITIAL_STAGE_ID
+    deal_lead_source = Config.ANBC_LEAD_SOURCE if is_anbc_form else None
     partial_success = {}
     try:
         contact_id = get_hubspot_contact(email, firstname, lastname)
@@ -1651,7 +1654,7 @@ def submit_data_inquiry():
         }), 500
 
     try:
-        deal_id = create_hubspot_deal(title, deal_stage ,deal_pipeline)
+        deal_id = create_hubspot_deal(title, deal_stage, deal_pipeline, deal_lead_source)
     except Exception as e:
         return jsonify({
             "error": "Failed to create deal. ",
@@ -1691,7 +1694,7 @@ def submit_data_inquiry():
 
     if sendCopy:
         subject = 'SPARC Form Submission'
-        email_body = creation_request_confirmation_email.substitute({'message': body})
+        email_body = anbc_form_creation_request_confirmation_email.substitute({'name': firstname}) if is_anbc_form else creation_request_confirmation_email.substitute({'name': firstname})
         html_body = markdown.markdown(email_body)
         try:
             email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)
@@ -1861,6 +1864,7 @@ def create_wrike_task():
         if resp.status_code == 200:
             if 'userEmail' in form and form['userEmail'] and 'sendCopy' in form and form['sendCopy'] == 'true':
                 # default to bug form if task type not specified
+                name = form.get("name", form['userEmail'])
                 subject = 'SPARC Reported Error/Issue Submission'
                 body = issue_reporting_email.substitute({'message': description})
                 if taskType == "feedback":
@@ -1868,25 +1872,25 @@ def create_wrike_task():
                     body = feedback_email.substitute({'message': description})
                 elif taskType == "interest":
                     subject = 'SPARC Service Interest Submission'
-                    body = service_interest_email.substitute({'message': description})
+                    body = creation_request_confirmation_email.substitute({'name': name})
                 elif taskType == "general":
                     subject = 'SPARC Question or Inquiry Submission'
                     body = general_interest_email.substitute({'message': description})
                 elif taskType == "research":
                     subject = 'SPARC Research Submission'
-                    body = creation_request_confirmation_email.substitute({'message': description})
+                    body = creation_request_confirmation_email.substitute({'name': name})
                 elif taskType == "news":
                     subject = 'SPARC News Submission'
-                    body = creation_request_confirmation_email.substitute({'message': description})
+                    body = creation_request_confirmation_email.substitute({'name': name})
                 elif taskType == "event":
                     subject = 'SPARC Event Submission'
-                    body = creation_request_confirmation_email.substitute({'message': description})
+                    body = creation_request_confirmation_email.substitute({'name': name})
                 elif taskType == "toolsAndResources":
                     subject = 'SPARC Tool/Resource Submission'
-                    body = creation_request_confirmation_email.substitute({'message': description})
+                    body = creation_request_confirmation_email.substitute({'name': name})
                 elif taskType == "communitySpotlight":
                     subject = 'SPARC Story Submission'
-                    body = creation_request_confirmation_email.substitute({'message': description})
+                    body = creation_request_confirmation_email.substitute({'name': name})
                 userEmail = form['userEmail']
                 if len(userEmail) > 0:
                     email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], subject, body)

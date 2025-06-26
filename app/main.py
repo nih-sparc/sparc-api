@@ -1414,7 +1414,6 @@ def create_issue():
     if not title or not issue_body:
         abort(400, description="Missing title or body")
     email = form.get("email", "").strip()
-    sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
     if task_type in ["bug", "feedback", "test"]:
         try:
             issue = create_github_issue(title.strip(), issue_body, labels=[task_type], assignees=Config.GITHUB_ISSUE_ASSIGNEES)
@@ -1489,7 +1488,7 @@ def create_issue():
                 response_message += 'File upload unsuccessful. '
                 status_code = 201
                 response_status = 'warning'
-        if sendCopy:
+        if email:
             # default to bug form if task type not specified
             subject = 'SPARC Reported Issue Submission'
             email_body = issue_reporting_email.substitute({'message': issue_body})
@@ -1628,7 +1627,7 @@ def submit_data_inquiry():
     firstname = form.get("firstname", "").strip()
     lastname = form.get("lastname", "").strip()
     task_type = form.get("type", "")
-    is_anbc_form = form.get("isAnbcForm", False)
+    is_anbc_form = form.get("isAnbcForm", "false")
     title = form.get("title").strip()
     body = form.get("body").strip()
     if not title or not body or not email or not firstname or not lastname:
@@ -1636,14 +1635,12 @@ def submit_data_inquiry():
     if task_type not in ["research","interest"]:
         return jsonify({"error": f"Unsupported task type: {task_type}"}), 400
 
-    sendCopy = 'sendCopy' in form and form['sendCopy'] == 'true'
-
     contact_id = None
     deal_id = None
     note_id = None
     deal_pipeline = Config.HUBSPOT_ONBOARDING_PIPELINE_ID if task_type == "research" else Config.HUBSPOT_GRANT_SEEKER_PIPELINE_ID
     deal_stage = Config.HUBSPOT_ONBOARDING_PIPELINE_INITIAL_STAGE_ID if task_type == "research" else Config.HUBSPOT_GRANT_SEEKER_PIPELINE_INITIAL_STAGE_ID
-    deal_lead_source = Config.ANBC_LEAD_SOURCE if is_anbc_form else None
+    deal_lead_source = Config.ANBC_LEAD_SOURCE if is_anbc_form == 'true' else None
     partial_success = {}
     try:
         contact_id = get_hubspot_contact(email, firstname, lastname)
@@ -1685,25 +1682,25 @@ def submit_data_inquiry():
         }
 
     response = {
-        "message": "Request successfully submitted.",
+        "message": "Request successfully submitted. ",
         "status": "success",
         "contact_id": contact_id,
         "deal_id": deal_id,
         "note_id": note_id
     }
 
-    if sendCopy:
-        subject = 'SPARC Form Submission'
-        email_body = anbc_form_creation_request_confirmation_email.substitute({'name': firstname}) if is_anbc_form else creation_request_confirmation_email.substitute({'name': firstname})
+    if email:
+        subject = 'SPARC Form Submission Confirmation'
+        email_body = anbc_form_creation_request_confirmation_email.substitute({'name': firstname, 'message': body}) if is_anbc_form == 'true' else creation_request_confirmation_email.substitute({'name': firstname, 'message': body})
         html_body = markdown.markdown(email_body)
         try:
-            email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)
-            response['message'] = response.get('message', '') + 'Confirmation email sent to user successfully.'
+            email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body, Config.SERVICES_EMAIL)
+            response['message'] = response.get('message', '') + 'Confirmation email sent to user successfully. '
             if partial_success:
-                partial_success['warning'] = partial_success.get('warning', '') + 'Confirmation email sent to user successfully.'
+                partial_success['warning'] = partial_success.get('warning', '') + 'Confirmation email sent to user successfully. '
         except Exception as e:
             if partial_success:
-                partial_success['warning'] = partial_success.get('warning', '') + 'Confirmation email sent to user unsuccessful.'
+                partial_success['warning'] = partial_success.get('warning', '') + 'Confirmation email sent to user unsuccessful. '
                 partial_success['details'] = partial_success.get('details', '') + str(e)
             else:
                 partial_success = {
@@ -1862,7 +1859,7 @@ def create_wrike_task():
                     )
 
         if resp.status_code == 200:
-            if 'userEmail' in form and form['userEmail'] and 'sendCopy' in form and form['sendCopy'] == 'true':
+            if 'userEmail' in form and form['userEmail']:
                 # default to bug form if task type not specified
                 name = form.get("name", form['userEmail'])
                 subject = 'SPARC Reported Error/Issue Submission'
@@ -2462,20 +2459,16 @@ def contact_support():
     name = data.get("name")
     email = data.get("email")
     message = data.get("message")
-    subject = data.get("subject", "Feedback submission")
-    send_copy = data.get("sendCopy", False)
+    subject = data.get("subject", "SPARC Form Submission Confirmation")
 
     if not name or not email or not message:
         return jsonify({"error": "Missing required fields"}), 400
 
-    # Send to SPARC support address
-    email_sender.sendgrid_email(Config.SES_SENDER, Config.SES_SENDER, subject, message)
-
-    # Optionally send a confirmation copy to the user
-    if send_copy:
-        email_sender.sendgrid_email(Config.SES_SENDER, 
+    if email:
+        email_sender.sendgrid_email(Config.SES_SENDER,
                                     email,
-                                    "We received your message",
-                                    feedback_email.substitute({'message': message}))
+                                    subject,
+                                    feedback_email.substitute({'message': message}),
+                                    Config.SERVICES_EMAIL)
 
     return jsonify({"message": "Message received successfully."}), 200

@@ -95,7 +95,8 @@ class Config(object):
     HUBSPOT_GRANT_SEEKER_PIPELINE_INITIAL_STAGE_ID = os.environ.get("HUBSPOT_GRANT_SEEKER_PIPELINE_INITIAL_STAGE_ID", "appointmentscheduled")
     HUBSPOT_ONBOARDING_PIPELINE_INITIAL_STAGE_ID = os.environ.get("HUBSPOT_ONBOARDING_PIPELINE_INITIAL_STAGE_ID", "110981262")
     HUBSPOT_V3_API = os.environ.get("HUBSPOT_V3_API", "https://api.hubapi.com/crm/v3")
-    ANBC_LEAD_SOURCE = "ANBC partnership"
+    ANBC_LEAD_SOURCE = os.environ.get("ANBC_LEAD_SOURCE", "ANBC partnership")
+    SERVICES_EMAIL = os.environ.get("SERVICES_EMAIL", "services@sparc.science")
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")
     GOOGLE_API_GA_KEY_PATH = os.environ.get("GOOGLE_API_GA_KEY_PATH")

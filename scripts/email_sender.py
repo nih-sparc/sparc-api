@@ -3,7 +3,7 @@ from string import Template
 import boto3
 import sendgrid
 from app.config import Config
-from sendgrid.helpers.mail import Asm, Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, \
+from sendgrid.helpers.mail import Asm, Cc, Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, \
     FileContent, GroupId, GroupsToDisplay
 
 subject = "Message from SPARC Portal"
@@ -80,6 +80,13 @@ creation_request_confirmation_email = Template('''\
       NIH-approved, HEAL-compliant repository<br/>
       Registered with re3data.org
     </p>
+
+    <p>
+      Your submission:
+      <br/>
+      <br/>
+      $message
+    </p>
   </body>
 </html>
 ''')
@@ -94,7 +101,7 @@ anbc_form_creation_request_confirmation_email = Template('''\
 
     <p>We've successfully received your form and appreciate you taking the time to provide this information. The information you submitted is included below for your records.</p>
 
-    <p>By participating in this process, you're helping advance FAIR data principles—making research data Findable, Accessible, Interoperable, and Reusable. Through our partnership between Autonomic Neuroscience: Basic and Clinical and <a href="https://sparc.science/">SPARC</a> We truly appreciate your commitment to contributing to the broader scientific community and supporting efforts that will benefit researchers for years to come.</p>
+    <p>By participating in this process, you're helping advance FAIR data principles—making research data Findable, Accessible, Interoperable, and Reusable. Through our partnership between Autonomic Neuroscience: Basic and Clinical and <a href="https://sparc.science/">SPARC</a>, we're working together to create a more robust and accessible scientific ecosystem. We truly appreciate your commitment to contributing to the broader scientific community and supporting efforts that will benefit researchers for years to come.</p>
 
     <p>Our team will review your submission and get back to you within the next 3 business days. If you have any questions in the meantime, please don't hesitate to contact us at <a href="mailto:services@sparc.science">services@sparc.science</a>.</p>
 
@@ -108,6 +115,13 @@ anbc_form_creation_request_confirmation_email = Template('''\
       <a href="https://sparc.science">https://sparc.science</a><br/>
       NIH-approved, HEAL-compliant repository<br/>
       Registered with re3data.org
+    </p>
+
+    <p>
+      Your submission:
+      <br/>
+      <br/>
+      $message
     </p>
   </body>
 </html>
@@ -155,13 +169,20 @@ class EmailSender(object):
         logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")
         return response
 
-    def sendgrid_email(self, fromm, to, subject, body):
+    def sendgrid_email(self, fromm, to, subject, body, cc=None):
         mail = Mail(
             Email(fromm),
             To(to),
             subject,
             Content("text/html", body)
         )
+        if cc:
+          if isinstance(cc, list):
+              for cc_addr in cc:
+                  mail.add_cc(Cc(cc_addr))
+          else:
+              mail.add_cc(Cc(cc))
+
         response = sg_client.send(mail)
         logging.info(f"Sending a '{subject}' mail using SendGrid")
         logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")

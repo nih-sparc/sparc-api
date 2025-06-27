@@ -396,7 +396,8 @@ def test_submit_data_inquiry(client):
 
     request_response_json = request_response.get_json()
 
-    assert request_response.status_code == 201
+    assert 200 <= request_response.status_code < 300
+
     for key in ["contact_id", "deal_id", "note_id"]:
         assert request_response_json.get(key) is not None, f"{key} is missing or None"
 

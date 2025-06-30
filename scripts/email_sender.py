@@ -5,6 +5,7 @@ import sendgrid
 from app.config import Config
 from sendgrid.helpers.mail import Asm, Cc, Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, \
     FileContent, GroupId, GroupsToDisplay
+from static.sparc_logo_base64 import sparc_logo_base64
 
 subject = "Message from SPARC Portal"
 
@@ -45,7 +46,7 @@ Your message:
 $message
 ''')
 
-service_form_submission_request_confirmation_email = Template('''\
+service_form_submission_request_confirmation_email = Template(f'''\
 <html>
   <body style="font-family: Arial, sans-serif; line-height: 1.6;">
 
@@ -65,7 +66,7 @@ service_form_submission_request_confirmation_email = Template('''\
     SPARC Data and Resource Center</p>
 
     <p>
-      <img src="https://sparc.science/logo-sparc-wave-primary.svg" alt="SPARC Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;"/><br/>
+      <img src="{sparc_logo_base64}" alt="SPARC Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;"/><br/>
       <a href="https://sparc.science">https://sparc.science</a><br/>
       NIH-approved, HEAL-compliant repository<br/>
       Registered with re3data.org
@@ -81,7 +82,7 @@ service_form_submission_request_confirmation_email = Template('''\
 </html>
 ''')
 
-creation_request_confirmation_email = Template('''\
+creation_request_confirmation_email = Template(f'''\
 <html>
   <body style="font-family: Arial, sans-serif; line-height: 1.6;">
 
@@ -101,7 +102,7 @@ creation_request_confirmation_email = Template('''\
     SPARC Data and Resource Center</p>
 
     <p>
-      <img src="https://sparc.science/logo-sparc-wave-primary.svg" alt="SPARC Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;"/><br/>
+      <img src="{sparc_logo_base64}" alt="SPARC Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;"/><br/>
       <a href="https://sparc.science">https://sparc.science</a><br/>
       NIH-approved, HEAL-compliant repository<br/>
       Registered with re3data.org
@@ -117,7 +118,7 @@ creation_request_confirmation_email = Template('''\
 </html>
 ''')
 
-anbc_form_creation_request_confirmation_email = Template('''\
+anbc_form_creation_request_confirmation_email = Template(f'''\
 <html>
   <body style="font-family: Arial, sans-serif; line-height: 1.6;">
 
@@ -137,7 +138,7 @@ anbc_form_creation_request_confirmation_email = Template('''\
     SPARC Data and Resource Center</p>
 
     <p>
-      <img src="https://sparc.science/logo-sparc-wave-primary.svg" alt="SPARC Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;"/><br/>
+      <img src="{sparc_logo_base64}" alt="SPARC Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;"/><br/>
       <a href="https://sparc.science">https://sparc.science</a><br/>
       NIH-approved, HEAL-compliant repository<br/>
       Registered with re3data.org

@@ -47,7 +47,7 @@ from app.scicrunch_requests import create_doi_query, create_filter_request, crea
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id, \
     create_multiple_mimetype_query, create_citations_query
-from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, anbc_form_creation_request_confirmation_email
+from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, anbc_form_creation_request_confirmation_email, service_form_submission_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -1630,6 +1630,7 @@ def submit_data_inquiry():
     is_anbc_form = form.get("isAnbcForm", "false")
     title = form.get("title").strip()
     body = form.get("body").strip()
+    is_service_form = form.get("isServiceForm", "false")
     if not title or not body or not email or not firstname or not lastname:
         return jsonify({"error": "Missing title, body, email, first name, or last name"}), 400
     if task_type not in ["research","interest"]:
@@ -1691,7 +1692,11 @@ def submit_data_inquiry():
 
     if email:
         subject = 'SPARC Form Submission Confirmation'
-        email_body = anbc_form_creation_request_confirmation_email.substitute({'name': firstname, 'message': body}) if is_anbc_form == 'true' else creation_request_confirmation_email.substitute({'name': firstname, 'message': body})
+        email_body = ''
+        if is_service_form == 'true':
+            email_body = service_form_submission_request_confirmation_email.substitute({'name': firstname, 'message': body})
+        else:
+            email_body = anbc_form_creation_request_confirmation_email.substitute({'name': firstname, 'message': body}) if is_anbc_form == 'true' else creation_request_confirmation_email.substitute({'name': firstname, 'message': body})
         html_body = markdown.markdown(email_body)
         try:
             email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body, Config.SERVICES_EMAIL)

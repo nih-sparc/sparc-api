@@ -34,16 +34,6 @@ issue_reporting_email = Template('''\
 $message
 ''')
 
-service_interest_email = Template('''\
-<b>Thank you for expressing interest in a SPARC service! We have received your request and will be in contact as soon as possible.</b>
-<br>
-<br>
-Your message:
-<br>
-<br>
-$message
-''')
-
 
 general_interest_email = Template('''\
 <b>Thank you for your submission to SPARC! We have received your question/inquiry and will be in contact as soon as possible.</b>
@@ -53,6 +43,42 @@ Your message:
 <br>
 <br>
 $message
+''')
+
+service_form_submission_request_confirmation_email = Template('''\
+<html>
+  <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+
+    <p>Hi $name,</p>
+
+    <p>Thank you for your submission!</p>
+
+    <p>We've successfully received your form and appreciate you taking the time to provide this information. The information you submitted is included below for your records.</p>
+
+    <p>The SPARC Data and Resource Center (DRC) has a depth of expertise in developing and supporting digital resources that can be shared, cited, visualized, computed, and used for virtual experimentation. Your interest in SPARC supports FAIR data principles—making research data Findable, Accessible, Interoperable, and Reusable. We truly appreciate your commitment to contributing to the broader scientific community and supporting efforts that will benefit researchers for years to come.</p>
+
+    <p>Our team will review your submission and make our best effort to get back to you within the next 5 business days. If you have any questions in the meantime, please don't hesitate to contact us at <a href="mailto:services@sparc.science">services@sparc.science</a>.</p>
+
+    <p>Thank you again for your dedication to advancing scientific progress.</p>
+
+    <p>Best regards,<br/>
+    SPARC Data and Resource Center</p>
+
+    <p>
+      <img src="https://sparc.science/logo-sparc-wave-primary.svg" alt="SPARC Logo" style="max-width: 200px; height: auto; margin-bottom: 20px;"/><br/>
+      <a href="https://sparc.science">https://sparc.science</a><br/>
+      NIH-approved, HEAL-compliant repository<br/>
+      Registered with re3data.org
+    </p>
+
+    <p>
+      Your submission:
+      <br/>
+      <br/>
+      $message
+    </p>
+  </body>
+</html>
 ''')
 
 creation_request_confirmation_email = Template('''\

@@ -4,7 +4,7 @@ from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
 from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
 from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids, get_associated_datasets
-from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions
+from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions, init_gspread_client, append_contact
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
 from scripts.update_protocol_metrics import update_protocol_metrics, get_protocol_metrics_table_state
@@ -1740,8 +1740,15 @@ def create_wrike_task():
             logging.error("Could not validate captcha, bypassing validation", ex)
     elif not app.config['TESTING']:
         return {"error": "Failed Captcha Validation"}, 409
+    
     # Captcha all good
-    if form and 'title' in form and 'description' in form:
+    if form["type"] == "event" or form["type"] == "communitySpotlight" or form["type"] == "toolsAndResources":
+        client = init_gspread_client()
+        if append_contact(client, [form["title"], None, None, None, None, None, form["description"]]):
+            return ('', 204)
+        else:
+            return {"error": "Failed registering user data"}, 500
+    elif form and 'title' in form and 'description' in form:
         title = form["title"]
         description = form["description"]
         newTaskDescription = form["description"]

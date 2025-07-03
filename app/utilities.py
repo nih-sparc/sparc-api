@@ -1,6 +1,7 @@
 import base64
 from io import BytesIO
 from app.manifest_name_to_discover_name import name_map
+import os
 
 def get_path_from_mangled_list(s3_path):
 
@@ -39,3 +40,11 @@ def print_hit_structure(hit):
     print('hit:')
     if isinstance(hit, dict):
         print_dict(hit)
+
+def get_extension(filename: str) -> str:
+    """
+    Extracts and returns the extension of a filename, including the leading dot.
+    If the filename has no extension, returns an empty string.
+    """
+    _, ext = os.path.splitext(filename)
+    return ext 

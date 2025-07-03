@@ -4,7 +4,7 @@ from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets
 from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
 from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids, get_associated_datasets
-from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions, init_gspread_client, append_contact
+from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions, init_gspread_client, append_contact, upload_file, init_drive_client
 from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
 from scripts.update_protocol_metrics import update_protocol_metrics, get_protocol_metrics_table_state
@@ -56,10 +56,12 @@ from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatase
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
     reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
 from app.serializer import ContactRequestSchema
-from app.utilities import img_to_base64_str, get_path_from_mangled_list
+from app.utilities import img_to_base64_str, get_path_from_mangled_list, get_extension
 from app.osparc.osparc import start_simulation as do_start_simulation
 from app.osparc.osparc import check_simulation as do_check_simulation
 from app.biolucida_process_results import process_results as process_biolucida_results, process_result as process_biolucida_result
+
+import uuid
 
 logging.basicConfig()
 
@@ -1742,177 +1744,22 @@ def create_wrike_task():
         return {"error": "Failed Captcha Validation"}, 409
     
     # Captcha all good
-    if form["type"] == "event" or form["type"] == "communitySpotlight" or form["type"] == "toolsAndResources":
-        client = init_gspread_client()
-        if append_contact(client, [form["title"], None, None, None, None, None, form["description"]]):
-            return ('', 204)
-        else:
-            return {"error": "Failed registering user data"}, 500
-    elif form and 'title' in form and 'description' in form:
-        title = form["title"]
-        description = form["description"]
-        newTaskDescription = form["description"]
-
-        hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
-        # Updated Wrike Space info based off type of task. We default to drc_feedback folder if type is not present.
-        url = 'https://www.wrike.com/api/v4/folders/' + Config.DRC_FEEDBACK_FOLDER_ID + '/tasks'
-        followers = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID,
-                     Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
-        responsibles = [Config.CCB_HEAD_WRIKE_ID, Config.DAT_CORE_TECH_LEAD_WRIKE_ID, Config.MAP_CORE_TECH_LEAD_WRIKE_ID, Config.K_CORE_TECH_LEAD_WRIKE_ID,
-                        Config.SIM_CORE_TECH_LEAD_WRIKE_ID, Config.MODERATOR_WRIKE_ID]
-        customStatus = Config.DRC_WRIKE_CUSTOM_STATUS_ID
-        taskType = ""
-        templateTaskId = ""
-        templateSubTaskIds = []
-        if form and 'type' in form:
-            taskType = form["type"]
-        if taskType == "news":
-            url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
-            followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-            responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-            customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
-            templateTaskId = Config.NEWS_TEMPLATE_TASK_ID
-        if taskType == "event":
-            url = 'https://www.wrike.com/api/v4/folders/' + Config.NEWS_AND_EVENTS_FOLDER_ID + '/tasks'
-            followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-            responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-            customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
-            templateTaskId = Config.EVENT_TEMPLATE_TASK_ID
-        elif taskType == "toolsAndResources":
-            url = 'https://www.wrike.com/api/v4/folders/' + Config.TOOLS_AND_RESOURCES_FOLDER_ID + '/tasks'
-            followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-            responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-            customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
-            templateTaskId = Config.TOOLS_AND_RESOURCES_TEMPLATE_TASK_ID
-        elif taskType == "communitySpotlight":
-            url = 'https://www.wrike.com/api/v4/folders/' + Config.COMMUNITY_SPOTLIGHT_FOLDER_ID + '/tasks'
-            followers = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-            responsibles = [Config.COMMS_LEAD_1_WRIKE_ID, Config.COMMS_LEAD_2_WRIKE_ID, Config.COMMS_LEAD_3_WRIKE_ID]
-            customStatus = Config.COMMS_WRIKE_CUSTOM_STATUS_ID
-            templateTaskId = Config.COMMUNITY_SPOTLIGHT_TEMPLATE_TASK_ID
-        elif taskType == "research":
-            followers.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
-            responsibles.extend([Config.SUE_WRIKE_ID, Config.JYL_WRIKE_ID])
-
-        if templateTaskId != "":
-            templateUrl = 'https://www.wrike.com/api/v4/tasks/' + templateTaskId
-            templateResp = requests.get(
-                url=templateUrl,
-                headers=hed
-            )
-            if 'data' in templateResp.json() and templateResp.json()["data"] != []:
-                newTaskDescription = templateResp.json()["data"][0]["description"] + description
-                templateSubTaskIds = templateResp.json()["data"][0]["subTaskIds"]
-
-        data = {
-            "title": title,
-            "description": newTaskDescription,
-            "customStatus": customStatus,
-            "followers": followers,
-            "responsibles": responsibles,
-            "follow": False,
-            "dates": {"type": "Backlog"}
-        }
-
-        resp = requests.post(
-            url=url,
-            json=data,
-            headers=hed
-        )
-
-        # add the file as an attachment to the newly created ticket
-        files = request.files
-        if 'data' in resp.json() and resp.json()["data"] != []:
-            new_task_id = resp.json()["data"][0]["id"]
-            if files and 'attachment' in files:
-                attachment = files['attachment']
-                file_data = attachment.read()
-                file_name = attachment.filename
-                content_type = attachment.content_type
-                headers = {
-                    'Authorization': 'Bearer ' + Config.WRIKE_TOKEN,
-                    'X-File-Name': file_name,
-                    'content-type': content_type,
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-                attachment_url = "https://www.wrike.com/api/v4/tasks/" + new_task_id + "/attachments"
-
-                try:
-                    requests.post(
-                        url=attachment_url,
-                        data=file_data,
-                        headers=headers
-                    )
-                except Exception as e:
-                    print(e)
-
-            # create copies of all the templates subtasks and add them to the newly created ticket
-            for subTaskId in templateSubTaskIds:
-                subTaskTemplateUrl = 'https://www.wrike.com/api/v4/tasks/' + subTaskId
-                subTaskTemplateResp = requests.get(
-                    url=subTaskTemplateUrl,
-                    headers=hed
-                )
-                if 'data' in subTaskTemplateResp.json() and subTaskTemplateResp.json()["data"] != []:
-                    subTaskData = {
-                        "title": subTaskTemplateResp.json()["data"][0]["title"],
-                        "description": subTaskTemplateResp.json()["data"][0]["description"],
-                        "customStatus": subTaskTemplateResp.json()["data"][0]["customStatusId"],
-                        "followers": subTaskTemplateResp.json()["data"][0]["followerIds"],
-                        "responsibles": subTaskTemplateResp.json()["data"][0]["responsibleIds"],
-                        "follow": False,
-                        "superTasks": [new_task_id],
-                        "dates": {"type": "Backlog"}
-                    }
-                    requests.post(
-                        url=url,
-                        json=subTaskData,
-                        headers=hed
-                    )
-
-        if resp.status_code == 200:
-            if 'userEmail' in form and form['userEmail']:
-                # default to bug form if task type not specified
-                name = form.get("name", form['userEmail'])
-                subject = 'SPARC Reported Error/Issue Submission'
-                body = issue_reporting_email.substitute({'message': description})
-                if taskType == "feedback":
-                    subject = 'SPARC Feedback Submission'
-                    body = feedback_email.substitute({'message': description})
-                elif taskType == "interest":
-                    subject = 'SPARC Service Interest Submission'
-                    body = creation_request_confirmation_email.substitute({'name': name})
-                elif taskType == "general":
-                    subject = 'SPARC Question or Inquiry Submission'
-                    body = general_interest_email.substitute({'message': description})
-                elif taskType == "research":
-                    subject = 'SPARC Research Submission'
-                    body = creation_request_confirmation_email.substitute({'name': name})
-                elif taskType == "news":
-                    subject = 'SPARC News Submission'
-                    body = creation_request_confirmation_email.substitute({'name': name})
-                elif taskType == "event":
-                    subject = 'SPARC Event Submission'
-                    body = creation_request_confirmation_email.substitute({'name': name})
-                elif taskType == "toolsAndResources":
-                    subject = 'SPARC Tool/Resource Submission'
-                    body = creation_request_confirmation_email.substitute({'name': name})
-                elif taskType == "communitySpotlight":
-                    subject = 'SPARC Story Submission'
-                    body = creation_request_confirmation_email.substitute({'name': name})
-                userEmail = form['userEmail']
-                if len(userEmail) > 0:
-                    email_sender.sendgrid_email(Config.SES_SENDER, form['userEmail'], subject, body)
-
-            return jsonify(
-                title=title,
-                description=description,
-                task_id=resp.json()["data"][0]["id"]
-            )
-        else:
-            return resp.json()
+    has_attachment = False
+    image_id = uuid.uuid4()
+    response = None
+    if 'attachment' in request.files:
+        has_attachment = True
+        file = request.files["attachment"]
+        drive_client = init_drive_client()
+        response = upload_file(drive_client, file, str(image_id) + get_extension(file.filename))
+    client = init_gspread_client()
+    description = form["description"]
+    if has_attachment and response and response['webViewLink']:
+        description += "\n\nAttachment: " + response['webViewLink']
+    if append_contact(client, [form["title"], None, None, None, None, None, description]):
+        return ('', 204)
     else:
-        abort(400, description="Missing title or description")
+        return {"error": "Failed registering user data"}, 500
 
 
 @app.route("/hubspot_contact_properties/<email>", methods=["GET"])

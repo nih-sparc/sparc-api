@@ -100,6 +100,7 @@ class Config(object):
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")
     GOOGLE_API_SPREADS_SCOPE = os.environ.get("GOOGLE_API_SPREADS_SCOPE", "https://www.googleapis.com/auth/spreadsheets")
+    GOOGLE_API_DRIVE_SCOPE = os.environ.get("GOOGLE_API_DRIVE_SCOPE", "https://www.googleapis.com/auth/drive")
     GOOGLE_API_GA_KEY_PATH = os.environ.get("GOOGLE_API_GA_KEY_PATH")
     GOOGLE_API_GA_VIEW_ID = os.environ.get("GOOGLE_API_GA_VIEW_ID", "198433812")
     ALGOLIA_APP_ID = os.environ.get("ALGOLIA_APP_ID")

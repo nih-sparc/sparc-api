@@ -5,10 +5,14 @@ from datetime import datetime
 from app.config import Config
 from dateutil.relativedelta import relativedelta
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 from oauth2client.service_account import ServiceAccountCredentials
+
+import io
 
 SCOPE = Config.GOOGLE_API_GA_SCOPE
 SPREADS_SCOPE = Config.GOOGLE_API_SPREADS_SCOPE
+DRIVE_SCOPE = Config.GOOGLE_API_DRIVE_SCOPE
 KEY_PATH = Config.GOOGLE_API_GA_KEY_PATH
 VIEW_ID = Config.GOOGLE_API_GA_VIEW_ID
 
@@ -87,7 +91,45 @@ def append_contact(client, row):
             valueInputOption='USER_ENTERED',
             insertDataOption='INSERT_ROWS',
             body={
-                "values": [row]
+                'values': [row]
             }
         ).execute()
     return True
+
+def init_drive_client():
+    try:
+        if KEY_PATH:
+            credentials = ServiceAccountCredentials.from_json_keyfile_name(
+                KEY_PATH,
+                DRIVE_SCOPE
+            )
+            drive = build('drive', 'v3', credentials=credentials)
+            return drive
+        else:
+            logging.info('No key path set for Google JSON credential file.')
+            return None
+
+    except JSONDecodeError as e:
+        logging.error('An error occurred while instantiating the DRIVE client.', str(e))
+        return None
+    except TypeError as e:
+        logging.error('An error occurred while instantiating the DRIVE client.', str(e))
+        return None
+    
+def upload_file(client, file, filename):
+    if file.filename == '':
+        return False
+    file_stream = io.BytesIO(file.read())
+    mime_type = file.mimetype or 'application/octet-stream'
+    file_metadata = {
+        'name': filename or file.filename,
+        'parents': ['1WO7wZdamhZYse_MjPaHzqZQ7FMlHsf15']
+    }
+    media = MediaIoBaseUpload(file_stream, mimetype=mime_type, resumable=True)
+    resp = client.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields='webViewLink',
+        supportsAllDrives=True
+    ).execute()
+    return resp

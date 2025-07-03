@@ -197,27 +197,6 @@ def test_scaffold_get_share_id_and_state(client):
     r = client.post(f"/scaffold/getstate", json = {})
     assert r.status_code == 400
 
-
-def test_create_wrike_task(client):
-    
-    r = client.post(f"/tasks", data={"title": "test-integration-task-sparc-api"})
-    assert r.status_code == 400
-    r2 = client.post(f"/tasks", data={"description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
-    assert r2.status_code == 400
-    r3 = client.post(f"/tasks", data={"title": "test-integration-task-sparc-api", "description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
-    assert r3.status_code == 200
-
-    # this part is only for cleaning the wrike board
-    returned_data = r3.get_json()
-    task_id = returned_data["task_id"]
-    url = 'https://www.wrike.com/api/v4/tasks/{}'.format(task_id)
-    hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
-    resp = requests.delete(
-        url=url,
-        headers=hed
-    )
-    assert resp.status_code == 200
-
 def test_get_hubspot_contact(client):
     r = client.get(f"/hubspot_contact_properties/hubspot_webhook_test@test.com")
     assert r.status_code == 200

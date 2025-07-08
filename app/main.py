@@ -1724,7 +1724,7 @@ def submit_data_inquiry():
     return jsonify(response), 201
 
 @app.route("/tasks", methods=["POST"])
-def create_wrike_task():
+def report_form_submission():
     form = request.form
     if "captcha_token" in form:
         try:
@@ -1757,9 +1757,30 @@ def create_wrike_task():
     if has_attachment and response and response['webViewLink']:
         description += "\n\nAttachment: " + response['webViewLink']
     if append_contact(client, [form["title"], None, None, None, None, None, description]):
+        # Send a confirmation email to the user
+        if 'userEmail' in form and form['userEmail']:
+            user_email = form['userEmail']
+            name = form["firstName"]
+            subject = 'SPARC Submission'
+            body = creation_request_confirmation_email.substitute({
+                'name': name,
+                'message': description
+            })
+            task_type = ''
+            if form and 'type' in form:
+                task_type = form["type"]
+            if task_type == "news":
+                subject = 'SPARC News Submission'
+            elif task_type == "event":
+                subject = 'SPARC Event Submission'
+            elif task_type == "toolsAndResources":
+                subject = 'SPARC Tool/Resource Submission'
+            elif task_type == "communitySpotlight":
+                subject = 'SPARC Story Submission'
+            if len(user_email) > 0 and subject and body:
+                email_sender.sendgrid_email(Config.SES_SENDER, user_email, subject, body.replace('\n', '<br>'))
         return ('', 204)
-    else:
-        return {"error": "Failed registering user data"}, 500
+    return {"error": "Failed registering user data"}, 500
 
 
 @app.route("/hubspot_contact_properties/<email>", methods=["GET"])

@@ -1760,7 +1760,7 @@ def report_form_submission():
         # Send a confirmation email to the user
         if 'userEmail' in form and form['userEmail']:
             user_email = form['userEmail']
-            name = form["firstName"]
+            name = form["firstName"] or user_email
             subject = 'SPARC Submission'
             body = creation_request_confirmation_email.substitute({
                 'name': name,

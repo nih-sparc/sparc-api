@@ -15,6 +15,8 @@ SPREADS_SCOPE = Config.GOOGLE_API_SPREADS_SCOPE
 DRIVE_SCOPE = Config.GOOGLE_API_DRIVE_SCOPE
 KEY_PATH = Config.GOOGLE_API_GA_KEY_PATH
 VIEW_ID = Config.GOOGLE_API_GA_VIEW_ID
+EVENTS_SPREADS_ID = Config.EVENTS_SPREADS_ID
+EVENTS_ATTACHMENTS_FOLDER = Config.EVENTS_ATTACHMENTS_FOLDER
 
 
 def init_ga_reporting():
@@ -86,7 +88,7 @@ def init_gspread_client():
 def append_contact(client, row):
     if client:
         client.spreadsheets().values().append(
-            spreadsheetId='1SmgquFqUZLsBty5CJBNkRGCmXj_OQiY-dT6WN9L684c',
+            spreadsheetId=EVENTS_SPREADS_ID,
             range='Events',
             valueInputOption='USER_ENTERED',
             insertDataOption='INSERT_ROWS',
@@ -123,7 +125,7 @@ def upload_file(client, file, filename):
     mime_type = file.mimetype or 'application/octet-stream'
     file_metadata = {
         'name': filename or file.filename,
-        'parents': ['1WO7wZdamhZYse_MjPaHzqZQ7FMlHsf15']
+        'parents': [EVENTS_ATTACHMENTS_FOLDER]
     }
     media = MediaIoBaseUpload(file_stream, mimetype=mime_type, resumable=True)
     resp = client.files().create(

@@ -9,6 +9,7 @@ BIOLUCIDA_3D = 'biolucida-3d'
 COMMON_IMAGES = 'common-images'
 CONTEXT_FILE = 'abi-context-file'
 CSV = 'csv'
+FLATMAP_FILE = 'abi-flatmap-file'
 NAME = 'name'
 ORGANS = 'organs'
 PLOT_FILE = 'abi-plot'
@@ -18,6 +19,7 @@ SCAFFOLD_FILE = 'abi-scaffold-metadata-file'
 THUMBNAIL_IMAGE = 'abi-thumbnail'
 SCAFFOLD_VIEW_FILE = 'abi-scaffold-view-file'
 SIMULATION_FILE = 'abi-simulation-file'
+SIMULATION_OMEX_FILE = 'abi-simulation-omex-file'
 FE_MODEL = 'fe-model'
 VIDEO = 'video'
 VERSION = 'version'
@@ -25,17 +27,20 @@ README = 'readme'
 TITLE = 'title'
 
 
-PASS_THROUGH_KEYS = [ADDITIONAL_LINKS, BIOLUCIDA_2D, BIOLUCIDA_3D, COMMON_IMAGES, CONTEXT_FILE, CSV, NAME, ORGANS, PLOT_FILE, README,
-                     SEGMENTATION_FILES, SCAFFOLD_FILE, THUMBNAIL_IMAGE, SCAFFOLD_VIEW_FILE, SIMULATION_FILE, TITLE, VERSION, VIDEO]
+PASS_THROUGH_KEYS = [ADDITIONAL_LINKS, BIOLUCIDA_2D, BIOLUCIDA_3D, COMMON_IMAGES, CONTEXT_FILE, CSV, FLATMAP_FILE, NAME, ORGANS, PLOT_FILE, README,
+                     SEGMENTATION_FILES, SCAFFOLD_FILE, THUMBNAIL_IMAGE, SCAFFOLD_VIEW_FILE, SIMULATION_FILE, SIMULATION_OMEX_FILE,
+                     TITLE, VERSION, VIDEO]
 
 MAPPED_MIME_TYPES = {
     'text/csv': CSV,
     'application/vnd.mbfbioscience.metadata+xml': SEGMENTATION_FILES,
     'application/vnd.mbfbioscience.neurolucida+xml': SEGMENTATION_FILES,
     'application/x.vnd.abi.context-information+json': CONTEXT_FILE,
+    'application/x.vnd.abi.flatmap+json': FLATMAP_FILE,
     'application/x.vnd.abi.scaffold.meta+json': SCAFFOLD_FILE,
     'application/x.vnd.abi.scaffold.view+json': SCAFFOLD_VIEW_FILE,
     'application/x.vnd.abi.simulation+json': SIMULATION_FILE,
+    'application/x.vnd.abi.simulation+x.vnd.abi.omex': SIMULATION_OMEX_FILE,
     'image/x.vnd.abi.thumbnail+jpeg': THUMBNAIL_IMAGE,
     'image/x.vnd.abi.thumbnail+png': THUMBNAIL_IMAGE,
     'text/vnd.abi.plot+thumbnail': THUMBNAIL_IMAGE,  # <-- Old incorrect annotation, needs to be corrected.

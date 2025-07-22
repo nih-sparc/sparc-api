@@ -1779,7 +1779,7 @@ def report_form_submission():
                 subject = 'SPARC Story Submission'
             if len(user_email) > 0 and subject and body:
                 email_sender.sendgrid_email(Config.SES_SENDER, user_email, subject, body.replace('\n', '<br>'))
-        return ('', 204)
+        return {'attachment_filename': image_id if has_attachment else ''}, 200
     return {"error": "Failed registering user data"}, 500
 
 

@@ -14,6 +14,7 @@ Flask-Caching==2.3.0
 Flask-Cors==3.0.8
 flask-marshmallow==0.10.1
 google-api-python-client==2.52.0
+gspread==6.2.1
 gunicorn==20.0.4
 httpx>=0.27.0
 hubspot-api-client==9.0.0

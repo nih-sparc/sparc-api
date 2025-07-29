@@ -1,23 +1,62 @@
 import pytest
 from app import app
 from app.config import Config
+import io
 import requests
 import random
 import string
+import time
 import hmac
 import hashlib
 import base64
 import time
 import json
+from oauth2client.service_account import ServiceAccountCredentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
-from requests.auth import HTTPBasicAuth
+SPREADS_SCOPE = Config.GOOGLE_API_SPREADS_SCOPE
+DRIVE_SCOPE = Config.GOOGLE_API_DRIVE_SCOPE
+KEY_PATH = Config.GOOGLE_API_GA_KEY_PATH
+EVENTS_SPREADS_ID = Config.EVENTS_SPREADS_ID
+EVENTS_ATTACHMENTS_FOLDER = Config.EVENTS_ATTACHMENTS_FOLDER
 
+def random_str(n=8):
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
+
+def get_events_sheet_id(svc):
+    """Lookup the sheetId for the 'Events' tab."""
+    meta = svc.spreadsheets().get(
+        spreadsheetId=EVENTS_SPREADS_ID,
+        fields='sheets(properties(sheetId,title))'
+    ).execute()
+    for s in meta['sheets']:
+        props = s['properties']
+        if props['title'] == 'Events':
+            return props['sheetId']
+    raise ValueError("Events sheet not found")
 
 @pytest.fixture
 def client():
     # Spin up test flask app
     app.config['TESTING'] = True
     return app.test_client()
+
+@pytest.fixture
+def sheets_service():
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+        KEY_PATH,
+        SPREADS_SCOPE
+    )
+    return build('sheets', 'v4', credentials=creds)
+
+@pytest.fixture
+def drive_service():
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+        KEY_PATH,
+        DRIVE_SCOPE
+    )
+    return build('drive', 'v3', credentials=creds)
 
 
 def test_direct_download_url_small_file(client):
@@ -197,30 +236,87 @@ def test_scaffold_get_share_id_and_state(client):
     r = client.post(f"/scaffold/getstate", json = {})
     assert r.status_code == 400
 
-
-def test_create_wrike_task(client):
-    
-    r = client.post(f"/tasks", data={"title": "test-integration-task-sparc-api"})
-    assert r.status_code == 400
-    r2 = client.post(f"/tasks", data={"description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
-    assert r2.status_code == 400
-    r3 = client.post(f"/tasks", data={"title": "test-integration-task-sparc-api", "description": "test-integration-task-sparc-api<br />Here is a small text but not lorem ipsum"})
-    assert r3.status_code == 200
-
-    # this part is only for cleaning the wrike board
-    returned_data = r3.get_json()
-    task_id = returned_data["task_id"]
-    url = 'https://www.wrike.com/api/v4/tasks/{}'.format(task_id)
-    hed = {'Authorization': 'Bearer ' + Config.WRIKE_TOKEN}
-    resp = requests.delete(
-        url=url,
-        headers=hed
-    )
-    assert resp.status_code == 200
-
 def test_get_hubspot_contact(client):
     r = client.get(f"/hubspot_contact_properties/hubspot_webhook_test@test.com")
     assert r.status_code == 200
+
+def test_tasks_appends(client, sheets_service, drive_service):
+    # 1) Prepare unique test data
+    title = f"test-{random_str()}"
+    description = f"desc-{random_str(12)}"
+    filename = f"{title}.txt"
+    file_contents = b"Test file content for Drive upload"
+    fake_file = (io.BytesIO(file_contents), filename)
+
+    # 2) Call /tasks (captcha bypassed in TESTING mode)
+    resp = client.post('/tasks', data={
+        'title': title,
+        'description': description,
+        'attachment': fake_file
+    })
+    assert resp.status_code == 200
+    json_resp = resp.get_json()
+    uploaded_filename = json_resp['attachment_filename'] + '.txt' if json_resp['attachment_filename'] else ''
+
+    # 3) Read back the Events sheet and locate the test row
+    get_resp = sheets_service.spreadsheets().values().get(
+        spreadsheetId=EVENTS_SPREADS_ID,
+        range='Events'
+    ).execute()
+    rows = get_resp.get('values', [])
+    assert rows, "No rows found in Events sheet"
+
+    # Find the 1-based index of the row with our test title
+    row_index = next(
+        (i for i, row in enumerate(rows, start=1) if row[0] == title),
+        None
+    )
+    assert row_index is not None, f"Test row with title '{title}' not found"
+
+    # 4) Delete exactly that row
+    sheet_id = get_events_sheet_id(sheets_service)
+    delete_request = {
+        "requests": [
+            {
+                "deleteDimension": {
+                    "range": {
+                        "sheetId": sheet_id,
+                        "dimension": "ROWS",
+                        "startIndex": row_index - 1,  # zero‑based
+                        "endIndex": row_index         # non‑inclusive
+                    }
+                }
+            }
+        ]
+    }
+    sheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=EVENTS_SPREADS_ID,
+        body=delete_request
+    ).execute()
+
+    # 5) Locate and delete the uploaded file by filename
+    if uploaded_filename:
+        query = f"'{EVENTS_ATTACHMENTS_FOLDER}' in parents and name='{uploaded_filename}' and trashed = false"
+        files_resp = drive_service.files().list(
+            q=query,
+            fields="files(id, name, driveId)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
+
+        files = files_resp.get('files', [])
+        matched_files = [f for f in files if f['name'] == uploaded_filename]
+
+        assert matched_files, f"No file named '{uploaded_filename}' found in Drive folder"
+        for f in matched_files:
+            try:
+                drive_service.files().update(
+                    fileId=f['id'],
+                    supportsAllDrives=True,
+                    body={"trashed": True}
+                ).execute()
+            except HttpError as e:
+                assert False, f"Failed to delete uploaded file: {e}"
 
 def test_subscribe_to_newsletter(client):
     http_method = "POST"

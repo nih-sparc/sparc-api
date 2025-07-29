@@ -99,8 +99,12 @@ class Config(object):
     SERVICES_EMAIL = os.environ.get("SERVICES_EMAIL", "services@sparc.science")
     # Metrics
     GOOGLE_API_GA_SCOPE = os.environ.get("GOOGLE_API_GA_SCOPE", "https://www.googleapis.com/auth/analytics.readonly")
+    GOOGLE_API_SPREADS_SCOPE = os.environ.get("GOOGLE_API_SPREADS_SCOPE", "https://www.googleapis.com/auth/spreadsheets")
+    GOOGLE_API_DRIVE_SCOPE = os.environ.get("GOOGLE_API_DRIVE_SCOPE", "https://www.googleapis.com/auth/drive")
     GOOGLE_API_GA_KEY_PATH = os.environ.get("GOOGLE_API_GA_KEY_PATH")
     GOOGLE_API_GA_VIEW_ID = os.environ.get("GOOGLE_API_GA_VIEW_ID", "198433812")
+    EVENTS_SPREADS_ID = os.environ.get("EVENTS_SPREADS_ID", "1SmgquFqUZLsBty5CJBNkRGCmXj_OQiY-dT6WN9L684c")
+    EVENTS_ATTACHMENTS_FOLDER = os.environ.get("EVENTS_ATTACHMENTS_FOLDER", "1WO7wZdamhZYse_MjPaHzqZQ7FMlHsf15")
     ALGOLIA_APP_ID = os.environ.get("ALGOLIA_APP_ID")
     ALGOLIA_API_KEY = os.environ.get("ALGOLIA_API_KEY")
     ALGOLIA_INDEX = os.environ.get("ALGOLIA_INDEX", "k-core_dev")

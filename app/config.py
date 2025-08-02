@@ -74,8 +74,6 @@ class Config(object):
     SCI_CRUNCH_SCIGRAPH_HOST = os.environ.get("SCI_CRUNCH_SCIGRAPH_HOST", "https://scicrunch.org/api/1/sparc-scigraph")
     SCI_CRUNCH_CITATIONS_HOST = os.environ.get("SCI_CRUNCH_CITATIONS_HOST", "https://api.scicrunch.io/elastic/v2/SPARC_Citations_pr")
     SENDGRID_API_KEY =  os.environ.get("SENDGRID_API_KEY")
-    SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP = os.environ.get("SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP", '')
-    SEND_MONTHLY_STATS = os.environ.get("SEND_MONTHLY_STATS", "FALSE")
     README_API_KEY =  os.environ.get("README_API_KEY")
     HUBSPOT_API_TOKEN = os.environ.get("HUBSPOT_API_TOKEN")
     HUBSPOT_CLIENT_SECRET = os.environ.get("HUBSPOT_CLIENT_SECRET")

@@ -3,8 +3,8 @@ from string import Template
 import boto3
 import sendgrid
 from app.config import Config
-from sendgrid.helpers.mail import Asm, Cc, Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, \
-    FileContent, GroupId, GroupsToDisplay
+from sendgrid.helpers.mail import Cc, Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, \
+    FileContent
 from static.sparc_logo_base64 import sparc_logo_base64
 
 subject = "Message from SPARC Portal"
@@ -160,9 +160,6 @@ class EmailSender(object):
         self.charset = "UTF-8"
         self.ses_sender = Config.SES_SENDER
         self.ses_arn = Config.SES_ARN
-        self.unsubscribe_group = 0  # Note that this must be an integer for use in "sendgrid.GoupId"
-        if Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP != '':
-            self.unsubscribe_group = int(Config.SENDGRID_MONTHLY_STATS_UNSUBSCRIBE_GROUP)
 
     def send_email(self, name, email_address, message):
         body = name + "\n" + email_address + "\n" + message
@@ -210,19 +207,6 @@ class EmailSender(object):
           else:
               mail.add_cc(Cc(cc))
 
-        response = sg_client.send(mail)
-        logging.info(f"Sending a '{subject}' mail using SendGrid")
-        logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")
-        return response
-
-    def sendgrid_email_with_unsubscribe_group(self, fromm, to, subject, body):
-        mail = Mail(
-            Email(fromm),
-            To(to),
-            subject,
-            Content("text/html", body)
-        )
-        mail.asm = Asm(GroupId(self.unsubscribe_group), GroupsToDisplay([self.unsubscribe_group]))
         response = sg_client.send(mail)
         logging.info(f"Sending a '{subject}' mail using SendGrid")
         logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")

@@ -5,7 +5,6 @@ from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count
 from scripts.update_contentful_entries import update_all_events_sort_order, update_event_sort_order
 from app.metrics.algolia import get_dataset_count, init_algolia_client, get_all_dataset_ids, get_associated_datasets
 from app.metrics.ga import init_ga_reporting, get_ga_1year_sessions, init_gspread_client, append_contact, upload_file, init_drive_client
-from scripts.monthly_stats import MonthlyStats
 from scripts.update_featured_dataset_id import set_featured_dataset_id, get_featured_dataset_id_table_state
 from scripts.update_protocol_metrics import update_protocol_metrics, get_protocol_metrics_table_state
 from app.osparc.services import OSparcServices
@@ -202,17 +201,6 @@ if not protocol_metrics_scheduler.running:
 if not featured_dataset_id_scheduler.running:
     logging.info('Starting scheduler for featured dataset id acquisition')
     featured_dataset_id_scheduler.start()
-
-if Config.DEPLOY_ENV == 'production':
-    monthly_stats_email_scheduler = BackgroundScheduler()
-    ms = MonthlyStats()
-    # Check when app starts in case the api server is down on the first
-    # of the month
-    ms.monthly_stats_required_check()
-    monthly_stats_email_scheduler.start()
-    # Check on the first of each month at 2am
-    monthly_stats_email_scheduler.add_job(ms.monthly_stats_required_check, 'cron',
-                                          year='*', month='*', day='1', hour='2', minute=0, second=0)
 
 # Run monthly annotation states clean up
 if annotationtable:

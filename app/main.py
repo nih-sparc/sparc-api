@@ -46,7 +46,7 @@ from app.scicrunch_requests import create_doi_query, create_filter_request, crea
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id, \
     create_multiple_mimetype_query, create_citations_query
-from scripts.email_sender import EmailSender, feedback_email, general_interest_email, issue_reporting_email, creation_request_confirmation_email, anbc_form_creation_request_confirmation_email, service_form_submission_request_confirmation_email
+from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email, anbc_form_creation_request_confirmation_email, service_form_submission_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
 
@@ -337,7 +337,7 @@ def contact():
     message = contact_request["message"]
 
     email_sender.send_email(name, email, message)
-    email_sender.sendgrid_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({'message': message}))
+    email_sender.mailersend_email(Config.SES_SENDER, email, 'Feedback submission', feedback_email.substitute({'message': message}))
 
     return json.dumps({"status": "sent"})
 
@@ -1487,7 +1487,7 @@ def create_issue():
                 email_body = feedback_email.substitute({'message': issue_body})
             html_body = markdown.markdown(email_body)
             try:
-                email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body)
+                email_sender.mailersend_email(Config.SES_SENDER, email, subject, html_body)
                 response_message += 'Confirmation email sent to user successful. '
             except Exception as e:
                 response_message += 'Confirmation email sent to user unsuccessful. '
@@ -1689,7 +1689,7 @@ def submit_data_inquiry():
             email_body = anbc_form_creation_request_confirmation_email.substitute({'name': firstname, 'message': body}) if is_anbc_form == 'true' else creation_request_confirmation_email.substitute({'name': firstname, 'message': body})
         html_body = markdown.markdown(email_body)
         try:
-            email_sender.sendgrid_email(Config.SES_SENDER, email, subject, html_body, Config.SERVICES_EMAIL)
+            email_sender.mailersend_email(Config.SES_SENDER, email, subject, html_body)
             response['message'] = response.get('message', '') + 'Confirmation email sent to user successfully. '
             if partial_success:
                 partial_success['warning'] = partial_success.get('warning', '') + 'Confirmation email sent to user successfully. '
@@ -1766,7 +1766,7 @@ def report_form_submission():
             elif task_type == "communitySpotlight":
                 subject = 'SPARC Story Submission'
             if len(user_email) > 0 and subject and body:
-                email_sender.sendgrid_email(Config.SES_SENDER, user_email, subject, body.replace('\n', '<br>'))
+                email_sender.mailersend_email(Config.SES_SENDER, user_email, subject, body.replace('\n', '<br>'))
         return {'attachment_filename': image_id if has_attachment else ''}, 200
     return {"error": "Failed registering user data"}, 500
 
@@ -2333,10 +2333,13 @@ def contact_support():
         return jsonify({"error": "Missing required fields"}), 400
 
     if email:
-        email_sender.sendgrid_email(Config.SES_SENDER,
+        try:
+            email_sender.mailersend_email(Config.SES_SENDER,
                                     email,
                                     subject,
                                     feedback_email.substitute({'message': message}),
                                     Config.SERVICES_EMAIL)
+        except Exception as e:
+              return jsonify({"message": "Confirmation email sent to user unsuccessful."}), 500
 
     return jsonify({"message": "Message received successfully."}), 200

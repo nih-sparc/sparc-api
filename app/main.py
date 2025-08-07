@@ -679,6 +679,46 @@ def get_dataset_info_pennsieve_identifier():
     return reform_dataset_results(dataset_search(query))
 
 
+def get_is_derived_from_with_identifier_or_path(objects, identifier, matchingPath):
+    source_list = []
+    for item in objects:
+        if ((identifier and item.get("identifier") == identifier) or \
+            (matchingPath and item.get('dataset', {}).get('path', '') == matchingPath)):
+            isDerivedFromPaths = item.get("datacite", {}).get("isDerivedFrom", {}).get('path')
+            if isDerivedFromPaths is not None:
+                for path in isDerivedFromPaths:
+                    source_objects = get_is_derived_from_with_identifier_or_path(objects, None, path)
+                    if len(source_objects) > 0:
+                        source_list.extend(source_objects)
+                    else:
+                        source_list.append(item)
+    return source_list
+
+
+# Trace original source all the way till it is found
+# or reach an external dataset
+def get_original_source_in_dataset(dataset_info, identifier):
+    hits = dataset_info.get("hits", {}).get('hits', [])
+    #there should only be one result
+    if len(hits) == 1:
+        objects = hits[0].get("_source", {}).get("objects")
+        if objects is not None:
+            return get_is_derived_from_with_identifier_or_path(objects, identifier, None)
+    return []
+
+
+def get_original_source(identifier):
+    query = create_identifier_query(identifier)
+    dataset_info = dataset_search(query)
+    return get_original_source_in_dataset(dataset_info, identifier)
+
+
+@app.route("/file_info/get_original_source")
+def get_file_info_original_source():
+    identifier = request.args.get('identifier')
+    return {'result': get_original_source(identifier)}
+
+
 @app.route("/segmentation_info/")
 def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     query_args = request.args

@@ -98,8 +98,8 @@ pytest
 **Used on sparc-api for:** Converting terms between forms and finding similar terms \
 **Critical:** not sure
 
-#### SendGrid
-**Source:** https://sendgrid.com/ \
+#### MailerSend
+**Source:** https://mailersend.com/ \
 **Summary:** Sends emails \
 **Used on sparc-api for:** Sending an email to a user after they give feedback \
 **Critical:** no

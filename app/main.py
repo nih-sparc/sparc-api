@@ -679,7 +679,7 @@ def get_dataset_info_pennsieve_identifier():
     return reform_dataset_results(dataset_search(query))
 
 
-def get_is_derived_from_with_identifier_or_path(objects, identifier, matchingPath):
+def get_is_derived_from_with_identifier_or_path(discoverId, objects, identifier, matchingPath):
     source_list = []
     for item in objects:
         if ((identifier and item.get("identifier") == identifier) or \
@@ -687,36 +687,56 @@ def get_is_derived_from_with_identifier_or_path(objects, identifier, matchingPat
             isDerivedFromPaths = item.get("datacite", {}).get("isDerivedFrom", {}).get('path')
             if isDerivedFromPaths is not None:
                 for path in isDerivedFromPaths:
-                    source_objects = get_is_derived_from_with_identifier_or_path(objects, None, path)
+                    source_objects = get_is_derived_from_with_identifier_or_path(discoverId, objects, None, path)
                     if len(source_objects) > 0:
                         source_list.extend(source_objects)
                     else:
-                        source_list.append(item)
+                        data = {
+                            'discoverId': discoverId,
+                            'name': item['name'],
+                            'path': item['dataset']['path']
+                        }
+                        source_list.append(data)
+            #else externa_source:
+            #    source_list.extend(get_original_source(None, "someDOI", None, "a path"))
+
     return source_list
 
 
 # Trace original source all the way till it is found
 # or reach an external dataset
-def get_original_source_in_dataset(dataset_info, identifier):
-    hits = dataset_info.get("hits", {}).get('hits', [])
+def get_original_source_in_dataset(dataset_info, identifier, matchingPath):
+    hits = dataset_info.get('hits', {}).get('hits', [])
     #there should only be one result
     if len(hits) == 1:
-        objects = hits[0].get("_source", {}).get("objects")
-        if objects is not None:
-            return get_is_derived_from_with_identifier_or_path(objects, identifier, None)
+        objects = hits[0].get('_source', {}).get('objects')
+        discoverId = hits[0].get('_source', {}).get('pennsieve', {}).get('identifier')
+        if objects is not None and discoverId is not None:
+            return get_is_derived_from_with_identifier_or_path(discoverId, objects, identifier, matchingPath)
     return []
 
 
-def get_original_source(identifier):
-    query = create_identifier_query(identifier)
+def get_original_source(identifier, doi, discoverId, path):
+    query = None
+    if identifier is not None:
+        query = create_identifier_query(identifier)
+    elif path is not None:
+        if doi is not None:
+            newDOI = doi.replace('DOI:', '')
+            query = create_multiple_doi_query([newDOI])
+        elif discoverId is not None:
+             query = create_multiple_discoverId_query([discoverId])
     dataset_info = dataset_search(query)
-    return get_original_source_in_dataset(dataset_info, identifier)
+    return get_original_source_in_dataset(dataset_info, identifier, path)
 
 
 @app.route("/file_info/get_original_source")
 def get_file_info_original_source():
+    discoverId = request.args.get('discoverId')
+    doi = request.args.get('doi')
     identifier = request.args.get('identifier')
-    return {'result': get_original_source(identifier)}
+    path = request.args.get('path')
+    return {'result': get_original_source(identifier, doi, discoverId, path)}
 
 
 @app.route("/segmentation_info/")

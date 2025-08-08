@@ -1,10 +1,8 @@
 import logging
 from string import Template
 import boto3
-import sendgrid
+from mailersend import emails
 from app.config import Config
-from sendgrid.helpers.mail import Cc, Content, Email, Mail, To, Attachment, FileName, FileType, Disposition, \
-    FileContent
 from static.sparc_logo_base64 import sparc_logo_base64
 
 subject = "Message from SPARC Portal"
@@ -16,7 +14,7 @@ ses_client = boto3.client(
     region_name=Config.AWS_REGION,
 )
 
-sg_client = sendgrid.SendGridAPIClient(api_key=Config.SENDGRID_API_KEY)
+mailer = emails.NewEmail(Config.MAILERSEND_API_KEY)
 
 feedback_email = Template('''\
 <b>Thank you for your feedback on the SPARC Portal!</b>
@@ -30,17 +28,6 @@ $message
 
 issue_reporting_email = Template('''\
 <b>Thank you for reporting the following error/issue on the SPARC Portal!</b>
-<br>
-<br>
-$message
-''')
-
-
-general_interest_email = Template('''\
-<b>Thank you for your submission to SPARC! We have received your question/inquiry and will be in contact as soon as possible.</b>
-<br>
-<br>
-Your message:
 <br>
 <br>
 $message
@@ -160,9 +147,10 @@ class EmailSender(object):
         self.charset = "UTF-8"
         self.ses_sender = Config.SES_SENDER
         self.ses_arn = Config.SES_ARN
+        self.from_name = "SPARC Portal"
 
     def send_email(self, name, email_address, message):
-        body = name + "\n" + email_address + "\n" + message
+        body = f"{name}\n{email_address}\n{message}"
         ses_client.send_email(
             Source=self.ses_sender,
             Destination={"ToAddresses": [self.ses_sender]},
@@ -173,41 +161,46 @@ class EmailSender(object):
             SourceArn=self.ses_arn,
         )
 
-    def sendgrid_email_with_attachment(self, fromm, to, subject, body, encoded_file, file_name, file_type):
-        mail = Mail(
-            Email(fromm),
-            To(to),
-            subject,
-            Content("text/html", body)
-        )
-        attachedFile = Attachment(
-            FileContent(encoded_file),
-            FileName(file_name),
-            FileType(file_type),
-            Disposition('attachment')
-        )
-        mail.attachment = attachedFile
+    def mailersend_email(self, from_email, to, subject, body, reply_to_email=None, reply_to_name=None):
+        data = {
+            "from": {"email": from_email, "name": self.from_name},
+            "to": [{"email": to}],
+            "subject": subject,
+            "html": body,
+        }
 
-        response = sg_client.send(mail)
-        logging.info(f"Sending a '{subject}' mail with attachment using SendGrid")
-        logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")
+        if reply_to_email:
+            data["reply_to"] = {
+                "email": reply_to_email,
+                "name": reply_to_name or reply_to_email
+            }
+
+        response = mailer.send(data)
+        if not response.status_code.startswith("2"):
+            raise Exception(f"Email failed to send.")
+        logging.info(f"Sending a '{subject}' mail using MailerSend")
+        logging.debug(f"Mail to {to} response: {response}")
         return response
 
-    def sendgrid_email(self, fromm, to, subject, body, cc=None):
-        mail = Mail(
-            Email(fromm),
-            To(to),
-            subject,
-            Content("text/html", body)
-        )
-        if cc:
-          if isinstance(cc, list):
-              for cc_addr in cc:
-                  mail.add_cc(Cc(cc_addr))
-          else:
-              mail.add_cc(Cc(cc))
+    def mailersend_email_with_attachment(self, from_email, to, subject, body, encoded_file, file_name, file_type):
+        attachment = {
+            "content": encoded_file,
+            "filename": file_name,
+            "type": file_type,
+            "disposition": "attachment"
+        }
 
-        response = sg_client.send(mail)
-        logging.info(f"Sending a '{subject}' mail using SendGrid")
-        logging.debug(f"Mail to {to} response\nStatus code: {response.status_code}\n{response.body}")
+        data = {
+            "from": {"email": from_email, "name": self.from_name},
+            "to": [{"email": to}],
+            "subject": subject,
+            "html": body,
+            "attachments": [attachment],
+        }
+
+        response = mailer.send(data)
+        if not response.status_code.startswith("2"):
+            raise Exception(f"Email failed to send.")
+        logging.info(f"Sending a '{subject}' mail with attachment using MailerSend")
+        logging.debug(f"Mail to {to} response: {response}")
         return response

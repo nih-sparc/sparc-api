@@ -679,24 +679,38 @@ def get_dataset_info_pennsieve_identifier():
     return reform_dataset_results(dataset_search(query))
 
 
-def get_is_derived_from_with_identifier_or_path(discoverId, objects, identifier, matchingPath):
+def get_is_derived_from_with_identifier_or_path(discoverId, version, objects, identifier, matchingPath):
     source_list = []
     for item in objects:
         if ((identifier and item.get("identifier") == identifier) or \
             (matchingPath and item.get('dataset', {}).get('path', '') == matchingPath)):
-            isDerivedFromPaths = item.get("datacite", {}).get("isDerivedFrom", {}).get('path')
+            datacite = item.get("datacite", {})
+            isDerivedFromPaths = datacite.get("isDerivedFrom", {}).get('path')
+            derivedFromAlsoInDatasets = datacite.get("derivedFromAlsoInDatasets", {}).get('list')
+            flatmapUUID = datacite.get("flatmap UUID")
+            if flatmapUUID:
+                source_list.append(
+                    {
+                        'flatmapUUID': flatmapUUID
+                    }
+                )
             if isDerivedFromPaths is not None:
                 for path in isDerivedFromPaths:
-                    source_objects = get_is_derived_from_with_identifier_or_path(discoverId, objects, None, path)
+                    source_objects = get_is_derived_from_with_identifier_or_path(discoverId, version, objects, None, path)
                     if len(source_objects) > 0:
                         source_list.extend(source_objects)
                     else:
                         data = {
                             'discoverId': discoverId,
                             'name': item['name'],
-                            'path': item['dataset']['path']
+                            'path': item['dataset']['path'],
+                            'version': version
                         }
                         source_list.append(data)
+            if derivedFromAlsoInDatasets is not None:
+                for external in derivedFromAlsoInDatasets:
+                    doi = external['dataset'].replace('https://doi.org/', '')
+                    source_list.extend(get_original_source(None, doi, None, external['path']))
             #else externa_source:
             #    source_list.extend(get_original_source(None, "someDOI", None, "a path"))
 
@@ -711,8 +725,9 @@ def get_original_source_in_dataset(dataset_info, identifier, matchingPath):
     if len(hits) == 1:
         objects = hits[0].get('_source', {}).get('objects')
         discoverId = hits[0].get('_source', {}).get('pennsieve', {}).get('identifier')
-        if objects is not None and discoverId is not None:
-            return get_is_derived_from_with_identifier_or_path(discoverId, objects, identifier, matchingPath)
+        version = hits[0].get('_source', {}).get('pennsieve', {}).get('version', {}).get('identifier')
+        if objects is not None and discoverId is not None and version is not None:
+            return get_is_derived_from_with_identifier_or_path(discoverId, version, objects, identifier, matchingPath)
     return []
 
 

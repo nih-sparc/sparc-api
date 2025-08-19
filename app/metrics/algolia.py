@@ -30,6 +30,15 @@ def get_all_dataset_ids():
       object_ids.append(record['objectID'])
   return object_ids
 
+def get_all_dataset_uuids():
+  client = init_algolia_client()
+  index = client.init_index(INDEX)
+  uuids = []
+  for record in index.browse_objects():
+    if record.get('item') and record['item'].get('identifier'):
+      uuids.append(record['item']['identifier'])
+  return uuids
+
 def get_associated_datasets(projectId):
   client = init_algolia_client()
   index = client.init_index(INDEX)

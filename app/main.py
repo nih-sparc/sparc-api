@@ -711,8 +711,6 @@ def get_is_derived_from_with_identifier_or_path(discoverId, version, objects, id
                 for external in derivedFromAlsoInDatasets:
                     doi = external['dataset'].replace('https://doi.org/', '')
                     source_list.extend(get_original_source(None, doi, None, external['path']))
-            #else externa_source:
-            #    source_list.extend(get_original_source(None, "someDOI", None, "a path"))
 
     return source_list
 

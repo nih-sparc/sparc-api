@@ -686,8 +686,9 @@ def get_is_derived_from_with_identifier_or_path(discoverId, version, objects, id
             (matchingPath and item.get('dataset', {}).get('path', '') == matchingPath)):
             datacite = item.get("datacite", {})
             isDerivedFromPaths = datacite.get("isDerivedFrom", {}).get('path')
-            derivedFromAlsoInDatasets = datacite.get("derivedFromAlsoInDatasets", {}).get('list')
-            flatmapUUID = datacite.get("flatmap UUID")
+            derivedfromdatasetdoi = datacite.get("derived_from_dataset_doi", {}).get('list')
+            derivedfromdatasetpath = datacite.get("derived_from_dataset_path", {}).get('list')
+            flatmapUUID = datacite.get("flatmap_uuid")
             if flatmapUUID:
                 source_list.append(
                     {
@@ -707,10 +708,11 @@ def get_is_derived_from_with_identifier_or_path(discoverId, version, objects, id
                             'version': version
                         }
                         source_list.append(data)
-            if derivedFromAlsoInDatasets is not None:
-                for external in derivedFromAlsoInDatasets:
-                    doi = external['dataset'].replace('https://doi.org/', '')
-                    source_list.extend(get_original_source(None, doi, None, external['path']))
+            if derivedfromdatasetdoi is not None and derivedfromdatasetpath is not None:
+                for i in range(len(derivedfromdatasetdoi)):
+                    if 0 <= i < len(derivedfromdatasetpath):
+                        doi = derivedfromdatasetdoi[i].replace('https://doi.org/', '')
+                        source_list.extend(get_original_source(None, doi, None, derivedfromdatasetpath[i]))
 
     return source_list
 

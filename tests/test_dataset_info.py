@@ -195,6 +195,50 @@ def test_doi_plot_annotation_dataset_search_version_2(client):
     assert PLOT_FILE in result
 
 
+def test_get_original_source_from_object_id(client):
+    package = "package:f24c8f8a-dd15-4705-9136-02fef9163795"
+    r = client.get('/file_info/get_original_source', query_string={'identifier': package})
+    response = json.loads(r.data)
+    assert 'result' in response
+    assert len(response['result']) == 1
+    result = response['result'][0]
+    assert "scaffold_info.json" == result['name']
+
+
+def test_get_original_source_from_id_and_path(client):
+    id = '219'
+    path = 'derivative/brainstem_sheep_metadata.json'
+    r = client.get('/file_info/get_original_source', query_string={'discoverId': id, 'path': path})
+    response = json.loads(r.data)
+    assert 'result' in response
+    assert len(response['result']) == 1
+    result = response['result'][0]
+    assert "scaffold_info.json" == result['name']
+
+
+def test_get_original_source_from_doi_and_path(client):
+    doi = '10.26275/lmjd-eyzq'
+    path = 'derivative/brainstem_sheep_metadata.json'
+    r = client.get('/file_info/get_original_source', query_string={'doi': doi, 'path': path})
+    response = json.loads(r.data)
+    assert 'result' in response
+    assert len(response['result']) == 1
+    result = response['result'][0]
+    assert "scaffold_info.json" == result['name']
+
+def test_get_original_source_from_external_id_and_path(client):
+    id = '426'
+    path = 'derivative/sub-f006/L/060-visualization/f006_left_human_vagus_metadata.json'
+    r = client.get('/file_info/get_original_source', query_string={'discoverId': id, 'path': path})
+    response = json.loads(r.data)
+    assert 'result' in response
+    assert len(response['result']) > 0
+    found = 0
+    for item in response['result']:
+        if item['discoverId'] == '438':
+            found = found + 1
+    assert found > 0
+
 def test_title_plot_annotation_dataset_search(client):
     print()
     title = "Sympathetic nerve stimulation of mouse and rabbit hearts"

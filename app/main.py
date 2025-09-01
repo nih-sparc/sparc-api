@@ -679,6 +679,95 @@ def get_dataset_info_pennsieve_identifier():
     return reform_dataset_results(dataset_search(query))
 
 
+def get_is_derived_from_with_identifier_or_path(discoverId, version, objects, identifier, matchingPath, datasetCache):
+    source_list = []
+    for item in objects:
+        if ((identifier and item.get("identifier") == identifier) or \
+            (matchingPath and item.get('dataset', {}).get('path', '') == matchingPath)):
+            datacite = item.get("datacite", {})
+            isDerivedFromPaths = datacite.get("isDerivedFrom", {}).get('path')
+            derivedfromdataset = item.get("derived_from_dataset", {})
+            derivedfromdatasetdoi = derivedfromdataset.get('uri')
+            derivedfromdatasetpath = derivedfromdataset.get('path')
+            flatmapUUID = item.get("associated_flatmap", {}).get('identifier')
+            if flatmapUUID:
+                source_list.append(
+                    {
+                        'discoverId': discoverId,
+                        'name': item['name'],
+                        'path': item['dataset']['path'],
+                        'version': version,
+                        'flatmapUUID': flatmapUUID
+                    }
+                )
+            if isDerivedFromPaths is not None:
+                for path in isDerivedFromPaths:
+                    path = path.replace('derivative/sub-f006/derivative/sub-f006', 'derivative/sub-f006')
+                    source_objects = get_is_derived_from_with_identifier_or_path(discoverId, version, objects, None, path, datasetCache)
+                    if len(source_objects) > 0:
+                        source_list.extend(source_objects)
+                    elif derivedfromdatasetdoi is None or derivedfromdatasetpath is None:
+                            data = {
+                                'discoverId': discoverId,
+                                'name': item['name'],
+                                'path': item['dataset']['path'],
+                                'version': version
+                            }
+                            source_list.append(data)
+            if derivedfromdatasetdoi is not None and derivedfromdatasetpath is not None:
+                for i in range(len(derivedfromdatasetdoi)):
+                    if 0 <= i < len(derivedfromdatasetpath):
+                        doi = derivedfromdatasetdoi[i].replace('https://doi.org/', '')
+                        source_list.extend(get_original_source(None, doi, None, derivedfromdatasetpath[i], datasetCache))
+
+    return source_list
+
+
+# Trace original source all the way till it is found
+# or reach an external dataset
+def get_original_source_in_dataset(dataset_info, identifier, matchingPath, datasetCache):
+    hits = dataset_info.get('hits', {}).get('hits', [])
+    #there should only be one result
+    if len(hits) == 1:
+        objects = hits[0].get('_source', {}).get('objects')
+        discoverId = hits[0].get('_source', {}).get('pennsieve', {}).get('identifier')
+        version = hits[0].get('_source', {}).get('pennsieve', {}).get('version', {}).get('identifier')
+        if objects is not None and discoverId is not None and version is not None:
+            return get_is_derived_from_with_identifier_or_path(discoverId, version, objects, identifier, matchingPath, datasetCache)
+    return []
+
+
+def get_original_source(identifier, doi, discoverId, path, datasetCache):
+    query = None
+    id = identifier
+    if identifier is not None:
+        query = create_identifier_query(identifier)
+    elif path is not None:
+        if doi is not None:
+            id = doi
+            newDOI = doi.replace('DOI:', '')
+            query = create_multiple_doi_query([newDOI])
+        elif discoverId is not None:
+             id = discoverId
+             query = create_multiple_discoverId_query([discoverId])
+    dataset_info = datasetCache.get(id, None)
+    if dataset_info is None:
+        dataset_info = dataset_search(query)
+        datasetCache[id] = dataset_info
+    return get_original_source_in_dataset(dataset_info, identifier, path, datasetCache)
+
+
+@app.route("/file_info/get_original_source")
+def get_file_info_original_source():
+    discoverId = request.args.get('discoverId')
+    doi = request.args.get('doi')
+    identifier = request.args.get('identifier')
+    path = request.args.get('path')
+    #the following cache the datasetInfo
+    datasetCache = {}
+    return {'result': get_original_source(identifier, doi, discoverId, path, datasetCache)}
+
+
 @app.route("/segmentation_info/")
 def get_segmentation_info_from_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     query_args = request.args

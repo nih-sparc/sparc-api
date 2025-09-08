@@ -1823,29 +1823,55 @@ def report_form_submission():
     # Captcha all good
     has_attachment = False
     image_id = uuid.uuid4()
-    response = None
+    file = None
+    file_upload_response = None
+    request_response = {
+      "message": "Request successfully submitted. ",
+      "status": "success",
+    }
+    request_response_code = 201
+
+    # --- Handle attachment upload ---
     if 'attachment' in request.files:
-        has_attachment = True
-        file = request.files["attachment"]
-        drive_client = init_drive_client()
-        response = upload_file(drive_client, file, str(image_id) + get_extension(file.filename))
-    client = init_gspread_client()
+        try:
+            has_attachment = True
+            file = request.files["attachment"]
+            drive_client = init_drive_client()
+            file_upload_response = upload_file(drive_client, file, str(image_id) + get_extension(file.filename))
+        except Exception as e:
+            request_response['message'] += "Failed to upload attachment file. "
+            request_response['status'] = 'warning'
+            request_response_code = 207
+            print(f"[ERROR] Failed to upload task attachment: {e}")
+    # --- Build description ---
     description = form["description"]
-    if has_attachment and response and response['webViewLink']:
-        description += "\n\nAttachment: " + response['webViewLink']
-    if append_contact(client, [form["title"], None, None, None, None, None, description]):
-        # Send a confirmation email to the user
-        if 'userEmail' in form and form['userEmail']:
-            user_email = form['userEmail']
-            name = form["firstName"] or user_email
+    if has_attachment and file_upload_response and file_upload_response['webViewLink']:
+        description += "\n\nAttachment: " + file_upload_response['webViewLink']
+    description = description.replace("\r\n", "\n").replace("\n", "<br>")
+    # --- Save to Google Sheets ---
+    try:
+        client = init_gspread_client()
+        success = append_contact(
+            client,
+            [form.get("title"), None, None, None, None, None, description]
+        )
+    except Exception as e:
+        print(f"[ERROR] Failed to add task to Google Sheets: {e}")
+        return {"message": "Request submission failed", "status": 'failure'}, 500
+    if not success:
+        return {"message": "Request submission failed", "status": 'failure'}, 500
+    # --- Send confirmation email ---
+    try:
+        user_email = form.get("userEmail")
+        if user_email:
+            name = form.get("firstName") or user_email
             subject = 'SPARC Submission'
             body = creation_request_confirmation_email.substitute({
                 'name': name,
-                'message': description
+                'message': f"<div>{description}</div>"
             })
-            task_type = ''
-            if form and 'type' in form:
-                task_type = form["type"]
+
+            task_type = form.get("type", "").strip()
             if task_type == "news":
                 subject = 'SPARC News Submission'
             elif task_type == "event":
@@ -1855,9 +1881,19 @@ def report_form_submission():
             elif task_type == "communitySpotlight":
                 subject = 'SPARC Story Submission'
             if len(user_email) > 0 and subject and body:
-                email_sender.mailersend_email(Config.SES_SENDER, user_email, subject, body.replace('\n', '<br>'))
-        return {'attachment_filename': image_id if has_attachment else ''}, 200
-    return {"error": "Failed registering user data"}, 500
+                if (file):
+                    file_bytes = file.read()
+                    encoded_file = base64.b64encode(file_bytes).decode("utf-8")
+                    email_sender.mailersend_email_with_attachment(Config.SES_SENDER, user_email, subject, body, encoded_file, file.filename, file.mimetype)
+                else:
+                    email_sender.mailersend_email(Config.SES_SENDER, user_email, subject, body)
+    except Exception as e:
+        request_response['message'] += "Confirmation email sent to user unsuccessful. "
+        request_response['status'] = 'warning'
+        request_response_code = 207
+        print(f"[ERROR] Failed to send confirmation email: {e}")
+        # Don't fail the whole request if email sending fails
+    return jsonify(request_response), request_response_code
 
 
 @app.route("/hubspot_contact_properties/<email>", methods=["GET"])

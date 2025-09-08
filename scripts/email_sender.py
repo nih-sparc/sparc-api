@@ -150,6 +150,8 @@ class EmailSender(object):
         return response
 
     def mailersend_email_with_attachment(self, from_email, to, subject, body, encoded_file, file_name, file_type):
+        if isinstance(encoded_file, bytes):
+          encoded_file = encoded_file.decode("utf-8")
         attachment = {
             "content": encoded_file,
             "filename": file_name,

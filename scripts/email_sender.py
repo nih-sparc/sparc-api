@@ -167,7 +167,7 @@ class EmailSender(object):
 
         response = mailer.send(data)
         if not str(response).startswith("2"):
-            logging.error(f"MailerSend error: {response.status_code} {response.text}")
+            logging.error(f"MailerSend error response: {response}")
             raise Exception(f"Email failed to send.")
         logging.info(f"Sending a '{subject}' mail with attachment using MailerSend")
         logging.debug(f"Mail to {to} response: {response}")

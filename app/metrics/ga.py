@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from oauth2client.service_account import ServiceAccountCredentials
+from googleapiclient.errors import HttpError
 
 import io
 
@@ -84,19 +85,33 @@ def init_gspread_client():
     except TypeError as e:
         logging.error('An error occurred while instantiating the GSPREAD client.', str(e))
         return None
-    
+
 def append_contact(client, row):
-    if client:
-        client.spreadsheets().values().append(
+    if not client:
+        raise ValueError("Google Sheets client is not initialized")
+
+    if not row or not isinstance(row, (list, tuple)):
+        raise ValueError(f"Row must be a non-empty list or tuple, got: {row}")
+
+    try:
+        result = client.spreadsheets().values().append(
             spreadsheetId=EVENTS_SPREADS_ID,
             range='Events',
             valueInputOption='USER_ENTERED',
             insertDataOption='INSERT_ROWS',
-            body={
-                'values': [row]
-            }
+            body={'values': [list(row)]}
         ).execute()
-    return True
+        # Check response for success
+        updates = result.get("updates", {})
+        updated_rows = updates.get("updatedRows", 0)
+        return updated_rows > 0
+    except HttpError as e:
+        # You can choose: log it, retry, or re-raise
+        print(f"Google Sheets API error: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return False
 
 def init_drive_client():
     try:

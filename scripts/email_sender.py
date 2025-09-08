@@ -153,7 +153,7 @@ class EmailSender(object):
         attachment = {
             "content": encoded_file,
             "filename": file_name,
-            "type": file_type,
+            "content_type": file_type,
             "disposition": "attachment"
         }
 
@@ -167,6 +167,7 @@ class EmailSender(object):
 
         response = mailer.send(data)
         if not str(response).startswith("2"):
+            logging.error(f"MailerSend error: {response.status_code} {response.text}")
             raise Exception(f"Email failed to send.")
         logging.info(f"Sending a '{subject}' mail with attachment using MailerSend")
         logging.debug(f"Mail to {to} response: {response}")

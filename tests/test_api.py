@@ -254,7 +254,7 @@ def test_tasks_appends(client, sheets_service, drive_service):
         'description': description,
         'attachment': fake_file
     })
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     json_resp = resp.get_json()
     uploaded_filename = json_resp['attachment_filename'] + '.txt' if json_resp['attachment_filename'] else ''
 

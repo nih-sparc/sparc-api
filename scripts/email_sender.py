@@ -128,7 +128,7 @@ class EmailSender(object):
             SourceArn=self.ses_arn,
         )
 
-    def mailersend_email(self, from_email, to, subject, body, reply_to_email=None, reply_to_name=None):
+    def mailersend_email(self, from_email, to, subject, body, reply_to_email=None, reply_to_name=None, cc=None):
         data = {
             "from": {"email": from_email, "name": self.from_name},
             "to": [{"email": to}],
@@ -141,6 +141,11 @@ class EmailSender(object):
                 "email": reply_to_email,
                 "name": reply_to_name or reply_to_email
             }
+
+        if cc:
+            if isinstance(cc, str):
+                cc = [{"email": cc}]
+            data["cc"] = cc
 
         response = mailer.send(data)
         if not str(response).startswith("2"):

@@ -2471,7 +2471,7 @@ def contact_support():
                                     email,
                                     subject,
                                     feedback_email.substitute({'message': message}),
-                                    Config.SERVICES_EMAIL
+                                    Config.SERVICES_EMAIL,
                                     cc=Config.SERVICES_EMAIL)
         except Exception as e:
               return jsonify({"message": "Confirmation email sent to user unsuccessful."}), 500

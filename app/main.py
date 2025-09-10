@@ -1778,7 +1778,7 @@ def submit_data_inquiry():
             email_body = anbc_form_creation_request_confirmation_email.substitute({'name': firstname, 'message': body}) if is_anbc_form == 'true' else creation_request_confirmation_email.substitute({'name': firstname, 'message': body})
         html_body = markdown.markdown(email_body)
         try:
-            email_sender.mailersend_email(Config.SES_SENDER, email, subject, html_body)
+            email_sender.mailersend_email(Config.SES_SENDER, email, subject, html_body, cc=Config.SERVICES_EMAIL)
             response['message'] = response.get('message', '') + 'Confirmation email sent to user successfully. '
             if partial_success:
                 partial_success['warning'] = partial_success.get('warning', '') + 'Confirmation email sent to user successfully. '
@@ -2471,7 +2471,8 @@ def contact_support():
                                     email,
                                     subject,
                                     feedback_email.substitute({'message': message}),
-                                    Config.SERVICES_EMAIL)
+                                    Config.SERVICES_EMAIL
+                                    cc=Config.SERVICES_EMAIL)
         except Exception as e:
               return jsonify({"message": "Confirmation email sent to user unsuccessful."}), 500
 

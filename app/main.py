@@ -1828,6 +1828,7 @@ def report_form_submission():
     request_response = {
       "message": "Request successfully submitted. ",
       "status": "success",
+      "attachment_filename": ""
     }
     request_response_code = 201
 
@@ -1847,6 +1848,7 @@ def report_form_submission():
     description = form["description"]
     if has_attachment and file_upload_response and file_upload_response['webViewLink']:
         description += "\n\nAttachment: " + file_upload_response['webViewLink']
+        request_response["attachment_filename"] = image_id
     description = description.replace("\r\n", "\n").replace("\n", "<br>")
     # --- Save to Google Sheets ---
     try:

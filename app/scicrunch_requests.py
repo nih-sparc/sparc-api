@@ -389,3 +389,30 @@ def create_request_body_for_curies(species):
         body['query'] = query
 
     return body
+
+
+def create_dataset_flatmap_query(dataset_id, size=10, from_=0):
+    """
+    Create a flatmap query for a dataset given the dataset id.
+    The dataset id is a Pennsieve dataset id, for example
+        N:dataset:2a3d01c0-39d3-464a-8746-54c9d67ebe0f
+    """
+    return {
+        "size": size,
+        "from": from_,
+        "query": {
+            "match": {
+                "item.identifier": {
+                    "query": dataset_id,
+                    "operator": "and",
+                }
+            }
+        },
+        "_source": [
+            "item.curie",
+            "item.name",
+            "item.identifier",
+            "objects.dataset.path",
+            "objects.associated_flatmap.identifier"
+        ]
+    }

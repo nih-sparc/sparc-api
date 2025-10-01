@@ -1,5 +1,4 @@
 import atexit
-from argparse import ArgumentError
 
 from app.metrics.pennsieve import get_download_count
 from app.metrics.contentful import init_cf_cda_client, get_funded_projects_count, get_featured_datasets

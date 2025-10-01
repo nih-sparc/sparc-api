@@ -263,3 +263,23 @@ def reform_related_terms(data):
         raise BaseException
 
     return result
+
+
+def reform_flatmap_query_result(sci_crunch_data, target_subject, dataset_id):
+    if not isinstance(sci_crunch_data, dict):
+        return {}
+
+    associated_flatmap = {'subject': target_subject, 'dataset': dataset_id}
+    pattern = rf"{target_subject}/([LR])/"
+    for hit in sci_crunch_data.get('hits', {'hits': []}).get('hits', []):
+        particulars = hit.get('_source', {'objects': {}})
+        for obj in particulars.get('objects', {}):
+            if 'associated_flatmap' in obj:
+                match = re.search(pattern, obj.get('dataset', {'path': ''}).get('path', ''), re.IGNORECASE)
+                if match:
+                    side_letter = match.group(1).upper()
+                    if side_letter in ['L', 'R']:
+                        side = "right" if side_letter == 'R' else "left"
+                        associated_flatmap[side] = obj['associated_flatmap']['identifier']
+
+    return associated_flatmap

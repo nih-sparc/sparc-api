@@ -487,7 +487,8 @@ def find_associated_flatmap_for_subject():
                     knowledge_base_response.raise_for_status()
                     flatmap_data = knowledge_base_response.json()
                     associated_flatmap_info = reform_flatmap_query_result(flatmap_data, target_subject, dataset_id)
-                    results.append(associated_flatmap_info)
+                    if associated_flatmap_info:
+                        results.append(associated_flatmap_info)
                 except requests.exceptions.ConnectionError:
                     return abort(400, description="Unable to make a connection to SCI_CRUNCH_HOST.")
                 except requests.exceptions.Timeout:

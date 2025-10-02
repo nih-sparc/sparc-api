@@ -22,7 +22,6 @@ import json
 import logging
 import re
 import requests
-import uuid
 from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -36,16 +35,17 @@ from flask import Flask, abort, jsonify, request
 from flask_cors import CORS
 from flask_marshmallow import Marshmallow
 from pennsieve import Pennsieve
-from pennsieve2.direct import new_client
 from pennsieve.base import UnauthorizedException as PSUnauthorizedException
+from pennsieve2.direct import new_client
 from PIL import Image
-from requests.auth import HTTPBasicAuth
 from flask_caching import Cache
 
-from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, create_title_query, \
-    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, create_onto_term_query, \
+from app.scicrunch_requests import create_doi_query, create_filter_request, create_facet_query, create_doi_aggregate, \
+    create_title_query, \
+    create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, \
+    create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id, \
-    create_multiple_mimetype_query, create_citations_query
+    create_multiple_mimetype_query, create_citations_query, create_dataset_flatmap_query
 from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email, anbc_form_creation_request_confirmation_email, service_form_submission_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
@@ -53,7 +53,8 @@ from xml.etree import ElementTree
 from app.config import Config
 from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable, ProtocolMetricsTable
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
-    reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results
+    reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results, \
+    reform_flatmap_query_result
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str, get_path_from_mangled_list, get_extension
 from app.osparc.osparc import start_simulation as do_start_simulation
@@ -95,27 +96,27 @@ if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 try:
-    annotationtable = AnnotationTable(db_url)
+    annotationtable = None if db_url is None else AnnotationTable(db_url)
 except AttributeError:
     annotationtable = None
 
 try:
-    maptable = MapTable(db_url)
+    maptable = None if db_url is None else MapTable(db_url)
 except AttributeError:
     maptable = None
 
 try:
-    scaffoldtable = ScaffoldTable(db_url)
+    scaffoldtable = None if db_url is None else ScaffoldTable(db_url)
 except AttributeError:
     scaffoldtable = None
 
 try:
-    featuredDatasetIdSelectorTable = FeaturedDatasetIdSelectorTable(db_url)
+    featuredDatasetIdSelectorTable = None if db_url is None else FeaturedDatasetIdSelectorTable(db_url)
 except AttributeError:
     featuredDatasetIdSelectorTable = None
 
 try:
-    protocolMetricsTable = ProtocolMetricsTable(db_url)
+    protocolMetricsTable = None if db_url is None else ProtocolMetricsTable(db_url)
 except AttributeError:
     protocolMetricsTable = None
 
@@ -446,6 +447,68 @@ def extract_thumbnail_from_xml_file(bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     base64_form = img_to_base64_str(im)
 
     return base64_form
+
+
+@app.route("/flatmap/find")
+def find_associated_flatmap_for_subject():
+    """
+    Find an associated flatmap for a subject given the subject id and dataset id.
+    The subject id and dataset id should be in the form:
+        subject: sub-f006
+        dataset: 2a3d01c0-39d3-464a-8746-54c9d67ebe0f
+    """
+    query_args = request.args
+    if 'dataset' not in query_args or 'subject' not in query_args:
+        return abort(400, description="Query arguments are not valid.")
+
+    target_dataset = query_args['dataset']
+    target_subject = query_args['subject']
+    params = {
+        'inst': target_subject,
+        'dataset': target_dataset,
+        'include-equivalent': 'true'
+    }
+
+    try:
+        qdb_response = requests.get(f'{Config.SCI_CRUNCH_QDB_HOST}/inst', params=params, timeout=30)
+        qdb_response.raise_for_status()
+        if qdb_response.status_code == 200:
+            data = qdb_response.json()
+            sci_crunch_params = {
+                "api_key": Config.KNOWLEDGEBASE_KEY
+            }
+            filtered_results = [item for item in data['result'] if item['dataset'] != target_dataset]
+            results = []
+            for result in filtered_results:
+                dataset_id = f"N:dataset:{result['dataset']}"
+                sci_crunch_query = create_dataset_flatmap_query(dataset_id)
+                try:
+                    knowledge_base_response = requests.post(f'{Config.SCI_CRUNCH_HOST}/_search', params=sci_crunch_params, json=sci_crunch_query)
+                    knowledge_base_response.raise_for_status()
+                    flatmap_data = knowledge_base_response.json()
+                    associated_flatmap_info = reform_flatmap_query_result(flatmap_data, target_subject, dataset_id)
+                    if associated_flatmap_info:
+                        results.append(associated_flatmap_info)
+                except requests.exceptions.ConnectionError:
+                    return abort(400, description="Unable to make a connection to SCI_CRUNCH_HOST.")
+                except requests.exceptions.Timeout:
+                    return abort(504, description='Request to SCI_CRUNCH_HOST timed out.')
+                except requests.exceptions.RequestException as e:
+                    return abort(502, description=f"Error while making a request to SCI_CRUNCH_HOST: {str(e)}")
+
+            if len(results) == 0:
+                return abort(404, description=f"No results for subject '{target_subject}' in dataset '{target_dataset}'.")
+
+            return jsonify(results)
+
+        abort(400, 'Failed to retrieve information from QDB.')
+
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to SCI_CRUNCH_QDB_HOST.")
+    except requests.exceptions.Timeout:
+        return abort(504, description='Request to SCI_CRUNCH_QDB_HOST timed out.')
+    except requests.exceptions.RequestException as e:
+        return abort(502, description=f"Error while making a request to SCI_CRUNCH_QDB_HOST: {str(e)}")
 
 
 @app.route("/exists/<path:path>")

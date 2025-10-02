@@ -67,12 +67,12 @@ def test_reform_flatmap_query_result_bad_input():
 
 def test_reform_flatmap_query_result_empty_input():
     output = reform_flatmap_query_result({}, 'sub-f005', '12345-6789-123-45')
-    assert output == {'dataset': '12345-6789-123-45', 'subject': 'sub-f005'}
+    assert output == {}
 
 
 def test_reform_flatmap_query_result_no_hits_input():
     output = reform_flatmap_query_result({'hits': {}}, 'sub-f005', '12345-6789-123-45')
-    assert output == {'dataset': '12345-6789-123-45', 'subject': 'sub-f005'}
+    assert output == {}
 
 
 def test_reform_flatmap_query_result_valid_input():

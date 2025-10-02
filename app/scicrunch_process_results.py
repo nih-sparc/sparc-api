@@ -266,10 +266,10 @@ def reform_related_terms(data):
 
 
 def reform_flatmap_query_result(sci_crunch_data, target_subject, dataset_id):
+    associated_flatmap = {}
     if not isinstance(sci_crunch_data, dict):
-        return {}
+        return associated_flatmap
 
-    associated_flatmap = {'subject': target_subject, 'dataset': dataset_id}
     pattern = rf"{target_subject}/([LR])/"
     for hit in sci_crunch_data.get('hits', {'hits': []}).get('hits', []):
         particulars = hit.get('_source', {'objects': {}})
@@ -281,5 +281,9 @@ def reform_flatmap_query_result(sci_crunch_data, target_subject, dataset_id):
                     if side_letter in ['L', 'R']:
                         side = "right" if side_letter == 'R' else "left"
                         associated_flatmap[side] = obj['associated_flatmap']['identifier']
+
+    if associated_flatmap:
+        associated_flatmap['subject'] = target_subject
+        associated_flatmap['dataset'] =  dataset_id
 
     return associated_flatmap

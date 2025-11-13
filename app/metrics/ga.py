@@ -1,5 +1,6 @@
 from json import JSONDecodeError
 import logging
+import requests
 from datetime import datetime
 
 from app.config import Config
@@ -18,6 +19,7 @@ KEY_PATH = Config.GOOGLE_API_GA_KEY_PATH
 VIEW_ID = Config.GOOGLE_API_GA_VIEW_ID
 EVENTS_SPREADS_ID = Config.EVENTS_SPREADS_ID
 EVENTS_ATTACHMENTS_FOLDER = Config.EVENTS_ATTACHMENTS_FOLDER
+COMMS_SLACK_WEBHOOK = Config.COMMS_SLACK_WEBHOOK
 
 
 def init_ga_reporting():
@@ -104,6 +106,9 @@ def append_contact(client, row):
         # Check response for success
         updates = result.get("updates", {})
         updated_rows = updates.get("updatedRows", 0)
+        if updated_rows > 0:
+            message = "🗓️ A new row was added to Events:\n" + "".join([str(item)+'\n' if item is not None else '' for item in row])
+            requests.post(COMMS_SLACK_WEBHOOK, json={"text": message})
         return updated_rows > 0
     except HttpError as e:
         # You can choose: log it, retry, or re-raise

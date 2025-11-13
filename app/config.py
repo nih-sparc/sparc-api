@@ -116,3 +116,4 @@ class Config(object):
     NUXT_TURNSTILE_SECRET_KEY = os.environ.get("NUXT_TURNSTILE_SECRET_KEY")
     TURNSTILE_URL = os.environ.get("TURNSTILE_URL", "https://challenges.cloudflare.com/turnstile/v0/siteverify")
     PMR_HOST = os.environ.get("PMR_HOST", "https://models.physiomeproject.org")
+    COMMS_SLACK_WEBHOOK = os.environ.get("COMMS_SLACK_WEBHOOK")

@@ -1912,13 +1912,14 @@ def report_form_submission():
     if has_attachment and file_upload_response and file_upload_response['webViewLink']:
         description += "\n\nAttachment: " + file_upload_response['webViewLink']
         request_response["attachment_filename"] = image_id
-    description = description.replace("\r\n", "\n").replace("\n", "<br>")
+    plain_description = description.replace("\r\n", "\n")
+    html_description = plain_description.replace("\n", "<br>")
     # --- Save to Google Sheets ---
     try:
         client = init_gspread_client()
         success = append_contact(
             client,
-            [form.get("title"), None, None, None, None, None, description]
+            [form.get("title"), None, None, None, None, None, plain_description]
         )
     except Exception as e:
         print(f"[ERROR] Failed to add task to Google Sheets: {e}")
@@ -1933,7 +1934,7 @@ def report_form_submission():
             subject = 'SPARC Submission'
             body = creation_request_confirmation_email.substitute({
                 'name': name,
-                'message': f"<div>{description}</div>"
+                'message': f"<div>{html_description}</div>"
             })
 
             task_type = form.get("type", "").strip()

@@ -1,5 +1,4 @@
 algoliasearch==2.6.2
-api==0.0.7
 APScheduler==3.7.0
 boto3==1.26
 botocore==1.29.0

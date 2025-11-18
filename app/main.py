@@ -1919,7 +1919,8 @@ def report_form_submission():
         client = init_gspread_client()
         success = append_contact(
             client,
-            [form.get("title"), None, None, None, None, None, plain_description]
+            [form.get("title"), None, None, None, None, None, plain_description],
+            app.config['TESTING']
         )
     except Exception as e:
         print(f"[ERROR] Failed to add task to Google Sheets: {e}")

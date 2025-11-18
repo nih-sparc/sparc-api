@@ -88,7 +88,7 @@ def init_gspread_client():
         logging.error('An error occurred while instantiating the GSPREAD client.', str(e))
         return None
 
-def append_contact(client, row):
+def append_contact(client, row, isTest):
     if not client:
         raise ValueError("Google Sheets client is not initialized")
 
@@ -106,7 +106,7 @@ def append_contact(client, row):
         # Check response for success
         updates = result.get("updates", {})
         updated_rows = updates.get("updatedRows", 0)
-        if updated_rows > 0:
+        if updated_rows > 0 and not isTest:
             message = "🗓️ A new row was added to Events:\n" + "".join([str(item)+'\n' if item is not None else '' for item in row])
             requests.post(COMMS_SLACK_WEBHOOK, json={"text": message})
         return updated_rows > 0

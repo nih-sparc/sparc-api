@@ -45,7 +45,8 @@ from app.scicrunch_requests import create_doi_query, create_filter_request, crea
     create_identifier_query, create_pennsieve_identifier_query, create_field_query, create_request_body_for_curies, \
     create_onto_term_query, \
     create_multiple_doi_query, create_multiple_discoverId_query, create_anatomy_query, get_body_scaffold_dataset_id, \
-    create_multiple_mimetype_query, create_citations_query, create_dataset_flatmap_query
+    create_multiple_mimetype_query, create_citations_query, create_dataset_flatmap_query, \
+    create_dataset_flatmap_uuid_query
 from scripts.email_sender import EmailSender, feedback_email, issue_reporting_email, creation_request_confirmation_email, anbc_form_creation_request_confirmation_email, service_form_submission_request_confirmation_email
 from threading import Lock
 from xml.etree import ElementTree
@@ -54,7 +55,7 @@ from app.config import Config
 from app.dbtable import AnnotationTable, MapTable, ScaffoldTable, FeaturedDatasetIdSelectorTable, ProtocolMetricsTable
 from app.scicrunch_process_results import process_results, process_get_first_scaffold_info, reform_aggregation_results, \
     reform_curies_results, reform_dataset_results, reform_related_terms, reform_anatomy_results, \
-    reform_flatmap_query_result
+    reform_flatmap_query_result, reform_flatmap_uuid_query_result
 from app.serializer import ContactRequestSchema
 from app.utilities import img_to_base64_str, get_path_from_mangled_list, get_extension
 from app.osparc.osparc import start_simulation as do_start_simulation
@@ -511,6 +512,42 @@ def find_associated_flatmap_for_subject():
         return abort(502, description=f"Error while making a request to SCI_CRUNCH_QDB_HOST: {str(e)}")
 
 
+@app.route("/flatmap/uuid")
+def find_associated_dataset_info_for_uuid():
+    """
+    Find dataset info for a given flatmap UUID.
+    The flatmap UUID should be in the form:
+        uuid: 2a3d01c0-39d3-464a-8746-54c9d67ebe0f
+    """
+    query_args = request.args
+    if 'uuid' not in query_args:
+        return abort(400, description="Query arguments are not valid.")
+
+    target_uuid = query_args['uuid']
+
+    sci_crunch_params = {
+        "api_key": Config.KNOWLEDGEBASE_KEY
+    }
+
+    sci_crunch_query = create_dataset_flatmap_uuid_query(target_uuid)
+    results = []
+    try:
+        knowledge_base_response = requests.post(f'{Config.SCI_CRUNCH_HOST}/_search', params=sci_crunch_params, json=sci_crunch_query)
+        knowledge_base_response.raise_for_status()
+        dataset_info = knowledge_base_response.json()
+        associated_dataset_info = reform_flatmap_uuid_query_result(dataset_info, target_uuid)
+        if associated_dataset_info:
+            results.append(associated_dataset_info)
+    except requests.exceptions.ConnectionError:
+        return abort(400, description="Unable to make a connection to SCI_CRUNCH_HOST.")
+    except requests.exceptions.Timeout:
+        return abort(504, description='Request to SCI_CRUNCH_HOST timed out.')
+    except requests.exceptions.RequestException as e:
+        return abort(502, description=f"Error while making a request to SCI_CRUNCH_HOST: {str(e)}")
+
+    return jsonify(results)
+
+
 @app.route("/exists/<path:path>")
 def url_exists(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     query_args = request.args
@@ -569,17 +606,17 @@ def s3_header_check(path, bucket_name):
     except botocore.exceptions.ClientError as err:
         # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
         if err.response["Error"]["Code"] == "404":
-            return (404, f'Provided path was not found on the s3 resource')
+            return 404, f'Provided path was not found on the s3 resource'
         elif err.response["Error"]["Code"] == "403":
-            return (403, f'There is a permission issue when accessing the file at specified path')
+            return 403, f'There is a permission issue when accessing the file at specified path'
         else:
             return abort(err.response["Error"]["Code"], err.response["Error"]["Message"])
     else:
-        return (200, 'OK')
+        return 200, 'OK'
 
 
 # Reverse proxy for objects from S3, a simple get object
-# operation. This is used by scaffoldvuer and its
+# operation. This is used by scaffoldvuer and it's
 # important to keep the relative <path> for accessing
 # other required files.
 @app.route("/s3-resource/<path:path>")
@@ -2306,8 +2343,8 @@ def pmr_file():
                 return resp.json()
         except:
             abort(400, description="invalid path")
-    else:
-        abort(400, description="missing path")
+
+    abort(400, description="missing path")
 
 
 @app.route("/start_simulation", methods=["POST"])

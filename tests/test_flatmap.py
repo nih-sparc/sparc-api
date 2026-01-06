@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from app import app
@@ -95,3 +97,27 @@ def test_reform_flatmap_query_result_valid_input():
 
     output = reform_flatmap_query_result(sci_crunch_data, 'sub-f005', '12345-6789-123-45')
     assert output == {'dataset': '12345-6789-123-45', 'subject': 'sub-f005', 'left': '54321-6789-123-45'}
+
+
+def test_dataset_info_for_flatmap_uuid_bad_dataset(client):
+    target_uuid = '2b4d01c0-39d3-464a-8746-54c9d67ebe0f'
+    r = client.get('/flatmap/uuid', query_string={'uuid': target_uuid})
+
+    assert r.status_code == 404
+    expected_result = {'error': f"404 Not Found: No results for Flatmap UUID '{target_uuid}'."}
+    assert expected_result == r.json
+
+
+def test_dataset_info_for_flatmap_uuid(client):
+    target_uuid = 'e81e3f3a-ed2f-5610-99ae-e019deae614a'
+    r = client.get('/flatmap/uuid', query_string={'uuid': target_uuid})
+
+    results = r.json
+    assert r.status_code == 200
+    assert len(results) == 1
+    first_result = results[0]
+    dataset_version = first_result['version']
+    dataset_id = first_result['dataset_id']
+    assert dataset_id == 462
+    assert dataset_version >= 2
+    assert len(first_result['urls']) >= 6

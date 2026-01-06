@@ -1,7 +1,9 @@
 SKIPPED_MIME_TYPES = [
+    'application/cellml+xml',
     'application/fastq',
     'application/javascript',
     'application/json',
+    'application/mipc',
     'application/octet-stream',
     'application/pdf',
     'application/rar',
@@ -50,6 +52,7 @@ SKIPPED_MIME_TYPES = [
     'image/x-coreldraw',
     'image/x.vnd.zeiss.czi',
     'inode/directory',
+    'model/vnd.mts',
     'text/Tab-separated-values',
     'text/css',
     'text/h323',

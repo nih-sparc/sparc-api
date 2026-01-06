@@ -529,6 +529,7 @@ def test_undefined_version_dataset_search(client):
     assert 'dataset_identifier' in json_data['result'][0]
     assert json_data['result'][0]['dataset_identifier'] == '17'
 
+
 def test_dataset_citations_search(client):
     # Testing with dataset 9
     identifier = 9

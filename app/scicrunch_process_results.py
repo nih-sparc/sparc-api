@@ -287,3 +287,50 @@ def reform_flatmap_query_result(sci_crunch_data, target_subject, dataset_id):
         associated_flatmap['dataset'] =  dataset_id
 
     return associated_flatmap
+
+
+def reform_flatmap_uuid_query_result(sci_crunch_data, target_uuid):
+    """
+    Extracts dataset ID, version, and JSON file paths from SciCrunch query results.
+    """
+    dataset_info = {}
+    if not isinstance(sci_crunch_data, dict):
+        return dataset_info
+
+    # Iterate through the hits (datasets found).
+    for hit in sci_crunch_data.get('hits', {}).get('hits', []):
+        source = hit.get('_source', {})
+
+        title = source.get('item', {}).get('name', '')
+        # Extract Pennsieve specific information.
+        pennsieve_data = source.get('pennsieve', {})
+        dataset_id = pennsieve_data.get('identifier')
+        dataset_version = pennsieve_data.get('version', {}).get('identifier')
+        s3_uri = pennsieve_data.get('uri')
+
+        # List to hold the found OMEX files.
+        omex_files = []
+
+        # Iterate through the objects (files) in the dataset.
+        objects = source.get('objects', [])
+        if objects:
+            for obj in objects:
+                # Check mimetype safely.
+                mimetype = obj.get('additional_mimetype', {}).get('name')
+
+                if mimetype == 'application/x.vnd.abi.simulation+x.vnd.abi.omex':
+                    file_path = obj.get('dataset', {}).get('path')
+                    if file_path:
+                        omex_files.append(file_path)
+
+        # Populate the result dictionary.
+        if dataset_id and dataset_version:
+            dataset_info = {
+                'dataset_id': int(dataset_id),
+                'version': int(dataset_version),
+                's3uri': s3_uri,
+                'urls': omex_files,
+                'title': title,
+            }
+
+    return dataset_info

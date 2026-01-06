@@ -40,6 +40,7 @@ def sort_files_by_mime_type(obj_list):
     if not obj_list:
         return sorted_files
 
+    unhandled_mime_types = set()
     for obj in obj_list:
 
         mime_type = obj.get('additional_mimetype', NOT_SPECIFIED)
@@ -51,7 +52,7 @@ def sort_files_by_mime_type(obj_list):
 
         mapped_mime_type = map_mime_type(mime_type, obj)
         if mapped_mime_type == NOT_SPECIFIED:
-            logging.warning(f'Unhandled mime type: {mime_type}')
+            unhandled_mime_types.add(mime_type)
         elif mapped_mime_type == SKIP:
             pass
         else:
@@ -65,6 +66,9 @@ def sort_files_by_mime_type(obj_list):
                 sorted_files[mapped_mime_type].append(obj)
             else:
                 sorted_files[mapped_mime_type] = [obj]
+
+    for mime_type in unhandled_mime_types:
+        logging.warning(f'Unhandled mime type: {mime_type}')
 
     return sorted_files
 

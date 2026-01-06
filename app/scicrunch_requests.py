@@ -416,3 +416,34 @@ def create_dataset_flatmap_query(dataset_id, size=10, from_=0):
             "objects.associated_flatmap.identifier"
         ]
     }
+
+
+def create_dataset_flatmap_uuid_query(flatmap_uuid, size=10, from_=0):
+    """
+    Create a query for Flatmap UUID to get datasets associated
+    with that value. For example:
+        e81e3f3a-ed2f-5610-99ae-e019deae614a
+    """
+    return {
+    "size": size,
+    "from": from_,
+    "query": {
+        "query_string": {
+            "fields": [
+                "*associated_flatmap.identifier"
+            ],
+            "query": f'"{flatmap_uuid}"'
+        }
+    },
+    "_source": [
+        "item.curie",
+        "item.name",
+        "pennsieve.identifier",
+        "pennsieve.uri",
+        "pennsieve.version.identifier",
+        "item.identifier",
+        "objects.dataset.path",
+        "objects.mimetype.name",
+        "objects.additional_mimetype.name"
+    ]
+}

@@ -35,7 +35,7 @@ class Config(object):
     DEPLOY_ENV = os.environ.get("DEPLOY_ENV", "development")
     SPARC_API_DEBUGGING = os.environ.get("SPARC_API_DEBUGGING", "TRUE")
     SPARC_APP_HOST = os.environ.get("SPARC_APP_HOST", "https://sparc-app.herokuapp.com")
-    SCI_CRUNCH_HOST = os.environ.get("SCICRUNCH_HOST", "https://scicrunch.org/api/1/elastic/SPARC_PortalDatasets_pr")
+    SCI_CRUNCH_HOST = os.environ.get("SCICRUNCH_HOST", "https://api.scicrunch.io/elastic/v1/SPARC_PortalDatasets_pr")
     MAPSTATE_TABLENAME = os.environ.get("MAPSTATE_TABLENAME", "mapstates")
     ANNOTATIONSTATE_TABLENAME = os.environ.get("ANNOTATION_TABLENAME", "annotationstates")
     SCAFFOLDSTATE_TABLENAME = os.environ.get("SCAFFOLDSTATE_TABLENAME", "scaffoldstates")
@@ -70,7 +70,7 @@ class Config(object):
     DIRECT_DOWNLOAD_LIMIT = int(os.environ.get("DIRECT_DOWNLOAD_LIMIT", "20971520"))
     DEFAULT_S3_BUCKET_NAME = "prd-sparc-discover50-use1"
     NEUROLUCIDA_HOST = os.environ.get("NEUROLUCIDA_HOST", "https://sparc.biolucida.net:8081")
-    SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://scicrunch.org/api/1/elastic/Interlex_pr")
+    SCI_CRUNCH_INTERLEX_HOST = os.environ.get("SCI_CRUNCH_INTERLEX_HOST", "https://api.scicrunch.io/elastic/Interlex_pr/v1")
     SCI_CRUNCH_SCIGRAPH_HOST = os.environ.get("SCI_CRUNCH_SCIGRAPH_HOST", "https://scicrunch.org/api/1/sparc-scigraph")
     SCI_CRUNCH_CITATIONS_HOST = os.environ.get("SCI_CRUNCH_CITATIONS_HOST", "https://api.scicrunch.io/elastic/v2/SPARC_Citations_pr")
     SCI_CRUNCH_QDB_HOST = os.environ.get("SCI_CRUNCH_QDB_HOST", "https://services.scicrunch.io/quantdb/api/1/values")

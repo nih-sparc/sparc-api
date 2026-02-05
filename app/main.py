@@ -1133,176 +1133,6 @@ def get_featured_dataset():
     abort(404, description="An error occured while fetching the resource")
 
 
-@app.route("/reva/subject-ids", methods=["GET"])
-def getRevaSubjectIds():
-    try:
-        primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
-        primary_children = primary_folder['children']
-        subject_ids = []
-        for child in primary_children:
-            if child['content']['packageType'] == 'Collection':
-                subject_ids.append(child['content']['name'])
-        return jsonify({"status": "success", "ids": subject_ids}), 200
-    except Exception as e:
-        logging.error(f"Error while getting REVA subject id files: {e}")
-        return jsonify({"status": "Error while getting REVA subject id files: ", "message": e}), 500
-
-
-def getRevaTracingInSituFolderChildren(subject_id):
-    try:
-        coordinates_folder_name = 'CoordinatesData'
-        in_situ_folder_name = 'InSitu'
-        primary_folder = ps2.get(f'/packages/{Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}')
-        if not primary_folder:
-            msg = f"Primary folder not found: {Config.REVA_3D_TRACING_PRIMARY_FOLDER_COLLECTION_ID}"
-            logging.error(msg)
-            return abort(404, description=msg)
-
-        primary_children = primary_folder.get('children', [])
-        subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
-        if subject_child is None:
-            msg = f"Subject folder not found for subject id: {subject_id}"
-            logging.error(msg)
-            return abort(404, description=msg)
-
-        subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
-        if not subject_folder:
-            msg = f"Subject folder could not be fetched for id: {subject_child['content']['id']}"
-            logging.error(msg)
-            return abort(404, description=msg)
-
-        subject_children = subject_folder.get('children', [])
-        coordinates_child = next((child for child in subject_children if child['content']['name'] == coordinates_folder_name), None)
-        if coordinates_child is None:
-            msg = f"CoordinatesData folder not found for subject: {subject_id}"
-            logging.error(msg)
-            return abort(404, description=msg)
-
-        coordinates_folder = ps2.get(f"/packages/{coordinates_child['content']['id']}")
-        if not coordinates_folder:
-            msg = f"CoordinatesData folder could not be fetched for id: {coordinates_child['content']['id']}"
-            logging.error(msg)
-            return abort(404, description=msg)
-
-        coordinates_children = coordinates_folder.get('children', [])
-        in_situ_child = next((child for child in coordinates_children if child['content']['name'] == in_situ_folder_name), None)
-        if in_situ_child is None:
-            msg = f"InSitu folder not found for subject: {subject_id}"
-            logging.error(msg)
-            return abort(404, description=msg)
-
-        # Get in situ folder
-        in_situ_folder = ps2.get(f"/packages/{in_situ_child['content']['id']}")
-        if not in_situ_folder:
-            msg = f"InSitu folder could not be fetched for id: {in_situ_child['content']['id']}"
-            logging.error(msg)
-            return abort(404, description=msg)
-
-        return in_situ_folder.get('children', [])
-
-    except Exception as e:
-        msg = f"Exception thrown when getting Reva InSitu Folder: {e}"
-        logging.error(msg)
-        return abort(500, description=msg)
-
-
-@app.route("/reva/anatomical-landmarks-files/<subject_id>", methods=["GET"])
-def getRevaAnatomicalLandmarksFiles(subject_id):
-    try:
-        anatomical_landmarks_folder_name = 'AnatomicalLandmarks'
-        in_situ_children = getRevaTracingInSituFolderChildren(subject_id)
-        anatomical_landmarks_child = next((child for child in in_situ_children if child['content']['name'] == anatomical_landmarks_folder_name), None)
-        if anatomical_landmarks_child is None:
-            logging.error(f"REVA tracing folder {anatomical_landmarks_folder_name} not found for subject: {subject_id}")
-            return jsonify({"status": "ERROR", "message": f"{anatomical_landmarks_folder_name} folder not found for subject: {subject_id}"}), 404
-        anatomical_landmarks_folder = ps2.get(f"/packages/{anatomical_landmarks_child['content']['id']}")
-        anatomical_landmarks_children = anatomical_landmarks_folder['children']
-        anatomical_landmarks_folders = []
-        for anatomical_landmark_child in anatomical_landmarks_children:
-            landmark_folder_name = anatomical_landmark_child['content']['name']
-            landmark_folder_id = anatomical_landmark_child['content']['id']
-            anatomical_landmark_folder = ps2.get(f"/packages/{landmark_folder_id}")
-            landmark_children = anatomical_landmark_folder['children']
-            landmark_files = []
-            for landmark_child in landmark_children:
-                landmark_file_package_id = landmark_child['content']['id']
-                landmark_file = ps2.get(f"/packages/{landmark_file_package_id}/view")
-                landmark_file_id = landmark_file[0]['content']['id']
-                landmark_file_presigned_url = ps2.get(f"/packages/{landmark_file_package_id}/files/{landmark_file_id}")['url']
-                landmark_files.append({'name': str(landmark_child['content']['name']), 's3Url': str(landmark_file_presigned_url)})
-            anatomical_landmarks_folders.append({'name': str(landmark_folder_name), 'files': landmark_files})
-        return jsonify({"status": "success", "folders": anatomical_landmarks_folders}), 200
-    except Exception as e:
-        logging.error(f"Error while getting REVA anatomical landmarks files {e}")
-        return jsonify({"status": "Error while getting anatomical landmarks files: ", "message": e}), 500
-
-
-@app.route("/reva/tracing-files/<subject_id>", methods=["GET"])
-def getRevaTracingFiles(subject_id):
-    try:
-        vagus_nerve_folder_name = 'VagusNerve'
-        in_situ_children = getRevaTracingInSituFolderChildren(subject_id)
-        vagus_nerve_child = next((child for child in in_situ_children if child['content']['name'] == vagus_nerve_folder_name), None)
-        if vagus_nerve_child is None:
-            logging.error(f"REVA tracing folder {vagus_nerve_folder_name} not found for subject: {subject_id}")
-            return jsonify({"status": "ERROR", "message": f"{vagus_nerve_folder_name} folder not found for subject: {subject_id}"}), 404
-        vagus_nerve_folder = ps2.get(f"/packages/{vagus_nerve_child['content']['id']}")
-        vagus_nerve_children = vagus_nerve_folder['children']
-        vagus_tracing_files = []
-        for vagus_region_child in vagus_nerve_children:
-            vagus_region_folder = ps2.get(f"/packages/{vagus_region_child['content']['id']}")
-            # get file and use id and package id for getting the presigned url https://api.pennsieve.io/packages/{id}/view
-            vagus_region_children = vagus_region_folder['children']
-            for vagus_file_child in vagus_region_children:
-                file_package_id = vagus_file_child['content']['id']
-                vagus_file = ps2.get(f"/packages/{file_package_id}/view")
-                vagus_file_id = vagus_file[0]['content']['id']
-                vagus_file_presigned_url = ps2.get(f"/packages/{file_package_id}/files/{vagus_file_id}")['url']
-                vagus_tracing_files.append(
-                    {'name': str(vagus_file_child['content']['name']), 'region': str(vagus_region_child['content']['name']), 's3Url': str(vagus_file_presigned_url)})
-        return jsonify({"status": "success", "files": vagus_tracing_files}), 200
-    except Exception as e:
-        logging.error(f"Error while getting REVA tracing files {e}")
-        return jsonify({"status": "Error while getting tracing files: ", "message": e}), 500
-
-
-@app.route("/reva/micro-ct-files/<subject_id>", methods=["GET"])
-def getRevaMicroCtFiles(subject_id):
-    micro_ct_visualization_folder_name = f'{subject_id}-MicroCTVisualization'
-
-    try:
-        primary_folder = ps2.get(f'/packages/{Config.REVA_MICRO_CT_PRIMARY_FOLDER_COLLECTION_ID}')
-        primary_children = primary_folder['children']
-        subject_child = next((child for child in primary_children if child['content']['name'] == subject_id), None)
-        if subject_child is None:
-            logging.error(f'REVA microCT folder not found with subject id: {subject_id}')
-            return jsonify({"status": "ERROR", "message": f"MicroCT folder not found with subject id: {subject_id}"}), 404
-        subject_folder = ps2.get(f"/packages/{subject_child['content']['id']}")
-        subject_children = subject_folder['children']
-        micro_ct_child = next((child for child in subject_children if child['content']['name'] == micro_ct_visualization_folder_name), None)
-        if micro_ct_child is None:
-            logging.error(f'REVA microCT {micro_ct_visualization_folder_name} folder not found for subject: {subject_id}')
-            return jsonify({"status": "ERROR", "message": f"{micro_ct_visualization_folder_name} folder not found for subject: {subject_id}"}), 404
-        micro_ct_visualization_folder = ps2.get(f"/packages/{micro_ct_child['content']['id']}")
-        micro_ct_children = micro_ct_visualization_folder['children']
-        micro_ct_files = []
-        for micro_child in micro_ct_children:
-            file_package_id = micro_child['content']['id']
-            micro_child_file = ps2.get(f"/packages/{file_package_id}/view")
-            micro_child_file_id = micro_child_file[0]['content']['id']
-            micro_file_presigned_url = ps2.get(f"/packages/{file_package_id}/files/{micro_child_file_id}")['url']
-            file_name = micro_child['content']['name']
-            file_size = micro_child['storage']
-            package_type = micro_child['content']['packageType']
-            file_type = micro_child_file[0]['content']['fileType']
-            micro_ct_files.append(
-                {'name': str(file_name), 's3Url': str(micro_file_presigned_url), 'type': str(file_type), 'packageType': str(package_type), 'size': str(file_size)})
-        return jsonify({"status": "success", "files": micro_ct_files}), 200
-    except Exception as e:
-        logging.error(f"Error while getting REVA microCT files {e}")
-        return jsonify({"status": "Error while getting microCT files: ", "message": e}), 500
-
-
 @app.route("/get_owner_email/<int:owner_id>", methods=["GET"])
 def get_owner_email(owner_id):
     # Filter to find user based on provided int id
@@ -1668,7 +1498,7 @@ def get_hubspot_contact(email, firstname, lastname):
         "Content-Type": "application/json",
         "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN
     }
-    
+
     search_results = requests.post(search_url, headers=headers, json=search_body)
     search_data = search_results.json()
     contact_id = None
@@ -1882,7 +1712,7 @@ def report_form_submission():
             logging.error("Could not validate captcha, bypassing validation", ex)
     elif not app.config['TESTING']:
         return {"error": "Failed Captcha Validation"}, 409
-    
+
     # Captcha all good
     has_attachment = False
     image_id = uuid.uuid4()
@@ -2083,7 +1913,7 @@ def get_contact_properties(object_id):
     firstname = firstname_data.value if firstname_data else ""
     lastname_data = contact_data.properties_with_history.get("lastname", [{}])[0]
     lastname = lastname_data.value if lastname_data else ""
-    # The newsletter array contains tags where each one corresponds to a mailing list in EmailOctopus that a user can opt-in/out of  
+    # The newsletter array contains tags where each one corresponds to a mailing list in EmailOctopus that a user can opt-in/out of
     newsletter_tags_data = contact_data.properties_with_history.get("newsletter")
     if len(newsletter_tags_data) > 0:
         newsletter_tags_data = newsletter_tags_data[0]

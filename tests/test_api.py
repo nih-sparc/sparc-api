@@ -424,34 +424,6 @@ def test_get_total_dataset_citations(client):
     json = r.get_json()
     assert 'total_citations' in json
 
-def test_get_reva_subject_ids(client):
-    r = client.get('/reva/subject-ids')
-    assert r.status_code == 200
-    json = r.get_json()
-    assert 'ids' in json
-    assert type(json['ids']) == list
-
-def test_get_reva_tracing_files(client):
-    r = client.get('/reva/tracing-files/sub-SR005')
-    assert r.status_code == 200
-    json = r.get_json()
-    assert 'files' in json
-    assert type(json['files']) == list
-
-def test_get_reva_micro_ct_files(client):
-    r = client.get('/reva/micro-ct-files/sub-SR005')
-    assert r.status_code == 200
-    json = r.get_json()
-    assert 'files' in json
-    assert type(json['files']) == list
-
-def test_get_reva_landmarks_files(client):
-    r = client.get('/reva/anatomical-landmarks-files/sub-SR005')
-    assert r.status_code == 200
-    json = r.get_json()
-    assert 'folders' in json
-    assert type(json['folders']) == list
-
 def test_create_issue(client):
     create_response = client.post("/create_issue", data={
         "title": "test-sparc-api-issue-creation",

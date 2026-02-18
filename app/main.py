@@ -545,6 +545,9 @@ def find_associated_dataset_info_for_uuid():
     except requests.exceptions.RequestException as e:
         return abort(502, description=f"Error while making a request to SCI_CRUNCH_HOST: {str(e)}")
 
+    if len(results) == 0:
+        return abort(404, description=f"No results for Flatmap UUID '{target_uuid}'.")
+
     return jsonify(results)
 
 

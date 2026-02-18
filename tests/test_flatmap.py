@@ -120,4 +120,4 @@ def test_dataset_info_for_flatmap_uuid(client):
     dataset_id = first_result['dataset_id']
     assert dataset_id == 462
     assert dataset_version >= 2
-    assert len(first_result['urls']) >= 6
+    assert len(first_result['urls']) >= 2

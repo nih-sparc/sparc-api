@@ -354,6 +354,7 @@ def find_associated_flatmap_for_subject():
     target_subject = query_args['subject']
     params = {
         'inst': target_subject,
+        'dataset': target_dataset,
         'include-equivalent': 'true'
     }
 
@@ -365,10 +366,6 @@ def find_associated_flatmap_for_subject():
             sci_crunch_params = {
                 "api_key": Config.KNOWLEDGEBASE_KEY
             }
-            source_results = [item for item in data['result'] if item['dataset'] == target_dataset]
-            if len(source_results) == 0:
-                return abort(404, description=f"No results for subject '{target_subject}' in dataset '{target_dataset}'.")
-
             filtered_results = [item for item in data['result'] if item['dataset'] != target_dataset]
             results = []
             for result in filtered_results:

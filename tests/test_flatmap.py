@@ -19,7 +19,7 @@ def test_find_flatmap_uuid(client):
     target_dataset = '2a3d01c0-39d3-464a-8746-54c9d67ebe0f'
     r = client.get('/flatmap/find', query_string={'subject': target_subject, 'dataset': target_dataset})
     assert r.status_code == 200
-    expected_result = [{'dataset': 'N:dataset:031598b5-88eb-44eb-ba70-67ad1c2fe36a', 'left': '0ea45841-ce99-5b86-8d16-2d12689566f6', 'right': '238599e8-fd25-533e-9f88-68fad90c1bf2', 'subject': 'sub-f006'}]
+    expected_result = [{'dataset': 'N:dataset:031598b5-88eb-44eb-ba70-67ad1c2fe36a', 'left': 'cb2cd819-96fa-5eb2-a1b1-fdf25d760562', 'right': 'abe70961-bb62-5483-b8f6-208772d6173f', 'subject': 'sub-f006'}]
     assert expected_result == r.json
 
 

@@ -533,4 +533,4 @@ def test_scicrunch_resolver(client):
     # The resolver response should contain resolver metadata and hits
     assert 'resolver' in json_data
     assert 'hits' in json_data
-    assert json_data['hits']['total'] > 0
+    assert json_data['hits']['total']['value'] > 0

@@ -318,26 +318,6 @@ def contact():
     return json.dumps({"status": "sent"})
 
 
-def create_s3_presigned_url(s3BucketName, key, content_type, expiration):
-    response = s3.generate_presigned_url(
-        "get_object",
-        Params={"Bucket": s3BucketName, "Key": key, "RequestPayer": "requester", "ResponseContentType": content_type},
-        ExpiresIn=expiration,
-    )
-
-    return response
-
-
-# Download a file from S3
-@app.route("/download")
-def create_presigned_url(expiration=3600, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
-    key = request.args.get("key")
-    s3BucketName = request.args.get("s3BucketName", bucket_name)
-    content_type = request.args.get("contentType", "application/octet-stream")
-
-    return create_s3_presigned_url(s3BucketName, key, content_type, expiration)
-
-
 @app.route("/flatmap/find")
 def find_associated_flatmap_for_subject():
     """

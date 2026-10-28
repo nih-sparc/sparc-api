@@ -88,6 +88,63 @@ def init_gspread_client():
         logging.error('An error occurred while instantiating the GSPREAD client.', str(e))
         return None
 
+def _is_cell_limit_error(e):
+    return e.resp.status == 400 and 'number of cells in the workbook' in str(e)
+
+def _trim_unused_grid_space(client, spreadsheet_id, row_buffer=200, col_buffer=5):
+    """Google Sheets' cell cap counts every cell in a sheet's defined grid, not
+    just the ones holding data - deleting a row's values doesn't shrink the grid,
+    so empty-but-still-counted cells build up over months of real submissions
+    until the whole workbook hits the limit. Shrink every sheet down to its
+    actual used range (+ a small buffer) instead, which touches no real data.
+    Returns True if any sheet was resized.
+    """
+    meta = client.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+        fields='sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))'
+    ).execute()
+
+    resize_requests = []
+    for sheet in meta.get('sheets', []):
+        props = sheet['properties']
+        grid = props.get('gridProperties', {}) or {}
+        row_count = grid.get('rowCount', 0)
+        col_count = grid.get('columnCount', 0)
+        if row_count <= 0 or col_count <= 0:
+            continue
+
+        values_resp = client.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range=props['title']
+        ).execute()
+        values = values_resp.get('values', [])
+        used_rows = len(values)
+        used_cols = max((len(r) for r in values), default=0)
+
+        target_rows = min(max(used_rows + row_buffer, 1), row_count)
+        target_cols = min(max(used_cols + col_buffer, 1), col_count)
+
+        if target_rows < row_count or target_cols < col_count:
+            resize_requests.append({
+                'updateSheetProperties': {
+                    'properties': {
+                        'sheetId': props['sheetId'],
+                        'gridProperties': {
+                            'rowCount': target_rows,
+                            'columnCount': target_cols
+                        }
+                    },
+                    'fields': 'gridProperties(rowCount,columnCount)'
+                }
+            })
+
+    if resize_requests:
+        client.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': resize_requests}
+        ).execute()
+    return bool(resize_requests)
+
 def append_contact(client, row, isTest):
     if not client:
         raise ValueError("Google Sheets client is not initialized")
@@ -95,14 +152,26 @@ def append_contact(client, row, isTest):
     if not row or not isinstance(row, (list, tuple)):
         raise ValueError(f"Row must be a non-empty list or tuple, got: {row}")
 
-    try:
-        result = client.spreadsheets().values().append(
+    def do_append():
+        return client.spreadsheets().values().append(
             spreadsheetId=EVENTS_SPREADS_ID,
             range='Events',
             valueInputOption='USER_ENTERED',
             insertDataOption='INSERT_ROWS',
             body={'values': [list(row)]}
         ).execute()
+
+    try:
+        try:
+            result = do_append()
+        except HttpError as e:
+            if not _is_cell_limit_error(e):
+                raise
+            logging.warning(
+                'Events spreadsheet is at its cell limit; trimming unused grid space and retrying. %s', e
+            )
+            _trim_unused_grid_space(client, EVENTS_SPREADS_ID)
+            result = do_append()
         # Check response for success
         updates = result.get("updates", {})
         updated_rows = updates.get("updatedRows", 0)

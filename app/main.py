@@ -1216,8 +1216,13 @@ def create_issue():
                 response = requests.put(url, headers=headers, json=data)
                 if response.status_code in (200, 201):
                     json_response = response.json()
-                    image_url = json_response["content"]["download_url"]
-                    comment_body = f"![Issue Attachment]({image_url})"
+                    # download_url embeds a short-lived signed token for private
+                    # repos and 404s once it expires, even though the file is
+                    # still there. html_url is the permanent blob page, which
+                    # GitHub authorizes per-request instead of via a baked-in
+                    # token, so it never expires.
+                    image_url = json_response["content"]["html_url"]
+                    comment_body = f"[Issue Attachment]({image_url})"
                     headers = {
                         "Authorization": f"token {Config.SPARC_TECH_LEADS_GITHUB_TOKEN}",
                         "Accept": "application/vnd.github+json"

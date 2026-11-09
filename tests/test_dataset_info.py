@@ -306,8 +306,7 @@ def test_pennsieve_identifier_dataset_search(client):
 def test_name_mangling_for_s3_resource(client):
     # This test uses a file on dataset 328 which has a file where space is converted to underscore
     # to check the name mangling code is working
-    url = f'/s3-resource/328/files/derivative/mapped_Pig%207_thumbnail.jpeg?s3BucketName={BUCKET}'
-    print(url)
+    url = f'/s3-resource/328/files/derivative/mapped_Pig%207_thumbnail.jpeg'
     r = client.get(url)
     assert r.status_code == 200
 
@@ -319,7 +318,7 @@ def test_size_limit_on_mangled_s3_resource(client):
 
     # Use a try-except to make sure we can set the limit back
     try:
-        r = client.get(f'/s3-resource/328/files/derivative/mapped_Pig%207_thumbnail.jpeg?s3BucketName={BUCKET}')
+        r = client.get(f'/s3-resource/328/files/derivative/mapped_Pig%207_thumbnail.jpeg')
     except:
         pass
 

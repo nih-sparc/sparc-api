@@ -57,7 +57,7 @@ from app.scicrunch_process_results import process_results, process_get_first_sca
     reform_curies_results, reform_dataset_results, reform_anatomy_results, \
     reform_flatmap_query_result, reform_flatmap_uuid_query_result
 from app.serializer import ContactRequestSchema
-from app.utilities import get_path_from_mangled_list, get_extension, getS3BucketName
+from app.utilities import getS3BucketNameFromPennsieve, get_dataset_id_from_path, get_path_from_mangled_list, get_extension
 from app.osparc.osparc import start_simulation as do_start_simulation
 from app.osparc.osparc import check_simulation as do_check_simulation
 
@@ -422,7 +422,8 @@ def find_associated_dataset_info_for_uuid():
 @app.route("/exists/<path:path>")
 def url_exists(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     query_args = request.args
-    s3BucketName = getS3BucketName(query_args.get("s3BucketName", bucket_name))
+    dataset_id = get_dataset_id_from_path(path)
+    s3BucketName = getS3BucketNameFromPennsieve(dataset_id, query_args.get("s3BucketName", bucket_name))
 
     try:
         head_response = s3.head_object(
@@ -485,7 +486,6 @@ def s3_header_check(path, bucket_name):
     else:
         return 200, 'OK'
 
-
 # Reverse proxy for objects from S3, a simple get object
 # operation. This is used by scaffoldvuer and it's
 # important to keep the relative <path> for accessing
@@ -493,7 +493,8 @@ def s3_header_check(path, bucket_name):
 @app.route("/s3-resource/<path:path>")
 def direct_download_url(path, bucket_name=Config.DEFAULT_S3_BUCKET_NAME):
     query_args = request.args
-    s3BucketName = getS3BucketName(query_args.get("s3BucketName", bucket_name))
+    dataset_id = get_dataset_id_from_path(path)
+    s3BucketName = getS3BucketNameFromPennsieve(dataset_id, query_args.get("s3BucketName", bucket_name))
     s3_path = path  # Will modify s3_path if we find name mangling
 
     # Check the header to see if too large or does not exist

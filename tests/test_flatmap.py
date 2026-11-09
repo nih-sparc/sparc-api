@@ -5,8 +5,6 @@ from app.config import Config
 from app.scicrunch_process_results import reform_flatmap_query_result
 from app.scicrunch_requests import create_dataset_flatmap_query
 
-BUCKET = Config.DEFAULT_S3_BUCKET_NAME
-
 @pytest.fixture
 def client():
     # Spin up test flask app

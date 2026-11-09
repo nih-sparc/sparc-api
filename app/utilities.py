@@ -1,19 +1,44 @@
 import base64
 from io import BytesIO
-from app.config import Config
 from app.manifest_name_to_discover_name import name_map
+import logging
 import os
+import requests
 
-def getS3BucketName(bucketName):
+def get_dataset_id_from_path(path):
     """
-    Guard against old s3 buckets
+    Get the dataset id from path, we expect the path to be prefix by the dataset id.
+    <dataset-id>/files/<path>
     """
+    if not path:
+        return None
+    dataset_id = path.lstrip('/').split('/', 1)[0]
+    return dataset_id if dataset_id.isdigit() else None
+
+def getS3BucketNameFromPennsieve(dataset_id, bucket):
+    if dataset_id:
+        url = f"https://api.pennsieve.io/discover/datasets/{dataset_id}"
+        headers = {"accept": "application/json"}
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            uri = response.json().get("uri", "")
+            # uri looks like s3://<bucket>/<dataset-id>/
+            if uri.startswith("s3://"):
+                bucket_name = uri[len("s3://"):].split("/", 1)[0]
+                if bucket_name:
+                    return bucket_name
+        except (requests.exceptions.RequestException, ValueError) as ex:
+            logging.error(f"Could not get bucket for dataset {dataset_id}: {ex}")
+    return bucket
+
+def replaceOldBucketName(original, bucket):
     outdatedBuckets = [ 'prd-sparc-discover50-use1', 'prd-sparc-discover-use1']
-    if bucketName:
+    if original:
         for outdated in outdatedBuckets:
-            if outdated in bucketName:
-                return bucketName.replace(outdated, Config.DEFAULT_S3_BUCKET_NAME)
-    return bucketName
+            if outdated in original:
+                return original.replace(outdated, bucket)
+    return original
 
 def get_path_from_mangled_list(s3_path):
 

@@ -3,6 +3,7 @@ import re
 
 from flask import jsonify
 from app.scicrunch_processing_common import SKIPPED_OBJ_ATTRIBUTES
+from app.utilities import getS3BucketName
 
 
 def _convert_patch_to_x(version):
@@ -89,7 +90,7 @@ def process_get_first_scaffold_info(results):
                     context_info = result['abi-context-file'][0]['dataset']['path']
                 id = result['dataset_identifier']
                 version = result['dataset_version']
-                s3uri = result['s3uri']
+                s3uri = getS3BucketName(result['s3uri'])
                 return jsonify({'path': path, 'id': id, 'version': version, 's3uri': s3uri, 'contextinfo': context_info})
             except KeyError:
                 return None
@@ -277,7 +278,7 @@ def reform_flatmap_uuid_query_result(sci_crunch_data, target_uuid):
         pennsieve_data = source.get('pennsieve', {})
         dataset_id = pennsieve_data.get('identifier')
         dataset_version = pennsieve_data.get('version', {}).get('identifier')
-        s3_uri = pennsieve_data.get('uri')
+        s3_uri = getS3BucketName(pennsieve_data.get('uri'))
 
         # List to hold the found OMEX files.
         omex_files = []

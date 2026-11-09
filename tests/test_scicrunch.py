@@ -13,13 +13,13 @@ from app.config import Config
 from known_uberons import UBERONS_DICT
 from known_dois import has_doi_changed, warn_doi_changes
 
+BUCKET = Config.DEFAULT_S3_BUCKET_NAME
 
 @pytest.fixture
 def client():
     # Spin up test flask app
     app.config['TESTING'] = True
     return app.test_client()
-
 
 
 def test_scicrunch_keys(client):
@@ -460,7 +460,7 @@ def test_get_body_scaffold_info(client):
     assert result['id'] == '307'
     assert result['path'] == 'derivative/human_body_metadata.json'
     assert result['contextinfo'] == 'derivative/human_body_metadata_context_info.json'
-    assert 'prd-sparc-discover50-use1' in result['s3uri']
+    assert BUCKET in result['s3uri']
 
 def test_getting_curies(client):
     # Test if we get a shorter list of uberons with species specified

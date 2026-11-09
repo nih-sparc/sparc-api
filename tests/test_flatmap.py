@@ -1,11 +1,9 @@
 import pytest
 
 from app import app
+from app.config import Config
 from app.scicrunch_process_results import reform_flatmap_query_result
-
-
 from app.scicrunch_requests import create_dataset_flatmap_query
-
 
 @pytest.fixture
 def client():

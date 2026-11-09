@@ -61,14 +61,15 @@ def drive_service():
 
 def test_direct_download_url_small_file(client):
     small_s3_file = '217/files/derivative/brainstem_pig_metadata.json'
-    r = client.get(f"/s3-resource/{small_s3_file}?s3BucketName=prd-sparc-discover50-use1")
+    #small_s3_file = '328/files/derivative/mapped_Pig_7_thumbnail.jpeg'
+    r = client.get(f"/s3-resource/{small_s3_file}")
 
     assert r.status_code == 200
     assert b"medulla" in r.data
 
 def test_direct_download_url_new_bucket_file(client):
     new_s3_file = '307%2Ffiles%2Fderivative%2Fhuman_body_metadata.json'
-    r = client.get(f"/s3-resource/{new_s3_file}?s3BucketName=prd-sparc-discover50-use1")
+    r = client.get(f"/s3-resource/{new_s3_file}")
 
     assert r.status_code == 200
     assert b"colon" in r.data
@@ -76,14 +77,14 @@ def test_direct_download_url_new_bucket_file(client):
 
 def test_direct_download_url_thumbnail(client):
     small_s3_file = '95/files/derivative%2FcolonHuman_Layout1_thumbnail.jpeg'
-    r = client.get(f"/s3-resource/{small_s3_file}?s3BucketName=prd-sparc-discover50-use1")
+    r = client.get(f"/s3-resource/{small_s3_file}")
 
     assert r.status_code == 200
     assert b"\xFF\xD8\xFF" in r.data
 
 def test_direct_download_incorrect_path(client):
     incorrect_path = '95/files/?encodeBase64=true'
-    r = client.get(f"/s3-resource/{incorrect_path}?s3BucketName=prd-sparc-discover50-use1")
+    r = client.get(f"/s3-resource/{incorrect_path}")
 
     assert r.status_code != 200
 

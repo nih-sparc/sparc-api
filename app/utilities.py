@@ -4,6 +4,8 @@ from app.manifest_name_to_discover_name import name_map
 import logging
 import os
 import requests
+import threading
+import time
 
 def get_dataset_id_from_path(path):
     """
@@ -15,22 +17,50 @@ def get_dataset_id_from_path(path):
     dataset_id = path.lstrip('/').split('/', 1)[0]
     return dataset_id if dataset_id.isdigit() else None
 
+# dataset_id -> (bucket_name, expiry_time). Per process, so each gunicorn worker has its own.
+BUCKET_CACHE_TTL = 24 * 3600
+_bucket_cache = {}
+_bucket_cache_lock = threading.Lock()
+
+def _fetch_bucket_from_pennsieve(dataset_id):
+    """
+    Look up the S3 bucket of a dataset from Pennsieve discover. Returns None on failure.
+    """
+    url = f"https://api.pennsieve.io/discover/datasets/{dataset_id}"
+    headers = {"accept": "application/json"}
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        uri = response.json().get("uri", "")
+        # uri looks like s3://<bucket>/<dataset-id>/
+        if uri.startswith("s3://"):
+            bucket_name = uri[len("s3://"):].split("/", 1)[0]
+            if bucket_name:
+                return bucket_name
+    except (requests.exceptions.RequestException, ValueError) as ex:
+        logging.error(f"Could not get bucket for dataset {dataset_id}: {ex}")
+    return None
+
 def getS3BucketNameFromPennsieve(dataset_id, bucket):
-    if dataset_id:
-        url = f"https://api.pennsieve.io/discover/datasets/{dataset_id}"
-        headers = {"accept": "application/json"}
-        try:
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            uri = response.json().get("uri", "")
-            # uri looks like s3://<bucket>/<dataset-id>/
-            if uri.startswith("s3://"):
-                bucket_name = uri[len("s3://"):].split("/", 1)[0]
-                if bucket_name:
-                    return bucket_name
-        except (requests.exceptions.RequestException, ValueError) as ex:
-            logging.error(f"Could not get bucket for dataset {dataset_id}: {ex}")
-    return bucket
+    """
+    Get the S3 bucket of a dataset, cached for BUCKET_CACHE_TTL seconds.
+    Falls back to bucket if there is no dataset id or the lookup fails.
+    """
+    if not dataset_id:
+        return bucket
+    now = time.time()
+    with _bucket_cache_lock:
+        cached = _bucket_cache.get(dataset_id)
+        if cached and cached[1] > now:
+            return cached[0]
+    # Fetch outside the lock so a slow request doesn't block other datasets.
+    bucket_name = _fetch_bucket_from_pennsieve(dataset_id)
+    if bucket_name is None:
+        # Don't cache failures, so the next request retries.
+        return bucket
+    with _bucket_cache_lock:
+        _bucket_cache[dataset_id] = (bucket_name, now + BUCKET_CACHE_TTL)
+    return bucket_name
 
 def replaceOldBucketName(original, bucket):
     outdatedBuckets = [ 'prd-sparc-discover50-use1', 'prd-sparc-discover-use1']

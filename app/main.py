@@ -20,6 +20,7 @@ import hubspot
 from hubspot.crm.contacts import ApiException
 import json
 import logging
+import random
 import re
 import requests
 from urllib.parse import urlparse
@@ -29,6 +30,7 @@ from apscheduler.triggers.combining import OrTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from botocore.exceptions import ClientError
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from flask import Flask, abort, jsonify, request
@@ -71,6 +73,40 @@ log_level = Config.LOG_LEVEL.upper()
 app.logger.setLevel(getattr(logging, log_level, logging.WARNING))
 
 executor = ThreadPoolExecutor(max_workers=8)
+
+
+class RateLimiter:
+    """Thread-safe sliding-window rate limiter shared across the executor's worker threads.
+
+    Proactively paces outbound calls instead of relying solely on reacting to 429s after
+    the fact, which matters for limits like HubSpot's TEN_SECONDLY_ROLLING cap: that limit
+    is shared across the whole private app (not per-endpoint), so several worker threads
+    retrying a burst of 429s at once can keep re-tripping it instead of draining it.
+    """
+    def __init__(self, max_calls, period_seconds):
+        self.max_calls = max_calls
+        self.period_seconds = period_seconds
+        self.lock = Lock()
+        self.calls = deque()
+
+    def acquire(self):
+        while True:
+            with self.lock:
+                now = time.monotonic()
+                while self.calls and now - self.calls[0] > self.period_seconds:
+                    self.calls.popleft()
+                if len(self.calls) < self.max_calls:
+                    self.calls.append(now)
+                    return
+                sleep_for = self.period_seconds - (now - self.calls[0])
+            time.sleep(max(sleep_for, 0.01))
+
+
+# Conservative margins below the documented sustained limits (HubSpot: 100 req/10s on the
+# lowest private-app tier; EmailOctopus: 10 req/s), shared by all worker threads so a burst
+# of webhook events gets paced instead of firing concurrently and tripping 429s.
+hubspot_rate_limiter = RateLimiter(max_calls=8, period_seconds=1)
+emailoctopus_rate_limiter = RateLimiter(max_calls=8, period_seconds=1)
 
 # set environment variable
 app.config["ENV"] = Config.DEPLOY_ENV
@@ -1683,13 +1719,34 @@ def subscribe_to_newsletter():
         return jsonify({'error': str(e)}), 500
 
 
-def get_contact_properties(object_id):
+def get_retry_delay_seconds(headers, attempt, base_delay=1.0, max_delay=30.0):
+    # Honor the Retry-After header when the API provides one, otherwise fall back to
+    # exponential backoff with jitter so retrying threads don't all wake up at once.
+    retry_after = headers.get('Retry-After') if headers else None
+    if retry_after:
+        try:
+            return float(retry_after)
+        except (TypeError, ValueError):
+            pass
+    return min(base_delay * (2 ** attempt), max_delay) + random.uniform(0, 0.5)
+
+
+def get_contact_properties(object_id, max_retries=5):
     client = hubspot.Client.create(access_token=Config.HUBSPOT_API_TOKEN)
-    try:
-        contact_data = client.crm.contacts.basic_api.get_by_id(contact_id=str(object_id), properties_with_history=["firstname", "lastname", "email", "newsletter", "event_name"],
-                                                               archived=False)
-    except ApiException as e:
-        return abort(400, description=f"Exception thrown when getting contact properties: {e}")
+    contact_data = None
+    for attempt in range(max_retries + 1):
+        hubspot_rate_limiter.acquire()
+        try:
+            contact_data = client.crm.contacts.basic_api.get_by_id(contact_id=str(object_id), properties_with_history=["firstname", "lastname", "email", "newsletter", "event_name"],
+                                                                   archived=False)
+            break
+        except ApiException as e:
+            if e.status == 429 and attempt < max_retries:
+                delay = get_retry_delay_seconds(e.headers, attempt)
+                logging.warning(f'HubSpot rate limit hit while fetching contact {object_id} (attempt {attempt + 1}/{max_retries}); retrying in {delay:.1f}s')
+                time.sleep(delay)
+                continue
+            return abort(400, description=f"Exception thrown when getting contact properties: {e}")
 
     if not contact_data:
         return abort(400, description="Failed to retrieve contact data from HubSpot.")
@@ -1735,7 +1792,17 @@ def add_or_update_emailoctopus_contact(list_id, email, firstname, lastname, tags
         "tags": tags
     }
     try:
-        response = requests.put(url, json=payload, headers=headers)
+        max_retries = 5
+        response = None
+        for attempt in range(max_retries + 1):
+            emailoctopus_rate_limiter.acquire()
+            response = requests.put(url, json=payload, headers=headers)
+            if response.status_code == 429 and attempt < max_retries:
+                delay = get_retry_delay_seconds(response.headers, attempt)
+                logging.warning(f'EmailOctopus rate limit hit for email: {email} (attempt {attempt + 1}/{max_retries}); retrying in {delay:.1f}s')
+                time.sleep(delay)
+                continue
+            break
         if str(response.status_code) != '200':
             logging.error(f'Emailoctopus contact did not get added/updated for email: {email}. Returned a response of {response.status_code}: {response.text}')
         return response.json()
@@ -1746,6 +1813,11 @@ def add_or_update_emailoctopus_contact(list_id, email, firstname, lastname, tags
 
 @app.route("/hubspot_webhook", methods=["POST"])
 def hubspot_webhook():
+    # Capture the raw body bytes before parsing. HubSpot computes its signature over the
+    # exact bytes it sent, so we must sign those same bytes rather than re-serializing the
+    # parsed JSON: json.dumps() escapes non-ASCII characters (e.g. accented names), which
+    # would silently produce a different string than what HubSpot signed and fail validation.
+    raw_body = request.get_data(as_text=True)
     body = None
     try:
         body = request.get_json(force=True)
@@ -1775,11 +1847,10 @@ def hubspot_webhook():
             logging.error(f'Signature timestamp is older than 5 minutes: current time = {current_time}, signature time = {signature_timestamp}')
             return jsonify({'error': 'Signature timestamp is older than 5 minutes'}), 400
 
-        # Concatenate request method, URI, body, and header timestamp
+        # Concatenate request method, URI, raw body, and header timestamp
         url = request.url
         method = 'POST'
-        stringified_body = json.dumps(body, separators=(",", ":"))
-        raw_string = f"{method}{url}{stringified_body}{timestamp_header}"
+        raw_string = f"{method}{url}{raw_body}{timestamp_header}"
 
         # Create HMAC SHA-256 hash from the raw string, then base64-encode it
         hashed_signature = hmac.new(

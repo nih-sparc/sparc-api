@@ -6,8 +6,12 @@ HubSpot rate-limited the sync or a signature mismatch rejected the whole batch d
 bulk import). It searches HubSpot for contacts matching a property/value filter, then
 pushes each one to the Email Octopus master list, retrying with backoff on 429s.
 
-This intentionally does not import app.main (which would start the Flask app's background
-schedulers as a side effect) -- it only needs app.config.Config and HTTP calls.
+This intentionally avoids importing anything under app/ -- importing app.config pulls in
+app/__init__.py, which imports app.main and would start the Flask app's background
+schedulers and other third-party clients as a side effect. This script only needs the
+HubSpot/Email Octopus env vars and HTTP calls.
+
+Required env vars: HUBSPOT_API_TOKEN, EMAIL_OCTOPUS_API_KEY, EMAIL_OCTOPUS_MASTER_LIST_ID.
 
 Usage:
     python -m scripts.resync_hubspot_emailoctopus --value SfN2026
@@ -15,16 +19,21 @@ Usage:
 """
 import argparse
 import logging
+import os
 import random
+import sys
 import time
 
 import requests
 
-from app.config import Config
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-HUBSPOT_SEARCH_URL = f"{Config.HUBSPOT_V3_API}/objects/contacts/search"
+HUBSPOT_API_TOKEN = os.environ.get("HUBSPOT_API_TOKEN")
+EMAIL_OCTOPUS_API_KEY = os.environ.get("EMAIL_OCTOPUS_API_KEY")
+EMAIL_OCTOPUS_MASTER_LIST_ID = os.environ.get("EMAIL_OCTOPUS_MASTER_LIST_ID")
+HUBSPOT_V3_API = os.environ.get("HUBSPOT_V3_API", "https://api.hubapi.com/crm/v3")
+
+HUBSPOT_SEARCH_URL = f"{HUBSPOT_V3_API}/objects/contacts/search"
 CONTACT_PROPERTIES = ["firstname", "lastname", "email", "newsletter", "event_name"]
 
 
@@ -54,7 +63,7 @@ def request_with_retry(method, url, max_retries=5, **kwargs):
 def find_hubspot_contacts(property_name, value):
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + Config.HUBSPOT_API_TOKEN,
+        "Authorization": "Bearer " + HUBSPOT_API_TOKEN,
     }
     after = None
     while True:
@@ -99,16 +108,17 @@ def sync_contact_to_emailoctopus(contact, dry_run=False):
         logging.info(f"[dry-run] Would sync {email} with tags {tags}")
         return True
 
-    url = f"https://api.emailoctopus.com/lists/{Config.EMAIL_OCTOPUS_MASTER_LIST_ID}/contacts"
+    url = f"https://api.emailoctopus.com/lists/{EMAIL_OCTOPUS_MASTER_LIST_ID}/contacts"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + Config.EMAIL_OCTOPUS_API_KEY,
+        "Authorization": "Bearer " + EMAIL_OCTOPUS_API_KEY,
     }
     payload = {
         "email_address": email,
         "fields": {"FirstName": firstname, "LastName": lastname},
         "status": "subscribed",
-        "tags": tags,
+        # Email Octopus expects tags as an object of {tagName: true/false}, not an array.
+        "tags": {tag: True for tag in tags},
     }
     response = request_with_retry("PUT", url, headers=headers, json=payload)
     if response.status_code != 200:
@@ -125,6 +135,15 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Only print what would be synced, without writing to Email Octopus")
     parser.add_argument("--delay", type=float, default=0.2, help="Seconds to sleep between Email Octopus writes")
     args = parser.parse_args()
+
+    missing = [name for name, value in (
+        ("HUBSPOT_API_TOKEN", HUBSPOT_API_TOKEN),
+        ("EMAIL_OCTOPUS_API_KEY", EMAIL_OCTOPUS_API_KEY),
+        ("EMAIL_OCTOPUS_MASTER_LIST_ID", EMAIL_OCTOPUS_MASTER_LIST_ID),
+    ) if not value]
+    if missing:
+        logging.error(f"Missing required environment variable(s): {', '.join(missing)}")
+        sys.exit(1)
 
     total = 0
     succeeded = 0
